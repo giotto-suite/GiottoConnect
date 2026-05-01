@@ -1,0 +1,27 @@
+Package: GiottoConnect
+Type: Package
+Title: Giotto Interoperability and External Tool Connections
+Version: 0.1.0
+Authors@R: person("Giotto Suite Team", role = c("aut", "cre"),
+    email = "giottosuite@gmail.com")
+Description: A hub for Giotto interoperability functions and connections to
+    external visualization and analysis tools. The first major feature is a
+    Vitessce viewer pipeline that converts a Giotto spatial single-cell object
+    into a static Vitessce-powered website deployable via GitHub Pages. The
+    pipeline exports the object to SpatialData-Zarr format, generates a
+    Vitessce view configuration, and scaffolds a Vite/React application ready
+    for GitHub Actions deployment.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+    GiottoClass (>= 0.3.0),
+    reticulate (>= 1.35.0),
+    data.table (>= 1.14.0),
+    jsonlite (>= 1.8.0),
+    checkmate (>= 2.3.0)
+Suggests:
+    GiottoData,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
