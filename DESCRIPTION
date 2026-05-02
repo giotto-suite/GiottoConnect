@@ -5,23 +5,38 @@ Version: 0.1.0
 Authors@R: person("Giotto Suite Team", role = c("aut", "cre"),
     email = "giottosuite@gmail.com")
 Description: A hub for Giotto interoperability functions and connections to
-    external visualization and analysis tools. The first major feature is a
-    Vitessce viewer pipeline that converts a Giotto spatial single-cell object
-    into a static Vitessce-powered website deployable via GitHub Pages. The
-    pipeline exports the object to SpatialData-Zarr format, generates a
-    Vitessce view configuration, and scaffolds a Vite/React application ready
-    for GitHub Actions deployment.
+    external single-cell, spatial, and visualization frameworks. Bundles
+    conversions between Giotto and Seurat, SingleCellExperiment,
+    SpatialExperiment, AnnData, SpatialData, Bento, and Stereo-seq GEF, plus
+    a Vitessce viewer pipeline that converts a Giotto spatial single-cell
+    object into a static Vitessce-powered website deployable via GitHub Pages.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Imports:
     GiottoClass (>= 0.3.0),
+    GiottoUtils (>= 0.2.5),
     reticulate (>= 1.35.0),
     data.table (>= 1.14.0),
+    Matrix,
+    methods,
+    igraph,
     jsonlite (>= 1.8.0),
     checkmate (>= 2.3.0)
 Suggests:
     GiottoData,
+    rhdf5,
+    Seurat,
+    SeuratObject,
+    SingleCellExperiment,
+    SpatialExperiment,
+    SummarizedExperiment,
+    S4Vectors,
+    magick,
+    sf,
     testthat (>= 3.0.0)
+Remotes:
+    drieslab/GiottoClass,
+    drieslab/GiottoUtils
 Config/testthat/edition: 3
