@@ -43,7 +43,6 @@ NULL
 #'    exception of the python path, which may be customized.
 #'    See \code{\link{changeGiottoInstructions}} to modify instructions after creation.
 #' @export
-
 spatialdataToGiotto <- function(spatialdata_path = NULL,
     n_key_added = NULL,
     spatial_n_key_added = NULL,
@@ -646,7 +645,6 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
 #' @details Function in beta. Converts and saves a Giotto object in SpatialData
 #' format on disk.
 #' @export
-
 giottoToSpatialData <- function(
         gobject = NULL,
         spat_unit = NULL,

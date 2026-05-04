@@ -98,7 +98,6 @@ check_py_for_scanpy <- function() {
 #' creation.
 #' @returns Giotto object
 #' @export
-
 anndataToGiotto <- function(anndata_path = NULL,
     n_key_added = NULL,
     spatial_n_key_added = NULL,

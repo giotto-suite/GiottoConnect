@@ -27,7 +27,6 @@ NULL
 #' See SAW pipeline for additional information about the gef file.
 #' @returns giotto object
 #' @export
-
 gefToGiotto <- function(gef_file,
     bin_size = "bin100",
     gene_column = NULL,
