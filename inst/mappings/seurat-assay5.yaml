@@ -113,8 +113,6 @@ parts:
     # the hook sets nn_type (kNN if binary) and names it <type>.<reduction>
     # from Seurat's FindNeighbors record, else keeps the graph name
     to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
-    lossy:
-      - { kind: dropped, field: distance, note: "Seurat graphs store adjacency only; edge distances are NA" }
 
 lossy:
   - { kind: dropped, path: "assays/{assay}/layers/scale.data", note: "recomputable from normalized values; no Giotto slot" }

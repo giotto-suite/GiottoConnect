@@ -52,8 +52,10 @@ hookRegistry <- function() {
 # Edges from a (possibly self-including) sparse adjacency; self edges are
 # dropped. A binary graph is a kNN, a weighted one an sNN. When Seurat's
 # FindNeighbors record lists this graph, the network is named
-# "<type>.<reduction>" and k comes from k.param (which counts the cell itself);
-# otherwise the Seurat graph name is kept.
+# "<type>.<reduction>", k comes from k.param (which counts the cell itself)
+# and kNN distances are recomputed in the recorded reduction, dims and metric;
+# weights then follow Giotto's 1 / (1 + distance). Without a record the Seurat
+# graph name is kept and distances/weights are NA.
 .hook_graph_to_nn <- function(node, params, ctx) {
     m <- methods::as(node, "CsparseMatrix")
     ids <- rownames(m)
@@ -64,10 +66,8 @@ hookRegistry <- function() {
     tr <- tr[keep, , drop = FALSE]
     binary <- all(tr$x == 1)
     nn_type <- if (binary) "kNN" else "sNN"
-    edges <- data.table::data.table(
-        from = ids[tr$i], to = ids[tr$j],
-        weight = as.numeric(tr$x), distance = NA_real_
-    )
+    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
+        weight = NA_real_, distance = NA_real_)
 
     graph <- params$nn_graph
     rec <- .seurat_neighbors_record(ctx$x, graph)
@@ -89,7 +89,46 @@ hookRegistry <- function() {
                 "k = %s recovered from out-degree (%d self edges removed)", k, n_self))
         }
     }
+
+    if (binary && !is.null(rec)) {
+        d <- .neighbor_distances(ctx$x, rec, edges$from, edges$to)
+        edges$distance <- d$distance
+        edges$weight <- 1 / (1 + d$distance)
+        ctx$add_loss("recovered_from_parameters", "distance", sprintf(
+            "recomputed in %s dims %s (%s%s); weight = 1 / (1 + distance) replaces the binary adjacency",
+            rec$reduction, d$dims, d$metric, if (isTRUE(d$l2)) ", L2-normalised" else ""))
+    } else {
+        ctx$add_loss("dropped", "distance", if (binary) {
+            "Seurat graphs store adjacency only and no FindNeighbors record gives the space; distances are NA"
+        } else {
+            "sNN graphs carry shared-neighbour weights, not distances; distances are NA"
+        })
+        ctx$add_loss("dropped", "weight", "Giotto derives weights from distances; weights are NA")
+    }
     .hook_result(edges, to = list(nn_type = nn_type, name = name))
+}
+
+# distances between neighbour pairs in the space FindNeighbors used
+.neighbor_distances <- function(x, rec, from, to) {
+    SO <- asNamespace("SeuratObject")
+    emb <- SO$Embeddings(x, reduction = rec$reduction)
+    dims <- rec$dims %null% seq_len(ncol(emb))
+    emb <- emb[, dims, drop = FALSE]
+    l2 <- isTRUE(rec$l2.norm)
+    if (l2) emb <- emb / sqrt(rowSums(emb^2))
+    metric <- rec$annoy.metric %null% "euclidean"
+    a <- emb[from, , drop = FALSE]
+    b <- emb[to, , drop = FALSE]
+    distance <- switch(metric,
+        euclidean = sqrt(rowSums((a - b)^2)),
+        cosine = sqrt(pmax(0, 2 - 2 * rowSums(a * b) / sqrt(rowSums(a^2) * rowSums(b^2)))),
+        manhattan = rowSums(abs(a - b)),
+        stop(wrap_txt(sprintf("Unsupported FindNeighbors metric '%s'", metric)), call. = FALSE)
+    )
+    rng <- range(dims)
+    list(distance = unname(distance), metric = metric, l2 = l2,
+        dims = if (identical(dims, seq(rng[1], rng[2]))) sprintf("%d:%d", rng[1], rng[2]) else
+            paste(dims, collapse = ","))
 }
 
 # the FindNeighbors command that produced `graph`, or NULL
@@ -98,11 +137,10 @@ hookRegistry <- function() {
     SO <- asNamespace("SeuratObject")
     cmds <- grep("^FindNeighbors\\.", SO$Command(x), value = TRUE)
     for (cmd in rev(cmds)) {
-        gn <- SO$Command(x, command = cmd, value = "graph.name")
-        if (graph %in% gn) {
-            return(list(command = cmd,
-                reduction = SO$Command(x, command = cmd, value = "reduction"),
-                k.param = SO$Command(x, command = cmd, value = "k.param")))
+        prm <- methods::slot(SO$Command(x, command = cmd), "params")
+        if (graph %in% prm$graph.name) {
+            return(list(command = cmd, reduction = prm$reduction, k.param = prm$k.param,
+                dims = prm$dims, annoy.metric = prm$annoy.metric, l2.norm = prm$l2.norm))
         }
     }
     NULL

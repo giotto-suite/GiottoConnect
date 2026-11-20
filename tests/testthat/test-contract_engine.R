@@ -90,6 +90,9 @@ test_that("seuratToGiotto converts every mapped part in memory", {
     expect_equal(nn$name, "kNN.pca")
     e <- GiottoClass::getNearestNetwork(g, nn_type = "kNN", name = "kNN.pca", output = "data.table")
     expect_false(any(e$from == e$to))
+    emb <- SeuratObject::Embeddings(s, "pca")
+    expect_equal(e$distance, sqrt(rowSums((emb[e$from, ] - emb[e$to, ])^2)), ignore_attr = TRUE)
+    expect_equal(e$weight, 1 / (1 + e$distance))
 
     fm <- GiottoClass::fDataDT(g)
     expect_false(any(c("nCount_Xenium", "seurat_clusters") %in% names(fm)))
@@ -101,8 +104,9 @@ test_that("conversions are recorded with their losses", {
     expect_equal(prov$mapping, "seurat-assay5")
     expect_equal(prov$fingerprint, readMapping("seurat-assay5")$mapping$fingerprint)
     k <- prov$losses[prov$losses$kind == "recovered_from_parameters", ]
-    expect_equal(k$part_id, "nn")
-    expect_match(k$note, "FindNeighbors.Xenium.pca on 'pca'; k = 9 neighbours")
+    expect_equal(unique(k$part_id), "nn")
+    expect_match(k$note[k$field == "name"], "FindNeighbors.Xenium.pca on 'pca'; k = 9 neighbours")
+    expect_match(k$note[k$field == "distance"], "recomputed in pca dims 1:10 \\(euclidean\\)")
     expect_true("assays/Xenium/layers/scale.data" %in% prov$losses$field)
     expect_null(mappingProvenance(GiottoClass::giotto()))
 })
@@ -169,6 +173,9 @@ test_that("networks are named from Seurat's FindNeighbors record when it exists"
     l <- mappingProvenance(g)$losses
     expect_true(any(l$kind == "ambiguous" & l$field == "name"))
     expect_match(l$note[l$field == "k"], "k = 9 recovered from out-degree")
+    expect_true(all(c("distance", "weight") %in% l$field[l$kind == "dropped"]))
+    e <- GiottoClass::getNearestNetwork(g, nn_type = "kNN", name = "Xenium_nn", output = "data.table")
+    expect_true(all(is.na(e$distance)))
 })
 
 test_that("Visium objects select the Visium mapping and convert pixels to microns", {

@@ -95,8 +95,6 @@ parts:
     hook: seurat_graph_to_nn
     optional: true
     to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
-    lossy:
-      - { kind: dropped, field: distance, note: "Seurat graphs store adjacency only; edge distances are NA" }
 
 lossy:
   - { kind: dropped, path: "images/{image}/image", note: "tissue image is not carried over yet" }

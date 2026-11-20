@@ -41,7 +41,6 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     validate = TRUE, verbose = FALSE) {
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
     profile <- profile %null% profileObject(x)
-    eco <- mapping$mapping$source$ecosystem
     pkg <- mapping$mapping$source$package
     package_check(pkg)
 
@@ -53,33 +52,8 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
 
     contract <- giottoContract()
     ctx <- .new_ctx(mapping, params, profile)
-    ctx$x <- x
-    parts <- list()
-    for (p in mapping$parts) {
-        node <- mapping$source_nodes[[p$from]]
-        if (!.node_bound(node, params)) {
-            if (isTRUE(p$optional)) next
-            stop(wrap_txt(sprintf("Part '%s': source node '%s' is not bound", p$id, p$from)),
-                call. = FALSE)
-        }
-        ctx$part <- p$id
-        vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
-        data <- .read_node(x, node, params$values, pkg)
-        if (!is.null(p$hook)) {
-            data <- .hook_get(p$hook)(data, params$values, ctx)
-            if (inherits(data, "giottoHookResult")) {
-                p$to <- utils::modifyList(p$to, data$to)
-                data <- data$data
-            }
-        }
-        data <- .apply_ops(data, p$ops, params$values, p$id)
-        for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
-        parts[[p$id]] <- .build_part(p, data, contract, mapping)
-    }
-
-    ord <- order(match(vapply(mapping$parts[match(names(parts), vapply(
-        mapping$parts, `[[`, character(1), "id"))], `[[`, character(1), "part"), .PART_ORDER))
-    parts <- parts[ord]
+    prepared <- .prepare_parts(x, mapping, params, ctx, verbose = verbose)
+    parts <- lapply(prepared, function(pp) .build_part(pp$spec, pp$data, contract, mapping))
 
     g <- .assemble(parts, source = source)
     prov <- list(
@@ -89,6 +63,7 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         fingerprint = .mapping_fingerprint(mapping, profile, params$values),
         params = params$values,
         parts = names(parts),
+        targets = lapply(prepared, function(pp) pp$spec$to),
         losses = .collect_losses(mapping, ctx, params$values)
     )
     g <- .record_conversion(g, mapping_id = prov$mapping, mapping_version = prov$version,
@@ -126,6 +101,40 @@ mappingProvenance <- function(gobject) {
         description = "_convertWithMapping", toplevel = 1L,
         attachments = list(giottoConnect = prov)
     )
+}
+
+
+# Read, hook and transform every bound part. Returns a list (in assembly
+# order) of list(spec, data): spec is the part with its final, bound `to`
+# keys; data is exactly what the constructor receives.
+.prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE) {
+    pkg <- mapping$mapping$source$package
+    ctx$x <- x
+    out <- list()
+    for (p in mapping$parts) {
+        node <- mapping$source_nodes[[p$from]]
+        if (!.node_bound(node, params)) {
+            if (isTRUE(p$optional)) next
+            stop(wrap_txt(sprintf("Part '%s': source node '%s' is not bound", p$id, p$from)),
+                call. = FALSE)
+        }
+        ctx$part <- p$id
+        vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
+        data <- .read_node(x, node, params$values, pkg)
+        if (!is.null(p$hook)) {
+            data <- .hook_get(p$hook)(data, params$values, ctx)
+            if (inherits(data, "giottoHookResult")) {
+                p$to <- utils::modifyList(p$to, data$to)
+                data <- data$data
+            }
+        }
+        p$to <- lapply(p$to, function(v) if (is.character(v)) .pf_bind(v, params$values) else v)
+        data <- .apply_ops(data, p$ops, params$values, p$id)
+        for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
+        out[[p$id]] <- list(spec = p, data = data)
+    }
+    types <- vapply(out, function(pp) pp$spec$part, character(1))
+    out[order(match(types, .PART_ORDER))]
 }
 
 
