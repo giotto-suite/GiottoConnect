@@ -13,13 +13,13 @@ test_that("the bundled mapping reads, summarises and declares its losses", {
     # `on:` keys survive YAML 1.1 boolean parsing
     expect_equal(m$params$layer_raw$on, "{assay}")
     s <- expect_output(summary(m), "Declared losses")
-    expect_true(all(c("dropped", "estimated", "ambiguous") %in% s$losses$kind))
+    expect_true(all(c("dropped", "estimated") %in% s$losses$kind))
 })
 
-test_that("hookRegistry lists the graph hook", {
+test_that("hookRegistry lists the hooks and their packages", {
     h <- hookRegistry()
-    expect_equal(h$hook, "seurat_graph_to_nn")
-    expect_true(h$available)
+    expect_setequal(h$hook, c("seurat_graph_to_nn", "seurat_visium_to_um"))
+    expect_match(h$packages[h$hook == "seurat_visium_to_um"], "Seurat")
 })
 
 test_that("ops transform tables and matrices", {
@@ -102,7 +102,7 @@ test_that("conversions are recorded with their losses", {
     expect_equal(prov$fingerprint, readMapping("seurat-assay5")$mapping$fingerprint)
     k <- prov$losses[prov$losses$kind == "recovered_from_parameters", ]
     expect_equal(k$part_id, "nn")
-    expect_match(k$note, "k = 9")
+    expect_match(k$note, "FindNeighbors.Xenium.pca on 'pca'; k = 9 neighbours")
     expect_true("assays/Xenium/layers/scale.data" %in% prov$losses$field)
     expect_null(mappingProvenance(GiottoClass::giotto()))
 })
@@ -154,4 +154,38 @@ test_that("semantic validation checks the converted object", {
     expect_setequal(unique(v$check), c("raw_counts", "dims", "cell_ids", "coord_units",
         "dim_reduction", "nn_network"))
     expect_true(all(v$level == "OK"))
+})
+
+test_that("networks are named from Seurat's FindNeighbors record when it exists", {
+    skip_if_not_installed("SeuratObject")
+    expect_equal(GiottoClass::list_nearest_networks(fixture_giotto())$name, "kNN.pca")
+
+    s <- seurat_fixture()
+    s@commands <- list()
+    g <- seuratToGiotto(s)
+    nn <- GiottoClass::list_nearest_networks(g)
+    expect_equal(nn$name, "Xenium_nn")
+    expect_equal(nn$nn_type, "kNN")
+    l <- mappingProvenance(g)$losses
+    expect_true(any(l$kind == "ambiguous" & l$field == "name"))
+    expect_match(l$note[l$field == "k"], "k = 9 recovered from out-degree")
+})
+
+test_that("Visium objects select the Visium mapping and convert pixels to microns", {
+    skip_if_not_installed("Seurat")
+    env <- new.env()
+    sys.source(contract_script("build_fixtures.R"), envir = env)
+    s <- env$build_seurat_visium_fixture(n_side = 6L, um_per_px = 0.25)
+    f <- findMapping(profileObject(s), ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, "seurat-visium")
+    expect_equal(f$status, "match")
+    expect_equal(f$candidates$status[f$candidates$id == "seurat-assay5"], "repair_needed")
+
+    g <- seuratToGiotto(s)
+    sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
+    expect_equal(sort(unique(round(diff(sort(unique(sl$sdimx))), 6))), 16)
+    expect_true(all(sl$sdimy < 0))
+    l <- mappingProvenance(g)$losses
+    expect_match(l$note[l$part_id == "locs" & l$field == "units"], "0.25000 um per px")
+    expect_equal(GiottoClass::list_nearest_networks(g)$name, "kNN.pca")
 })

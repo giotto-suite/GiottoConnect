@@ -1,0 +1,105 @@
+# Seurat (SeuratObject >= 5) with an Assay5 count assay and a VisiumV2 image
+# (Load10X_Spatial for Visium and Visium HD) -> Giotto.
+# Spot/bin centers are converted from full-resolution pixels to microns, then
+# follow the Giotto convention: sdimx = x, sdimy = -y.
+mapping:
+  id: seurat-visium
+  version: 0.1.0
+  status: verified
+  built: "2026-11-19"
+  schema_version: 0.1.0
+  source:
+    ecosystem: seurat
+    class: Seurat
+    package: SeuratObject
+    built_with: "5.4.0"
+    applies_to:
+      package_version: ">= 5.0.0"
+      predicates:
+        - { path: "assays/{assay}", class: Assay5 }
+        - { path: "images/{image}", class: VisiumV2 }
+  target: { contract: giotto, version: "0.7.31" }
+  fingerprint: "a18c0d2cb8a248fa"
+  fixtures: [seurat5_visium_fixture]
+  history: []
+
+params:
+  assay:      { list: Assays, rule: first_where, where: { class: Assay5, has_child_role: [integer_valued, nonneg] } }
+  layer_raw:  { list: Layers, on: "{assay}", rule: first_where, where: { role: [integer_valued, nonneg] } }
+  layer_norm: { list: Layers, on: "{assay}", rule: name_is, value: data, optional: true }
+  image:      { list: Images, rule: first_of_class, class: VisiumV2 }
+  nn_graph:   { list: Graphs, rule: first_where, where: { name_matches: "_nn$", or_role: binary_valued }, optional: true }
+
+source_nodes:
+  counts:     { path: "assays/{assay}/layers/{layer_raw}",
+                get: { fn: LayerData, args: { assay: "{assay}", layer: "{layer_raw}" } } }
+  normalized: { path: "assays/{assay}/layers/{layer_norm}",
+                get: { fn: LayerData, args: { assay: "{assay}", layer: "{layer_norm}" } } }
+  cell_meta:  { path: "meta.data", get: { fn: "[[" } }
+  feat_meta:  { path: "assays/{assay}/meta.data", get: { fn: "[[", on: "assays/{assay}" } }
+  image:      { path: "images/{image}", get: { fn: "[[", args: { i: "{image}" } } }
+  pca:        { path: "reductions/pca/cell.embeddings", get: { fn: Embeddings, args: { reduction: pca } } }
+  umap:       { path: "reductions/umap/cell.embeddings", get: { fn: Embeddings, args: { reduction: umap } } }
+  nn:         { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: normalized }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    ops:
+      - { op: rownames_to_col, col: cell_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: locs
+    part: spatial_locs
+    from: image
+    hook: seurat_visium_to_um
+    ops:
+      - { op: rename, map: { x: sdimx, y: sdimy, cell: cell_ID } }
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: { spat_unit: cell, name: raw }
+
+  - id: pca
+    part: dim_reduction
+    from: pca
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: pca, method: pca }
+
+  - id: umap
+    part: dim_reduction
+    from: umap
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: umap, method: umap }
+
+  - id: nn
+    part: nn_network
+    from: nn
+    hook: seurat_graph_to_nn
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
+    lossy:
+      - { kind: dropped, field: distance, note: "Seurat graphs store adjacency only; edge distances are NA" }
+
+lossy:
+  - { kind: dropped, path: "images/{image}/image", note: "tissue image is not carried over yet" }
+  - { kind: dropped, path: "assays/{assay}/layers/scale.data", note: "recomputable from normalized values; no Giotto slot" }
+  - { kind: dropped, path: "reductions/pca/feature.loadings", note: "loadings and stdev are not carried over yet" }
+  - { kind: dropped, path: "graphs/{assay}_snn", note: "only the kNN graph is mapped; sNN can be rebuilt with createNearestNetwork()" }

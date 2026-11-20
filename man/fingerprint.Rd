@@ -19,7 +19,11 @@ ancestors). Missing paths are part of the hash. Ignored when
 \code{scope = "full"}.}
 
 \item{params}{named list of bound parameter values, e.g.
-\code{list(assay = "Xenium")}}
+\code{list(assay = "Xenium")}. For \code{scope = "paths"} they fill the \code{{param}}
+placeholders of \code{paths}. For \code{scope = "full"} their values are replaced by
+placeholders in the profile, as whole path segments or as \verb{_}/\code{.}-delimited
+tokens (\code{Xenium_nn}, \code{FindNeighbors.Xenium.pca}); pass only object names
+there, since a layer name like \code{data} would also match \code{meta.data}.}
 
 \item{scope}{\code{"paths"} (default when \code{paths} is given) or \code{"full"}}
 }

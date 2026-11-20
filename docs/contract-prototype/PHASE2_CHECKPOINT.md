@@ -142,3 +142,23 @@ does not yet.
 - **VisiumV2 needs a second mapping** (`seurat-visium.yaml`): coordinates via
   `GetTissueCoordinates` on the image, plus the scale factors.
 - **Not mapped yet**: molecules, images, spatial networks, PCA loadings.
+
+## Decisions after the checkpoint (Ruben, 2026-11-19)
+
+1. **Visium gets its own mapping.** `inst/mappings/seurat-visium.yaml` (verified, fingerprint
+   `a18c0d2cb8a248fa`) covers `VisiumV2` images. Mappings follow the Seurat object
+   structure, not the technology: FOV-based loaders (Xenium, CosMx, MERSCOPE) share
+   `seurat-assay5`.
+   - **New hook `seurat_visium_to_um`**: pixels → microns. Visium HD uses bin size / spot
+     scale factor; standard Visium uses a 100 µm spot pitch over the measured spacing.
+   - **Visium HD crop**: `findMapping` selects it (`match`, while `seurat-assay5` would
+     need repair). The scale is 0.27370 µm/px, exactly Space Ranger's
+     `microns_per_pixel`. Locations are identical to `GiottoDisk::importVisiumHDDisk(bin =
+     16, micron = TRUE)` on all 386 bins (dx = dy = 0).
+2. **Xenium control assays stay WARN-only.**
+3. **Networks are named `<kNN|sNN>.<reduction>` only when Seurat's `FindNeighbors` record
+   lists the graph.** The record also gives k (`k.param` − 1, since Seurat counts the cell
+   itself). Without a record, the Seurat graph name is kept and an `ambiguous` loss is
+   recorded. On the real crops this gives `kNN.pca` with k = 19.
+
+Hooks: **2**.

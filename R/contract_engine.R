@@ -53,6 +53,7 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
 
     contract <- giottoContract()
     ctx <- .new_ctx(mapping, params, profile)
+    ctx$x <- x
     parts <- list()
     for (p in mapping$parts) {
         node <- mapping$source_nodes[[p$from]]
@@ -66,6 +67,10 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         data <- .read_node(x, node, params$values, pkg)
         if (!is.null(p$hook)) {
             data <- .hook_get(p$hook)(data, params$values, ctx)
+            if (inherits(data, "giottoHookResult")) {
+                p$to <- utils::modifyList(p$to, data$to)
+                data <- data$data
+            }
         }
         data <- .apply_ops(data, p$ops, params$values, p$id)
         for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
@@ -347,6 +352,7 @@ mappingProvenance <- function(gobject) {
 .new_ctx <- function(mapping, params, profile) {
     ctx <- new.env(parent = emptyenv())
     ctx$losses <- list()
+    ctx$x <- NULL
     ctx$part <- NA_character_
     ctx$add_loss <- function(kind, field, note, declared = FALSE) {
         ctx$losses[[length(ctx$losses) + 1L]] <- data.frame(

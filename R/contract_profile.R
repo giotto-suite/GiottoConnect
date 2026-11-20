@@ -98,7 +98,11 @@ print.giottoProfile <- function(x, ...) {
 #' ancestors). Missing paths are part of the hash. Ignored when
 #' `scope = "full"`.
 #' @param params named list of bound parameter values, e.g.
-#' `list(assay = "Xenium")`
+#' `list(assay = "Xenium")`. For `scope = "paths"` they fill the `{param}`
+#' placeholders of `paths`. For `scope = "full"` their values are replaced by
+#' placeholders in the profile, as whole path segments or as `_`/`.`-delimited
+#' tokens (`Xenium_nn`, `FindNeighbors.Xenium.pca`); pass only object names
+#' there, since a layer name like `data` would also match `meta.data`.
 #' @param scope `"paths"` (default when `paths` is given) or `"full"`
 #' @returns character, an xxhash64 digest
 #' @examples
@@ -141,8 +145,8 @@ fingerprint <- function(profile,
 #' reappears elsewhere with the same kind, dtype, dimensionality and size roles
 #' is reported as `renamed_key` (same parent) or `moved` (different parent).
 #' @param old,new `giottoProfile` objects
-#' @param params_old,params_new optional bound parameters, used to template
-#' dataset-specific names (e.g. assay names) before comparing
+#' @param params_old,params_new optional bound object names (e.g. assay
+#' names), templated as in [fingerprint()] before comparing
 #' @returns a `giottoProfileDiff` data.frame with columns `change` (`added`,
 #' `removed`, `moved`, `renamed_key`, `kind_changed`, `dtype_changed`),
 #' `path`, `new_path`, `kind`, `class`, `detail`
@@ -505,16 +509,17 @@ print.giottoProfileDiff <- function(x, ...) {
     }, character(1))
 }
 
-# replace bound param values by {param}, as whole segments or as
-# underscore-delimited tokens within a segment ("Xenium_nn",
-# "nCount_Xenium"); dots are part of names ("meta.data", "Spatial.016um")
+# replace bound param values by {param}, as whole segments or as tokens
+# delimited by "_" or "." within a segment ("Xenium_nn", "nCount_Xenium",
+# "FindNeighbors.Xenium.pca"). Pass only object names (assays, images,
+# reductions): a layer value like "data" would also match "meta.data".
 .pf_template <- function(paths, params) {
     if (!length(params)) return(paths)
     vals <- unlist(params, use.names = TRUE)
     vals <- vals[nzchar(vals)]
     vals <- vals[order(nchar(vals), decreasing = TRUE)]
     for (nm in names(vals)) {
-        pat <- sprintf("(?<=^|/|_)%s(?=_|/|$)",
+        pat <- sprintf("(?<=^|/|_|\\.)%s(?=_|/|$|\\.)",
             .pf_regex_escape(vals[[nm]]))
         paths <- gsub(pat, sprintf("{%s}", nm), paths, perl = TRUE)
     }

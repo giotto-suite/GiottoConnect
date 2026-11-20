@@ -4,7 +4,7 @@
     "package": "SeuratObject",
     "version": "5.4.0"
   },
-  "profiled_at": "2026-11-19T21:35:18-0500",
+  "profiled_at": "2026-11-19T21:46:56-0500",
   "profiler_version": "0.1.0",
   "n_cells": 200,
   "n_feat": 50,
@@ -1447,10 +1447,142 @@
       "class": "list",
       "dtype": null,
       "shape": null,
+      "n_children": 1,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "FindNeighbors.Xen..."
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca",
+      "kind": "S4",
+      "class": "SeuratCommand",
+      "dtype": null,
+      "shape": null,
+      "n_children": 5,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "name, time.stamp, assay.used"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/name",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "1",
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": "FindNeighbors.Xen..."
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/time.stamp",
+      "kind": "vector",
+      "class": "POSIXct",
+      "dtype": "double",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": "integer_valued,nonneg",
+      "sample": "1767225600"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/assay.used",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "Xenium"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/call.string",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "FindNeighbors(obj..."
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params",
+      "kind": "list",
+      "class": "list",
+      "dtype": null,
+      "shape": null,
+      "n_children": 6,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "reduction, dims, assay"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/reduction",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "pca"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/dims",
+      "kind": "vector",
+      "class": "integer",
+      "dtype": "integer",
+      "shape": "10",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": "integer_valued,nonneg",
+      "sample": "1, 2, 3"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/assay",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "Xenium"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/k.param",
+      "kind": "vector",
+      "class": "integer",
+      "dtype": "integer",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": "integer_valued,nonneg",
+      "sample": "10"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/compute.SNN",
+      "kind": "vector",
+      "class": "logical",
+      "dtype": "logical",
+      "shape": "1",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "TRUE"
+    },
+    {
+      "path": "commands/FindNeighbors.Xenium.pca/params/graph.name",
+      "kind": "vector",
+      "class": "character",
+      "dtype": "character",
+      "shape": "2",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": null,
+      "sample": "Xenium_nn, Xenium_snn"
     },
     {
       "path": "tools",

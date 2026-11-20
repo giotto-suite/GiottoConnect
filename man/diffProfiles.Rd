@@ -9,8 +9,8 @@ diffProfiles(old, new, params_old = NULL, params_new = NULL)
 \arguments{
 \item{old, new}{\code{giottoProfile} objects}
 
-\item{params_old, params_new}{optional bound parameters, used to template
-dataset-specific names (e.g. assay names) before comparing}
+\item{params_old, params_new}{optional bound object names (e.g. assay
+names), templated as in \code{\link[=fingerprint]{fingerprint()}} before comparing}
 }
 \value{
 a \code{giottoProfileDiff} data.frame with columns \code{change} (\code{added},

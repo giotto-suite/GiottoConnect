@@ -9,10 +9,14 @@ id <- if (length(args)) args[[1]] else "seurat-assay5"
 pkgload::load_all(".", quiet = TRUE)
 env <- new.env()
 sys.source(file.path("inst", "scripts", "build_fixtures.R"), envir = env)
-x <- env$build_seurat_fixture()
+builders <- list(
+    seurat5_fixture_small = env$build_seurat_fixture,
+    seurat5_visium_fixture = env$build_seurat_visium_fixture
+)
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
 m <- readMapping(yaml_file)
+x <- builders[[m$mapping$fixtures[[1]]]]()
 p <- profileObject(x)
 g <- convertWithMapping(x, m, profile = p)
 disk <- tempfile("verify_")
