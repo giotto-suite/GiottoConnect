@@ -330,9 +330,11 @@ build_llm_cases <- function() {
 #       obsp distances + connectivities with a uns/neighbors record
 #   build_h5ad_fixture(path, legacy = TRUE)   anndata 0.7: counts in X (csc),
 #       raw/X copy, pre-0.8 categorical (`__categories`), obsm spatial only
+#   build_h5ad_fixture(path, raw_extra = 5)   counts in raw/X over the var
+#       genes plus `raw_extra` more, described by raw/var (Visium-like)
 
 build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
-                               legacy = FALSE, seed = 1L) {
+                               legacy = FALSE, raw_extra = 0L, seed = 1L) {
     stopifnot(requireNamespace("hdf5r", quietly = TRUE))
     set.seed(seed)
     cells <- sprintf("cell_%03d", seq_len(n_cells))
@@ -411,12 +413,26 @@ build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
     } else {
         enc(h5, "anndata")
         dense(h5, "X", norm)
-        layers <- h5$create_group("layers")
-        enc(layers, "dict")
-        sparse(layers, "counts", counts)
         frame("obs", cells, list(n_counts = Matrix::rowSums(counts), cell_type = type,
             center_x = xy[, 1], center_y = xy[, 2]))
-        frame("var", feats, list(highly_variable = rep(c(1L, 0L), length.out = n_feat)))
+        if (raw_extra > 0L) {
+            # counts over more genes than X, kept in raw with their own var
+            extra <- Matrix::rsparsematrix(n_cells, raw_extra, density = 0.2,
+                rand.x = function(n) as.double(stats::rpois(n, 4) + 1))
+            raw_counts <- cbind(counts, extra)
+            raw_feats <- c(feats, sprintf("extra%02d", seq_len(raw_extra)))
+            raw <- h5$create_group("raw")
+            sparse(raw, "X", raw_counts)
+            frame("var", raw_feats, list(gene_ids = paste0("ENSG", seq_along(raw_feats))))
+            h5$link_move_from(h5, "var", "raw/var")
+            frame("var", feats, list(highly_variable = rep(c(1L, 0L), length.out = n_feat),
+                gene_ids = paste0("ENSG", seq_len(n_feat))))
+        } else {
+            layers <- h5$create_group("layers")
+            enc(layers, "dict")
+            sparse(layers, "counts", counts)
+            frame("var", feats, list(highly_variable = rep(c(1L, 0L), length.out = n_feat)))
+        }
         obsm <- h5$create_group("obsm")
         enc(obsm, "dict")
         dense(obsm, "X_pca", pca)

@@ -79,10 +79,13 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
      no mapping choice changes).
 3. **Declared losses were listed when their path was absent: fixed.** Only
    drops of data the object holds are listed.
-4. **Feature metadata always comes from `var`**, even when the counts come from
-   `raw/X` with their own `raw/var`. In slideseqv2, `raw` has 17,733 genes vs 4,000
-   in `var`. That file has no integer `raw`, so it was not hit. **Proposal:** bind
-   the feature table from the matrix that was chosen.
+4. **Feature metadata always came from `var`: fixed.** It now follows the counts.
+   For `raw/X` counts it is `raw/var` (all its genes), with the `var` columns joined
+   by feature ID (`NA` for raw-only genes); otherwise it is `var`.
+   - A new `adapterReads()` names the extra paths an accessor reads, so `raw/var`
+     no longer shows as unmapped.
+   - Accessor args that refer only to an unbound optional param are dropped, so a
+     file without counts still gets its feature table.
 5. **Not mapped yet:**
    - squidpy spatial networks (`obsp/spatial_*`);
    - obsm data frames (deconvolution);

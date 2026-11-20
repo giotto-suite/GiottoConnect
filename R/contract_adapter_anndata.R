@@ -17,7 +17,7 @@ setMethod("adapterListPaths", "anndataAdapter", function(adapter) c(
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "anndataAdapter", function(adapter) c(
-    "h5adMatrix", "h5adFrame", "h5adObsm", "h5adObsp", "h5adValue", "path"
+    "h5adMatrix", "h5adFrame", "h5adVar", "h5adObsm", "h5adObsp", "h5adValue", "path"
 ))
 setMethod("adapterObjectLists", "anndataAdapter", function(adapter) {
     c("Layers", "Obsm", "Obsp")
@@ -36,6 +36,18 @@ setMethod("adapterRead", "anndataAdapter", function(adapter, x, node, params) {
     on.exit(h5$close_all())
     fn <- .H5AD_ACCESSORS[[get$fn]]
     do.call(fn, c(list(h5, el), args))
+})
+
+# matrices are named by their var table; feature metadata for raw/X counts
+# reads raw/var
+setMethod("adapterReads", "anndataAdapter", function(adapter, node, params) {
+    fn <- node$get$fn
+    if (identical(fn, "h5adMatrix")) return(.h5ad_var_group(.pf_bind(node$path, params)))
+    m <- node$get$args$matrix
+    if (identical(fn, "h5adVar") && is.character(m) && startsWith(.pf_bind(m, params), "raw/")) {
+        return("raw/var")
+    }
+    character()
 })
 
 # X, raw/X and layers stream into a GiottoDisk project with h5adInput()
@@ -179,6 +191,35 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
 # the feature table that belongs to a matrix
 .h5ad_var_group <- function(path) if (startsWith(path, "raw/")) "raw/var" else "var"
 
+# Feature metadata for the features of `matrix`: var, or for raw/X the
+# raw/var table (which may hold more features) with the var columns added by
+# feature ID; a column in both takes the var value where var has the feature.
+.h5ad_var <- function(h5, path, matrix = NULL) {
+    v <- .h5ad_frame(h5, path)
+    if (is.null(matrix) || !startsWith(matrix, "raw/") || !.h5ad_exists(h5, "raw/var")) return(v)
+    r <- .h5ad_frame(h5, "raw/var")
+    ids <- union(rownames(r), rownames(v))
+    ir <- match(ids, rownames(r))
+    iv <- match(ids, rownames(v))
+    cols <- union(names(r), names(v))
+    out <- lapply(cols, function(cn) {
+        a <- if (cn %in% names(r)) r[[cn]][ir]
+        b <- if (cn %in% names(v)) v[[cn]][iv]
+        if (is.null(a)) return(b)
+        if (is.null(b)) return(a)
+        if (is.factor(a) || is.factor(b)) {
+            a <- as.character(a)
+            b <- as.character(b)
+        }
+        a[!is.na(iv)] <- b[!is.na(iv)]
+        a
+    })
+    names(out) <- cols
+    out <- as.data.frame(out, optional = TRUE, stringsAsFactors = FALSE)
+    rownames(out) <- ids
+    out
+}
+
 # a csr/csc group as a dgCMatrix with the stored (rows x cols) layout
 .h5ad_sparse <- function(node, transposed = FALSE) {
     enc <- .h5ad_encoding(node)
@@ -260,7 +301,7 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
 }
 
 .H5AD_ACCESSORS <- list(
-    h5adMatrix = .h5ad_matrix, h5adFrame = .h5ad_frame, h5adObsm = .h5ad_obsm,
+    h5adMatrix = .h5ad_matrix, h5adFrame = .h5ad_frame, h5adVar = .h5ad_var, h5adObsm = .h5ad_obsm,
     h5adObsp = .h5ad_obsp, h5adValue = .h5ad_value, path = .h5ad_any
 )
 

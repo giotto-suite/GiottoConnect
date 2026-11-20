@@ -30,6 +30,9 @@ setGeneric("adapterObjectLists", function(adapter) standardGeneric("adapterObjec
 setGeneric("adapterRead", function(adapter, x, node, params) standardGeneric("adapterRead"))
 # a GiottoDisk streaming input for a node, or NULL to read it into R
 setGeneric("adapterStream", function(adapter, x, node, params) standardGeneric("adapterStream"))
+# paths a node's accessor reads besides the node itself (e.g. the feature
+# names of a matrix); they count as mapped
+setGeneric("adapterReads", function(adapter, node, params) standardGeneric("adapterReads"))
 
 # defaults: in-R objects profiled structurally, nodes read by an exported
 # function of the adapter's package, by `[[`, or structurally ("path", for
@@ -50,6 +53,7 @@ setMethod("adapterRead", "giottoConnectAdapter", function(adapter, x, node, para
 })
 
 setMethod("adapterStream", "giottoConnectAdapter", function(adapter, x, node, params) NULL)
+setMethod("adapterReads", "giottoConnectAdapter", function(adapter, node, params) character())
 
 setMethod("adapterListPaths", "seuratAdapter", function(adapter) c(
     Assays = "assays", Layers = "assays/{on}/layers",

@@ -139,7 +139,7 @@ mappingProvenance <- function(gobject) {
     paths <- ctx$profile$nodes$path
     out <- list()
     for (p in mapping$parts) {
-        node <- mapping$source_nodes[[p$from]]
+        node <- .drop_optional_args(mapping$source_nodes[[p$from]], mapping, params)
         present <- .part_bound(p, node, params) && .pf_bind(node$path, params$values) %in% paths
         if (!present) {
             if (isTRUE(p$optional)) {
@@ -309,6 +309,22 @@ mappingProvenance <- function(gobject) {
 
 # a part is bound when its source path, accessor and op arguments have no
 # unbound placeholders left
+# accessor args that only refer to optional params which did not bind are
+# left out, so the accessor uses its default
+.drop_optional_args <- function(node, mapping, params) {
+    args <- node$get$args
+    if (!length(args)) return(node)
+    opt <- names(Filter(function(pr) isTRUE(pr$optional), mapping$params))
+    gone <- intersect(params$unbound, opt)
+    keep <- vapply(args, function(a) {
+        if (!is.character(a)) return(TRUE)
+        ph <- gsub("[{}]", "", regmatches(a, gregexpr("\\{[^}]+\\}", a))[[1L]])
+        !length(ph) || !all(ph %in% gone)
+    }, logical(1))
+    node$get$args <- args[keep]
+    node
+}
+
 .part_bound <- function(p, node, params) {
     txt <- c(node$path, node$get$on, unlist(node$get$args), unlist(p$ops),
         names(unlist(lapply(p$ops, `[[`, "map"))))

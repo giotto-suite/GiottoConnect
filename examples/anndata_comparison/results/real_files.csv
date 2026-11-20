@@ -1,6 +1,6 @@
 "file","size_mb","cells","features","mapping","status","params","parts","readback_match","readback_declared","readback_undeclared","readback_disk_pass","warnings","profile_s","memory_s","disk_s"
-"seqfish_squidpy",31,19416,351,"anndata-spatial","match","counts=X; spatial=spatial","expr_raw, cell_meta, feat_meta, locs, dimred_umap",16,0,0,TRUE,"unmapped, coord_units",0.46,3.18,3.5
-"merfish_squidpy",49,73655,161,"anndata-spatial","match","normalized=X; spatial=spatial","expr_normalized, cell_meta, feat_meta, locs",12,0,0,TRUE,"unmapped, coord_units",0.39,1.85,2.72
-"slideseqv2_squidpy",251,41786,4000,"anndata-spatial","match","normalized=X; spatial=spatial; nn_dist=distances","expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap, nn",24,0,0,TRUE,"unmapped",0.69,3.6,4.74
-"visium_kuppe_P12",127,3392,14514,"anndata-spatial","match","counts=raw/X; normalized=X; spatial=X_spatial","expr_raw, expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap",23,0,0,TRUE,"unmapped, coord_units",0.54,2.98,4.63
-"seqfish_aki",537,225000,988,"anndata-spatial","match","counts=layers/counts; normalized=X; spatial=spatial; nn_dist=distances","expr_raw, expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap, nn",27,0,0,TRUE,"",0.71,10.65,24.49
+"seqfish_squidpy",31,19416,351,"anndata-spatial","match","counts=X; spatial=spatial","expr_raw, cell_meta, feat_meta, locs, dimred_umap",16,0,0,TRUE,"unmapped, coord_units",0.46,3.2,3.49
+"merfish_squidpy",49,73655,161,"anndata-spatial","match","normalized=X; spatial=spatial","expr_normalized, cell_meta, feat_meta, locs",12,0,0,TRUE,"unmapped, coord_units",0.4,1.86,2.75
+"slideseqv2_squidpy",251,41786,4000,"anndata-spatial","match","normalized=X; spatial=spatial; nn_dist=distances","expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap, nn",24,0,0,TRUE,"unmapped",0.69,3.62,4.76
+"visium_kuppe_P12",127,3392,14514,"anndata-spatial","match","counts=raw/X; normalized=X; spatial=X_spatial","expr_raw, expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap",23,0,0,TRUE,"coord_units",0.54,2.96,4.65
+"seqfish_aki",537,225000,988,"anndata-spatial","match","counts=layers/counts; normalized=X; spatial=spatial; nn_dist=distances","expr_raw, expr_normalized, cell_meta, feat_meta, locs, dimred_pca, dimred_umap, nn",27,0,0,TRUE,"",0.7,10.67,24.56

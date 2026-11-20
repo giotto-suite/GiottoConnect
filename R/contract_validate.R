@@ -83,6 +83,9 @@ print.giottoValidation <- function(x, ...) {
 }
 
 .vm_params <- function(mapping, params, out) {
+    # args of unbound optional params are dropped at conversion, as here
+    mapping$source_nodes <- lapply(mapping$source_nodes, .drop_optional_args,
+        mapping = mapping, params = params)
     used <- unique(unlist(lapply(mapping$parts, function(p) .vm_part_params(mapping, p))))
     for (nm in names(mapping$params)) {
         pr <- mapping$params[[nm]]
@@ -169,8 +172,12 @@ print.giottoValidation <- function(x, ...) {
         (nd$kind %in% c("sparse_matrix", "dense_matrix") & nd$dtype %in% c("double", "integer")) |
             nd$kind == "data.frame")
     ]
+    adapter <- .adapter_for(mapping)
     covered <- c(
         vapply(mapping$source_nodes, function(n) .pf_bind(n$path, params$values), character(1)),
+        unlist(lapply(mapping$source_nodes, function(n) {
+            adapterReads(adapter, .drop_optional_args(n, mapping, params), params$values)
+        })),
         unlist(lapply(mapping$parts, function(p) lapply(p$lossy, function(l) l$path))),
         unlist(lapply(mapping$lossy, function(l) .pf_bind(l$path %null% "", params$values)))
     )
@@ -226,7 +233,8 @@ print.giottoValidation <- function(x, ...) {
             profile$n_cells))
     }
     if (!is.na(profile$n_feat)) {
-        lvl <- if (length(feats) == profile$n_feat) "OK" else "WARN"
+        # more features than the source counts (e.g. raw/X genes beyond var) lose nothing
+        lvl <- if (length(feats) >= profile$n_feat) "OK" else "WARN"
         out$add("dims", NA, lvl, sprintf("%d features in giotto, %d in source", length(feats),
             profile$n_feat))
     }

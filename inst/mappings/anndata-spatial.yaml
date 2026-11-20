@@ -34,7 +34,8 @@ source_nodes:
   counts:     { path: "{counts}", get: { fn: h5adMatrix } }
   normalized: { path: "{normalized}", get: { fn: h5adMatrix } }
   obs:        { path: obs, get: { fn: h5adFrame } }
-  var:        { path: var, get: { fn: h5adFrame } }
+  # the feature table of the counts: raw/var (plus var columns) for raw/X
+  var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}" } } }
   spatial:    { path: "obsm/{spatial}", get: { fn: h5adObsm } }
   reduction:  { path: "obsm/{red}", get: { fn: h5adObsm } }
   nn:         { path: "obsp/{nn_dist}", get: { fn: h5adObsp } }
