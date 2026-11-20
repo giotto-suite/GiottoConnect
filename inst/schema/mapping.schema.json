@@ -208,7 +208,8 @@
             "Neighbors",
             "Images",
             "Boundaries",
-            "columns"
+            "columns",
+            "children"
           ]
         },
         "on": {
@@ -220,7 +221,8 @@
             "first",
             "first_where",
             "name_is",
-            "first_of_class"
+            "first_of_class",
+            "value_of"
           ]
         },
         "where": {
@@ -273,6 +275,9 @@
         },
         "optional": {
           "type": "boolean"
+        },
+        "path": {
+          "type": "string"
         }
       }
     },

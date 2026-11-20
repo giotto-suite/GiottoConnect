@@ -74,3 +74,25 @@ All nine reach the expected outcome. No variant needs the LLM step.
 | `rename` map keys were not bound (`"{x_col}": sdimx`) | keys are bound like values |
 | The moved rule could rewrite paths that an accessor never reads | restricted to `get.on` nodes |
 | Candidate ranking ignored value roles, so the `data` layer outranked integer counts | value roles scored separately |
+
+## Follow-up: Seurat v3/v4 assays (D9)
+
+- **New mapping `inst/mappings/seurat-assay.yaml`** (verified, fingerprint `d876ef28dee4b61f`)
+  for v3/v4 `Assay` objects. It differs from `seurat-assay5` in about ten YAML lines: v3
+  assays keep `counts`/`data` as direct slots (listed with the new generic `children`
+  verb), and `meta.features` instead of `meta.data`.
+  SeuratObject's `LayerData()` reads both layouts, so the accessors are unchanged.
+- **Mappings convert the default assay.** The `assay` param of all three mappings uses
+  the new `value_of` rule on `active.assay`, so it binds the default assay only if that
+  assay also satisfies the class and count conditions.
+  - This removes an ambiguity on real Xenium objects, whose control assays are v3 `Assay`
+    next to an `Assay5` main assay: the v3 mapping no longer applies to them.
+  - Profiles gain a `value` column for scalars. It is not part of the fingerprint.
+- **D9 now converts through `seurat-assay`.** `findMapping` returns `repair_needed` because
+  the counts-only object lacks `data`, reductions and graphs; repair notes these as absent
+  (`not_needed`), and the readback passes.
+- **"No mapping applies"** is now tested with a data-only object (no integer counts).
+- **Fixes:**
+  - `has_child_role` only counts matrices. Assay5's integer `default` slot satisfied it.
+  - Optional parts whose source path is absent are skipped. Only unbound ones were
+    skipped before.

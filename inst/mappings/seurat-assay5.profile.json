@@ -4,7 +4,7 @@
     "package": "SeuratObject",
     "version": "5.4.0"
   },
-  "profiled_at": "2026-11-19T21:57:16-0500",
+  "profiled_at": "2026-11-20T06:45:36-0500",
   "profiler_version": "0.1.0",
   "n_cells": 200,
   "n_feat": 50,
@@ -20,7 +20,8 @@
       "n_children": 13,
       "truncated": false,
       "role_hints": null,
-      "sample": "assays, meta.data, active.assay"
+      "sample": "assays, meta.data, active.assay",
+      "value": null
     },
     {
       "path": "assays",
@@ -31,7 +32,8 @@
       "n_children": 1,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": null
     },
     {
       "path": "assays/Xenium",
@@ -42,7 +44,8 @@
       "n_children": 8,
       "truncated": false,
       "role_hints": null,
-      "sample": "layers, cells, features"
+      "sample": "layers, cells, features",
+      "value": null
     },
     {
       "path": "assays/Xenium/layers",
@@ -53,7 +56,8 @@
       "n_children": 3,
       "truncated": false,
       "role_hints": null,
-      "sample": "counts, data, scale.data"
+      "sample": "counts, data, scale.data",
+      "value": null
     },
     {
       "path": "assays/Xenium/layers/counts",
@@ -64,7 +68,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,cols_eq_ncells,rows_eq_nfeat",
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/layers/data",
@@ -75,7 +80,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg,cols_eq_ncells,rows_eq_nfeat",
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/layers/scale.data",
@@ -86,7 +92,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "cols_eq_ncells,rows_eq_nfeat",
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/cells",
@@ -97,7 +104,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames,rows_eq_ncells",
-      "sample": "cell_001, cell_002 | counts, data"
+      "sample": "cell_001, cell_002 | counts, data",
+      "value": null
     },
     {
       "path": "assays/Xenium/features",
@@ -108,7 +116,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames,rows_eq_nfeat",
-      "sample": "gene01, gene02 | counts, data"
+      "sample": "gene01, gene02 | counts, data",
+      "value": null
     },
     {
       "path": "assays/Xenium/default",
@@ -119,7 +128,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,binary_valued",
-      "sample": "1"
+      "sample": "1",
+      "value": "1"
     },
     {
       "path": "assays/Xenium/assay.orig",
@@ -130,7 +140,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/meta.data",
@@ -141,7 +152,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "rows_eq_nfeat",
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/misc",
@@ -152,7 +164,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "assays/Xenium/key",
@@ -163,7 +176,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "xenium_"
+      "sample": "xenium_",
+      "value": "xenium_"
     },
     {
       "path": "meta.data",
@@ -174,7 +188,8 @@
       "n_children": 4,
       "truncated": false,
       "role_hints": "two_numeric_cols,rows_eq_ncells",
-      "sample": "orig.ident, nCount_Xenium, nFeature_Xenium"
+      "sample": "orig.ident, nCount_Xenium, nFeature_Xenium",
+      "value": null
     },
     {
       "path": "meta.data/orig.ident",
@@ -185,7 +200,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "rows_eq_ncells",
-      "sample": "cell"
+      "sample": "cell",
+      "value": null
     },
     {
       "path": "meta.data/nCount_Xenium",
@@ -196,7 +212,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,rows_eq_ncells",
-      "sample": "103, 99, 104"
+      "sample": "103, 99, 104",
+      "value": null
     },
     {
       "path": "meta.data/nFeature_Xenium",
@@ -207,7 +224,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,rows_eq_ncells",
-      "sample": "45, 45, 44"
+      "sample": "45, 45, 44",
+      "value": null
     },
     {
       "path": "meta.data/seurat_clusters",
@@ -218,7 +236,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "rows_eq_ncells",
-      "sample": "0, 1, 2"
+      "sample": "0, 1, 2",
+      "value": null
     },
     {
       "path": "active.assay",
@@ -229,7 +248,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "active.ident",
@@ -240,7 +260,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "rows_eq_ncells",
-      "sample": "cell"
+      "sample": "cell",
+      "value": null
     },
     {
       "path": "graphs",
@@ -251,7 +272,8 @@
       "n_children": 2,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium_nn, Xenium_snn"
+      "sample": "Xenium_nn, Xenium_snn",
+      "value": null
     },
     {
       "path": "graphs/Xenium_nn",
@@ -262,7 +284,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,binary_valued,has_dimnames,rows_eq_ncells,cols_eq_ncells",
-      "sample": "cell_001, cell_002 | cell_001, cell_002"
+      "sample": "cell_001, cell_002 | cell_001, cell_002",
+      "value": null
     },
     {
       "path": "graphs/Xenium_snn",
@@ -273,7 +296,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg,has_dimnames,rows_eq_ncells,cols_eq_ncells",
-      "sample": "cell_001, cell_002 | cell_001, cell_002"
+      "sample": "cell_001, cell_002 | cell_001, cell_002",
+      "value": null
     },
     {
       "path": "neighbors",
@@ -284,7 +308,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions",
@@ -295,7 +320,8 @@
       "n_children": 2,
       "truncated": false,
       "role_hints": null,
-      "sample": "pca, umap"
+      "sample": "pca, umap",
+      "value": null
     },
     {
       "path": "reductions/pca",
@@ -306,7 +332,8 @@
       "n_children": 9,
       "truncated": false,
       "role_hints": null,
-      "sample": "cell.embeddings, feature.loadings, feature.loadings...."
+      "sample": "cell.embeddings, feature.loadings, feature.loadings....",
+      "value": null
     },
     {
       "path": "reductions/pca/cell.embeddings",
@@ -317,7 +344,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames,rows_eq_ncells",
-      "sample": "cell_001, cell_002 | PC_1, PC_2"
+      "sample": "cell_001, cell_002 | PC_1, PC_2",
+      "value": null
     },
     {
       "path": "reductions/pca/feature.loadings",
@@ -328,7 +356,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames,rows_eq_nfeat",
-      "sample": "gene01, gene02 | PC_1, PC_2"
+      "sample": "gene01, gene02 | PC_1, PC_2",
+      "value": null
     },
     {
       "path": "reductions/pca/feature.loadings.projected",
@@ -339,7 +368,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/assay.used",
@@ -350,7 +380,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "reductions/pca/global",
@@ -361,7 +392,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "FALSE"
+      "sample": "FALSE",
+      "value": "FALSE"
     },
     {
       "path": "reductions/pca/stdev",
@@ -372,7 +404,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg",
-      "sample": "0.797474787448532, 0.741355203211417, 0.712717215875463"
+      "sample": "0.797474787448532, 0.741355203211417, 0.712717215875463",
+      "value": null
     },
     {
       "path": "reductions/pca/jackstraw",
@@ -383,7 +416,8 @@
       "n_children": 4,
       "truncated": false,
       "role_hints": null,
-      "sample": "empirical.p.values, fake.reduction.sc..., empirical.p.value..."
+      "sample": "empirical.p.values, fake.reduction.sc..., empirical.p.value...",
+      "value": null
     },
     {
       "path": "reductions/pca/jackstraw/empirical.p.values",
@@ -394,7 +428,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/jackstraw/fake.reduction.scores",
@@ -405,7 +440,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/jackstraw/empirical.p.values.full",
@@ -416,7 +452,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/jackstraw/overall.p.values",
@@ -427,7 +464,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/misc",
@@ -438,7 +476,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/pca/key",
@@ -449,7 +488,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "PC_"
+      "sample": "PC_",
+      "value": "PC_"
     },
     {
       "path": "reductions/umap",
@@ -460,7 +500,8 @@
       "n_children": 9,
       "truncated": false,
       "role_hints": null,
-      "sample": "cell.embeddings, feature.loadings, feature.loadings...."
+      "sample": "cell.embeddings, feature.loadings, feature.loadings....",
+      "value": null
     },
     {
       "path": "reductions/umap/cell.embeddings",
@@ -471,7 +512,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames,rows_eq_ncells",
-      "sample": "cell_001, cell_002 | umap_1, umap_2"
+      "sample": "cell_001, cell_002 | umap_1, umap_2",
+      "value": null
     },
     {
       "path": "reductions/umap/feature.loadings",
@@ -482,7 +524,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/feature.loadings.projected",
@@ -493,7 +536,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/assay.used",
@@ -504,7 +548,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "reductions/umap/global",
@@ -515,7 +560,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "FALSE"
+      "sample": "FALSE",
+      "value": "FALSE"
     },
     {
       "path": "reductions/umap/stdev",
@@ -526,7 +572,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/jackstraw",
@@ -537,7 +584,8 @@
       "n_children": 4,
       "truncated": false,
       "role_hints": null,
-      "sample": "empirical.p.values, fake.reduction.sc..., empirical.p.value..."
+      "sample": "empirical.p.values, fake.reduction.sc..., empirical.p.value...",
+      "value": null
     },
     {
       "path": "reductions/umap/jackstraw/empirical.p.values",
@@ -548,7 +596,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/jackstraw/fake.reduction.scores",
@@ -559,7 +608,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/jackstraw/empirical.p.values.full",
@@ -570,7 +620,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/jackstraw/overall.p.values",
@@ -581,7 +632,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/misc",
@@ -592,7 +644,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "reductions/umap/key",
@@ -603,7 +656,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "umap_"
+      "sample": "umap_",
+      "value": "umap_"
     },
     {
       "path": "images",
@@ -614,7 +668,8 @@
       "n_children": 1,
       "truncated": false,
       "role_hints": null,
-      "sample": "fov"
+      "sample": "fov",
+      "value": null
     },
     {
       "path": "images/fov",
@@ -625,7 +680,8 @@
       "n_children": 6,
       "truncated": false,
       "role_hints": null,
-      "sample": "coords_x_orientation, assay, key"
+      "sample": "coords_x_orientation, assay, key",
+      "value": null
     },
     {
       "path": "images/fov/coords_x_orientation",
@@ -636,7 +692,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/assay",
@@ -647,7 +704,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "images/fov/key",
@@ -658,7 +716,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium_"
+      "sample": "Xenium_",
+      "value": "Xenium_"
     },
     {
       "path": "images/fov/misc",
@@ -669,7 +728,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/molecules",
@@ -680,7 +740,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries",
@@ -691,7 +752,8 @@
       "n_children": 2,
       "truncated": false,
       "role_hints": null,
-      "sample": "centroids, segmentation"
+      "sample": "centroids, segmentation",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/centroids",
@@ -702,7 +764,8 @@
       "n_children": 7,
       "truncated": false,
       "role_hints": null,
-      "sample": "cells, nsides, radius"
+      "sample": "cells, nsides, radius",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/centroids/cells",
@@ -713,7 +776,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "rows_eq_ncells",
-      "sample": "cell_001, cell_002, cell_003"
+      "sample": "cell_001, cell_002, cell_003",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/centroids/nsides",
@@ -724,7 +788,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,binary_valued",
-      "sample": "0"
+      "sample": "0",
+      "value": "0"
     },
     {
       "path": "images/fov/boundaries/centroids/radius",
@@ -735,7 +800,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg",
-      "sample": "19.6527718449943"
+      "sample": "19.6527718449943",
+      "value": "19.6527718449943"
     },
     {
       "path": "images/fov/boundaries/centroids/theta",
@@ -746,7 +812,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,binary_valued",
-      "sample": "0"
+      "sample": "0",
+      "value": "0"
     },
     {
       "path": "images/fov/boundaries/centroids/coords",
@@ -757,7 +824,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg,has_dimnames,rows_eq_ncells",
-      "sample": " | x, y"
+      "sample": " | x, y",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/centroids/bbox",
@@ -768,7 +836,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "nonneg,has_dimnames",
-      "sample": "x, y | min, max"
+      "sample": "x, y | min, max",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/centroids/proj4string",
@@ -779,7 +848,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation",
@@ -790,7 +860,8 @@
       "n_children": 6,
       "truncated": false,
       "role_hints": null,
-      "sample": "compact, polygons, plotOrder"
+      "sample": "compact, polygons, plotOrder",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/compact",
@@ -801,7 +872,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "FALSE"
+      "sample": "FALSE",
+      "value": "FALSE"
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons",
@@ -812,7 +884,8 @@
       "n_children": 200,
       "truncated": true,
       "role_hints": null,
-      "sample": "cell_001, cell_002, cell_003"
+      "sample": "cell_001, cell_002, cell_003",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_001",
@@ -823,7 +896,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_002",
@@ -834,7 +908,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_003",
@@ -845,7 +920,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_004",
@@ -856,7 +932,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_005",
@@ -867,7 +944,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_006",
@@ -878,7 +956,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_007",
@@ -889,7 +968,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_008",
@@ -900,7 +980,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_009",
@@ -911,7 +992,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_010",
@@ -922,7 +1004,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_011",
@@ -933,7 +1016,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_012",
@@ -944,7 +1028,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_013",
@@ -955,7 +1040,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_014",
@@ -966,7 +1052,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_015",
@@ -977,7 +1064,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_016",
@@ -988,7 +1076,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_017",
@@ -999,7 +1088,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_018",
@@ -1010,7 +1100,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_019",
@@ -1021,7 +1112,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_020",
@@ -1032,7 +1124,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_021",
@@ -1043,7 +1136,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_022",
@@ -1054,7 +1148,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_023",
@@ -1065,7 +1160,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_024",
@@ -1076,7 +1172,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_025",
@@ -1087,7 +1184,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_026",
@@ -1098,7 +1196,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_027",
@@ -1109,7 +1208,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_028",
@@ -1120,7 +1220,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_029",
@@ -1131,7 +1232,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_030",
@@ -1142,7 +1244,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_031",
@@ -1153,7 +1256,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_032",
@@ -1164,7 +1268,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_033",
@@ -1175,7 +1280,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_034",
@@ -1186,7 +1292,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_035",
@@ -1197,7 +1304,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_036",
@@ -1208,7 +1316,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_037",
@@ -1219,7 +1328,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_038",
@@ -1230,7 +1340,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_039",
@@ -1241,7 +1352,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_040",
@@ -1252,7 +1364,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_041",
@@ -1263,7 +1376,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_042",
@@ -1274,7 +1388,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_043",
@@ -1285,7 +1400,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_044",
@@ -1296,7 +1412,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_045",
@@ -1307,7 +1424,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_046",
@@ -1318,7 +1436,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_047",
@@ -1329,7 +1448,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_048",
@@ -1340,7 +1460,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_049",
@@ -1351,7 +1472,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/polygons/cell_050",
@@ -1362,7 +1484,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/plotOrder",
@@ -1373,7 +1496,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg,rows_eq_ncells",
-      "sample": "2, 3, 4"
+      "sample": "2, 3, 4",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/bbox",
@@ -1384,7 +1508,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "has_dimnames",
-      "sample": "x, y | min, max"
+      "sample": "x, y | min, max",
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/proj4string",
@@ -1395,7 +1520,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "images/fov/boundaries/segmentation/sf.data",
@@ -1406,7 +1532,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "project.name",
@@ -1417,7 +1544,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "SeuratProject"
+      "sample": "SeuratProject",
+      "value": "SeuratProject"
     },
     {
       "path": "misc",
@@ -1428,7 +1556,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     },
     {
       "path": "version",
@@ -1439,7 +1568,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "5.4.0"
+      "sample": "5.4.0",
+      "value": null
     },
     {
       "path": "commands",
@@ -1450,7 +1580,8 @@
       "n_children": 1,
       "truncated": false,
       "role_hints": null,
-      "sample": "FindNeighbors.Xen..."
+      "sample": "FindNeighbors.Xen...",
+      "value": null
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca",
@@ -1461,7 +1592,8 @@
       "n_children": 5,
       "truncated": false,
       "role_hints": null,
-      "sample": "name, time.stamp, assay.used"
+      "sample": "name, time.stamp, assay.used",
+      "value": null
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/name",
@@ -1472,7 +1604,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "FindNeighbors.Xen..."
+      "sample": "FindNeighbors.Xen...",
+      "value": "FindNeighbors.Xenium.pca"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/time.stamp",
@@ -1483,7 +1616,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg",
-      "sample": "1767225600"
+      "sample": "1767225600",
+      "value": "2026-01-01"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/assay.used",
@@ -1494,7 +1628,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/call.string",
@@ -1505,7 +1640,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "FindNeighbors(obj..."
+      "sample": "FindNeighbors(obj...",
+      "value": "FindNeighbors(object, reduction = \"pca\")"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params",
@@ -1516,7 +1652,8 @@
       "n_children": 6,
       "truncated": false,
       "role_hints": null,
-      "sample": "reduction, dims, assay"
+      "sample": "reduction, dims, assay",
+      "value": null
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/reduction",
@@ -1527,7 +1664,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "pca"
+      "sample": "pca",
+      "value": "pca"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/dims",
@@ -1538,7 +1676,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg",
-      "sample": "1, 2, 3"
+      "sample": "1, 2, 3",
+      "value": null
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/assay",
@@ -1549,7 +1688,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium"
+      "sample": "Xenium",
+      "value": "Xenium"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/k.param",
@@ -1560,7 +1700,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": "integer_valued,nonneg",
-      "sample": "10"
+      "sample": "10",
+      "value": "10"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/compute.SNN",
@@ -1571,7 +1712,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "TRUE"
+      "sample": "TRUE",
+      "value": "TRUE"
     },
     {
       "path": "commands/FindNeighbors.Xenium.pca/params/graph.name",
@@ -1582,7 +1724,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "Xenium_nn, Xenium_snn"
+      "sample": "Xenium_nn, Xenium_snn",
+      "value": null
     },
     {
       "path": "tools",
@@ -1593,7 +1736,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": null
+      "sample": null,
+      "value": null
     }
   ]
 }

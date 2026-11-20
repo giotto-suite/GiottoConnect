@@ -9,7 +9,8 @@
     seurat = c(
         Assays = "assays", Layers = "assays/{on}/layers",
         Reductions = "reductions", Graphs = "graphs", Neighbors = "neighbors",
-        Images = "images", Boundaries = "images/{on}/boundaries", columns = "{on}"
+        Images = "images", Boundaries = "images/{on}/boundaries",
+        children = "{on}", columns = "{on}"
     )
 )
 
@@ -110,13 +111,15 @@ mappingProvenance <- function(gobject) {
 .prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE) {
     pkg <- mapping$mapping$source$package
     ctx$x <- x
+    paths <- ctx$profile$nodes$path
     out <- list()
     for (p in mapping$parts) {
         node <- mapping$source_nodes[[p$from]]
-        if (!.part_bound(p, node, params)) {
+        present <- .part_bound(p, node, params) && .pf_bind(node$path, params$values) %in% paths
+        if (!present) {
             if (isTRUE(p$optional)) next
-            stop(wrap_txt(sprintf("Part '%s': source node '%s' is not bound", p$id, p$from)),
-                call. = FALSE)
+            stop(wrap_txt(sprintf("Part '%s': source '%s' is not bound or not present", p$id,
+                .pf_bind(node$path, params$values))), call. = FALSE)
         }
         ctx$part <- p$id
         vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
@@ -171,6 +174,11 @@ mappingProvenance <- function(gobject) {
     ok <- switch(pr$rule,
         first = seq_len(nrow(kids)) == 1L,
         name_is = name == pr$value,
+        value_of = {
+            v <- nodes$value[nodes$path == .pf_bind(pr$path, list())]
+            hit <- length(v) == 1L && !is.na(v) & name == v
+            if (!is.null(pr$where)) hit & .param_where(pr$where, kids, name, nodes) else hit
+        },
         first_of_class = kids$class == pr$class,
         first_where = .param_where(pr$where, kids, name, nodes)
     )
@@ -187,8 +195,10 @@ mappingProvenance <- function(gobject) {
     if (!is.null(w$kind)) ok <- ok & kids$kind == w$kind
     if (!is.null(w$role)) ok <- ok & has(kids$role_hints, unlist(w$role))
     if (!is.null(w$has_child_role)) {
+        # data held below the node: matrices only, not scalar slots
         ok <- ok & vapply(kids$path, function(p) {
-            sub <- nodes[startsWith(nodes$path, paste0(p, "/")), , drop = FALSE]
+            sub <- nodes[startsWith(nodes$path, paste0(p, "/")) &
+                nodes$kind %in% c("sparse_matrix", "dense_matrix"), , drop = FALSE]
             any(has(sub$role_hints, unlist(w$has_child_role)))
         }, logical(1))
     }
@@ -368,6 +378,7 @@ mappingProvenance <- function(gobject) {
     ctx <- new.env(parent = emptyenv())
     ctx$losses <- list()
     ctx$x <- NULL
+    ctx$profile <- profile
     ctx$part <- NA_character_
     ctx$add_loss <- function(kind, field, note, declared = FALSE) {
         ctx$losses[[length(ctx$losses) + 1L]] <- data.frame(

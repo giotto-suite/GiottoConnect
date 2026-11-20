@@ -54,9 +54,33 @@ build_seurat_visium_fixture <- function(n_side = 12L, n_feat = 50L, bin_um = 16L
     .fx_reductions_graphs(s, assay)
 }
 
+# Seurat v3/v4 layout: a v3 Assay (counts/data/scale.data slots) with the
+# same FOV, reductions, graphs and FindNeighbors record as the v5 fixture
+build_seurat_v3_fixture <- function(n_cells = 200L, n_feat = 50L, assay = "Xenium",
+                                    seed = 1L) {
+    stopifnot(requireNamespace("SeuratObject", quietly = TRUE))
+    SO <- asNamespace("SeuratObject")
+    set.seed(seed)
+    s <- .fx_expression(n_cells, n_feat, assay, assay_class = "Assay")
+    cells <- colnames(s)
+    xy <- data.frame(x = stats::runif(n_cells, 0, 2000),
+        y = stats::runif(n_cells, 0, 2000), cell = cells)
+    sq <- do.call(rbind, lapply(seq_len(n_cells), function(i) {
+        data.frame(x = xy$x[i] + c(-5, 5, 5, -5), y = xy$y[i] + c(-5, -5, 5, 5),
+            cell = cells[i])
+    }))
+    s[["fov"]] <- SO$CreateFOV(
+        list(centroids = SO$CreateCentroids(xy), segmentation = SO$CreateSegmentation(sq)),
+        type = c("centroids", "segmentation"), assay = assay
+    )
+    .fx_reductions_graphs(s, assay)
+}
+
 # counts / data / scale.data layers and cell metadata
 .fx_expression <- function(n_cells, n_feat, assay,
-                           cells = sprintf("cell_%03d", seq_len(n_cells))) {
+                           cells = sprintf("cell_%03d", seq_len(n_cells)),
+                           assay_class = c("Assay5", "Assay")) {
+    assay_class <- match.arg(assay_class)
     SO <- asNamespace("SeuratObject")
     feats <- sprintf("gene%02d", seq_len(n_feat))
     counts <- matrix(stats::rpois(n_cells * n_feat, 2), n_feat, n_cells,
@@ -66,9 +90,15 @@ build_seurat_visium_fixture <- function(n_side = 12L, n_feat = 50L, bin_um = 16L
     scaled <- t(scale(t(as.matrix(norm))))
     scaled[is.na(scaled)] <- 0
 
-    s <- SO$CreateSeuratObject(SO$CreateAssay5Object(counts = counts), assay = assay)
-    s <- SO$`LayerData<-`(s, layer = "data", value = norm)
-    s <- SO$`LayerData<-`(s, layer = "scale.data", value = scaled)
+    if (assay_class == "Assay5") {
+        s <- SO$CreateSeuratObject(SO$CreateAssay5Object(counts = counts), assay = assay)
+        s <- SO$`LayerData<-`(s, layer = "data", value = norm)
+        s <- SO$`LayerData<-`(s, layer = "scale.data", value = scaled)
+    } else {
+        s <- SO$CreateSeuratObject(SO$CreateAssayObject(counts = counts), assay = assay)
+        s <- SO$SetAssayData(s, layer = "data", new.data = norm, assay = assay)
+        s <- SO$SetAssayData(s, layer = "scale.data", new.data = scaled, assay = assay)
+    }
     s$seurat_clusters <- factor(sample(0:3, n_cells, replace = TRUE))
     s
 }
@@ -189,9 +219,9 @@ DRIFT_EXPECTED <- data.frame(
     change = c("assay renamed Xenium -> Spatial", "layer counts -> raw_counts",
         "coordinates moved to meta.data x_um/y_um, FOV removed", "counts stored as a dense matrix",
         "extra reduction tsne", "coordinates in mm", "graph Xenium_nn -> knn_graph",
-        "unused graph Xenium_snn removed", "v3 Assay instead of Assay5"),
+        "unused graph Xenium_snn removed", "v3 Assay (counts only) instead of Assay5"),
     expected = c("params", "params", "rules (alternative)", "rules (cast)", "params, WARN unmapped",
         "params, WARN looks like mm", "params", "params (fingerprint unchanged)",
-        "no mapping applies"),
+        "seurat-assay mapping, optional parts absent"),
     stringsAsFactors = FALSE
 )

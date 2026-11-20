@@ -196,3 +196,34 @@ test_that("Visium objects select the Visium mapping and convert pixels to micron
     expect_match(l$note[l$part_id == "locs" & l$field == "units"], "0.25000 um per px")
     expect_equal(GiottoClass::list_nearest_networks(g)$name, "kNN.pca")
 })
+
+test_that("v3/v4 objects convert through seurat-assay and read back", {
+    skip_if_not_installed("SeuratObject")
+    env <- new.env()
+    sys.source(contract_script("build_fixtures.R"), envir = env)
+    s <- env$build_seurat_v3_fixture()
+    f <- findMapping(profileObject(s), ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, "seurat-assay")
+    expect_equal(f$status, "match")
+    g <- seuratToGiotto(s)
+    rb <- readbackCheck(s, g)
+    expect_true(attr(rb, "pass"))
+    expect_true(all(rb$status == "MATCH"))
+    expect_equal(GiottoClass::list_nearest_networks(g)$name, "kNN.pca")
+})
+
+test_that("the assay param binds the default assay only", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    s[["Extra"]] <- SeuratObject::CreateAssayObject(counts = SeuratObject::LayerData(s, layer = "counts"))
+    p <- profileObject(s)
+    expect_equal(p$nodes$value[p$nodes$path == "active.assay"], "Xenium")
+    f <- findMapping(p, ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, "seurat-assay5")
+    expect_equal(f$candidates$status[f$candidates$id == "seurat-assay"], "none")
+
+    SeuratObject::DefaultAssay(s) <- "Extra"
+    f2 <- findMapping(profileObject(s), ecosystem = "seurat")
+    expect_equal(f2$mapping$mapping$id, "seurat-assay")
+    expect_equal(f2$params$values$assay, "Extra")
+})

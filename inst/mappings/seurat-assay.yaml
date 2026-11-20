@@ -1,0 +1,136 @@
+# Seurat with a v3/v4 Assay count assay (counts/data/scale.data slots) -> Giotto.
+# Objects made with Seurat v3/v4, or v5 objects that kept v3 assays.
+# Spatial parts come from an FOV image (Xenium, CosMx, MERSCOPE loaders).
+# Coordinates follow the Giotto convention: sdimx = x, sdimy = -y.
+mapping:
+  id: seurat-assay
+  version: 0.1.0
+  status: verified
+  built: "2026-11-20"
+  schema_version: 0.1.0
+  source:
+    ecosystem: seurat
+    class: Seurat
+    package: SeuratObject
+    built_with: "5.4.0"
+    applies_to:
+      predicates:
+        - { path: "assays/{assay}", class: Assay }
+  target: { contract: giotto, version: "0.7.31" }
+  fingerprint: "d876ef28dee4b61f"
+  fixtures: [seurat_v3_fixture]
+  history: []
+
+params:
+  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay, has_child_role: [integer_valued, nonneg] } }
+  layer_raw:  { list: children, on: "assays/{assay}", rule: first_where, where: { kind: sparse_matrix, role: [integer_valued, nonneg] } }
+  layer_norm: { list: children, on: "assays/{assay}", rule: name_is, value: data, optional: true }
+  fov:        { list: Images, rule: first_of_class, class: FOV, optional: true }
+  centroids:  { list: Boundaries, on: "{fov}", rule: first_of_class, class: Centroids, optional: true }
+  segmentation: { list: Boundaries, on: "{fov}", rule: first_of_class, class: Segmentation, optional: true }
+  nn_graph:   { list: Graphs, rule: first_where, where: { name_matches: "_nn$", or_role: binary_valued }, optional: true }
+
+source_nodes:
+  counts:       { path: "assays/{assay}/{layer_raw}",
+                  get: { fn: LayerData, args: { assay: "{assay}", layer: "{layer_raw}" } } }
+  normalized:   { path: "assays/{assay}/{layer_norm}",
+                  get: { fn: LayerData, args: { assay: "{assay}", layer: "{layer_norm}" } } }
+  cell_meta:    { path: "meta.data", get: { fn: "[[" } }
+  feat_meta:    { path: "assays/{assay}/meta.features", get: { fn: "[[", on: "assays/{assay}" } }
+  centroids:    { path: "images/{fov}/boundaries/{centroids}",
+                  get: { fn: GetTissueCoordinates, on: "images/{fov}/boundaries/{centroids}" } }
+  segmentation: { path: "images/{fov}/boundaries/{segmentation}",
+                  get: { fn: GetTissueCoordinates, on: "images/{fov}/boundaries/{segmentation}" } }
+  pca:          { path: "reductions/pca/cell.embeddings", get: { fn: Embeddings, args: { reduction: pca } } }
+  umap:         { path: "reductions/umap/cell.embeddings", get: { fn: Embeddings, args: { reduction: umap } } }
+  nn:           { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: normalized }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    ops:
+      - { op: rownames_to_col, col: cell_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: locs
+    part: spatial_locs
+    from: centroids
+    optional: true
+    ops:
+      - { op: rename, map: { x: sdimx, y: sdimy, cell: cell_ID } }
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: { spat_unit: cell, name: raw }
+    lossy:
+      - { kind: estimated, field: units, note: "FOV coordinates carry no unit; assumed micron" }
+    alternatives:
+      # coordinates kept as cell metadata columns instead of an FOV
+      - id: locs_from_meta
+        from: cell_meta
+        params:
+          x_col: { list: columns, on: meta.data, rule: first_where, where: { name_matches: "^(x|.*_x)([_.].*)?$|^x$", kind: vector } }
+          y_col: { list: columns, on: meta.data, rule: first_where, where: { name_matches: "^(y|.*_y)([_.].*)?$|^y$", kind: vector } }
+        ops:
+          - { op: select_cols, cols: ["{x_col}", "{y_col}"] }
+          - { op: rownames_to_col, col: cell_ID }
+          - { op: rename, map: { "{x_col}": sdimx, "{y_col}": sdimy } }
+          - { op: scale, factor: -1, cols: [sdimy] }
+        lossy:
+          - { kind: estimated, field: units, note: "metadata coordinates carry no unit; assumed micron" }
+          - { kind: ambiguous, field: orientation, note: "metadata coordinates assumed image-space (y down), like FOV" }
+
+  - id: polygons
+    part: spatial_info
+    from: segmentation
+    optional: true
+    ops:
+      - { op: rename, map: { cell: poly_ID } }
+      - { op: scale, factor: -1, cols: [y] }
+    to: { name: cell }
+    lossy:
+      - { kind: estimated, field: geometry, note: "invalid source rings are repaired (make_valid); their vertices can move" }
+
+  - id: pca
+    part: dim_reduction
+    from: pca
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: pca, method: pca }
+
+  - id: umap
+    part: dim_reduction
+    from: umap
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: umap, method: umap }
+
+  - id: nn
+    part: nn_network
+    from: nn
+    hook: seurat_graph_to_nn
+    optional: true
+    # the hook sets nn_type (kNN if binary) and names it <type>.<reduction>
+    # from Seurat's FindNeighbors record, else keeps the graph name
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
+
+lossy:
+  - { kind: dropped, path: "assays/{assay}/scale.data", note: "recomputable from normalized values; no Giotto slot" }
+  - { kind: dropped, path: "assays/{assay}/var.features", note: "variable features are not carried over yet" }
+  - { kind: dropped, path: "reductions/pca/feature.loadings", note: "loadings and stdev are not carried over yet" }
+  - { kind: dropped, path: "graphs/{assay}_snn", note: "only the kNN graph is mapped; sNN can be rebuilt with createNearestNetwork()" }

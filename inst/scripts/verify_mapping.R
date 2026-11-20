@@ -11,7 +11,8 @@ env <- new.env()
 sys.source(file.path("inst", "scripts", "build_fixtures.R"), envir = env)
 builders <- list(
     seurat5_fixture_small = env$build_seurat_fixture,
-    seurat5_visium_fixture = env$build_seurat_visium_fixture
+    seurat5_visium_fixture = env$build_seurat_visium_fixture,
+    seurat_v3_fixture = env$build_seurat_v3_fixture
 )
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))

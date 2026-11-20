@@ -76,9 +76,25 @@ test_that("new data is reported, not mapped (D5) and mm coordinates warn (D6)", 
     expect_equal(v6$level[v6$check == "coord_units"], "WARN")
 })
 
-test_that("objects no mapping applies to are refused, not mis-converted (D9)", {
+test_that("v3/v4 assays use the seurat-assay mapping (D9)", {
     skip_if_not_installed("SeuratObject")
     s <- drift()$variants$D9
+    f <- findMapping(profileObject(s), ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, "seurat-assay")
+    expect_equal(f$status, "repair_needed")
+    r <- repairMapping(f$mapping, s)
+    expect_equal(r$status, "not_needed")
+    expect_true(all(r$changes$rule[r$changes$rule != "added"] == "absent"))
+    expect_true(attr(r$readback, "pass"))
+    g <- seuratToGiotto(s)
+    expect_equal(mappingProvenance(g)$mapping, "seurat-assay")
+})
+
+test_that("objects no mapping applies to are refused, not mis-converted", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    norm <- log1p(SO$LayerData(seurat_fixture(), layer = "counts"))
+    s <- SO$CreateSeuratObject(SO$CreateAssay5Object(data = norm), assay = "RNA")
     f <- findMapping(profileObject(s), ecosystem = "seurat")
     expect_equal(f$status, "none")
     expect_match(f$reasons, "param 'assay' could not be bound")

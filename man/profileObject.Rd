@@ -31,7 +31,8 @@ for role hints}
 a \code{giottoProfile}: a list with \code{source}, \code{profiled_at},
 \code{profiler_version}, \code{n_cells}, \code{n_feat}, \code{size_from}, \code{notes} and \code{nodes}
 (a data.frame with columns \code{path}, \code{kind}, \code{class}, \code{dtype}, \code{shape},
-\code{n_children}, \code{truncated}, \code{role_hints}, \code{sample})
+\code{n_children}, \code{truncated}, \code{role_hints}, \code{sample}, \code{value}; \code{value} holds
+scalar vectors and is not part of the fingerprint)
 }
 \description{
 Describe the structure of any R object (S4, lists,

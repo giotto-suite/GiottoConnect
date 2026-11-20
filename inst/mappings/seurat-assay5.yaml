@@ -5,7 +5,7 @@ mapping:
   id: seurat-assay5
   version: 0.1.0
   status: verified
-  built: "2026-11-19"
+  built: "2026-11-20"
   schema_version: 0.1.0
   source:
     ecosystem: seurat
@@ -22,7 +22,7 @@ mapping:
   history: []
 
 params:
-  assay:      { list: Assays, rule: first_where, where: { class: Assay5, has_child_role: [integer_valued, nonneg] } }
+  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay5, has_child_role: [integer_valued, nonneg] } }
   layer_raw:  { list: Layers, on: "{assay}", rule: first_where, where: { role: [integer_valued, nonneg] } }
   layer_norm: { list: Layers, on: "{assay}", rule: name_is, value: data, optional: true }
   fov:        { list: Images, rule: first_of_class, class: FOV, optional: true }

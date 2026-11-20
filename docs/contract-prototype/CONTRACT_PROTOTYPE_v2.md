@@ -439,3 +439,41 @@ Not yet covered: classic Visium (VisiumV1) and vendor-layout MERSCOPE.
 - Schema limitations, and what AnnData/SpatialExperiment would stress (note GiottoDisk's
   `h5adInput` family as reusable building blocks).
 - Open decisions.
+
+---
+
+## 8. Backlog: ecosystem adapters (after the prototype)
+
+The engine is GiottoConnect's ecosystem-neutral interoperability mechanism.
+Seurat is its first ecosystem, not its target. The prototype grew from
+Seurat, so these assumptions sit in the engine and become a per-ecosystem
+**adapter** (a virtual class plus one concrete adapter per ecosystem):
+
+| Seurat-shaped today | Adapter supplies |
+|---|---|
+| `get.fn` limited to exported SeuratObject getters (`getExportedValue`) | `get(node)`: SeuratObject getters, an hdf5r accessor, SummarizedExperiment getters, ... |
+| `.LIST_PATHS` and the profiler know Seurat's slots | `list_paths(x)` and `profile(x)` |
+| Input is an in-memory R object | `open(x)`: an object or a file path (`.h5ad`, later `.zarr`) |
+| Disk routing implicit through the backed setters | optional streaming inputs for `disk_backable` parts |
+
+A mapping names its adapter, and the schema checks `get:` against that
+adapter's accessors. Mapping YAML, contract, validation and readback are
+unchanged. Seurat moves onto the seam first, with no change in behaviour; its
+readback checks prove that.
+
+**AnnData is the next adapter.** It is a file with no R accessor package,
+which tests that the seam is general.
+- Accessor: the pure-hdf5r reader from GiottoDisk `R/h5ad.R` (`.h5ad_*`).
+  It covers obs/var data frames, categoricals including anndata < 0.8
+  `__categories` (reference: GiottoDisk branch `fix/h5ad-legacy-categoricals`),
+  `obsm`, and graphs named in `uns`.
+- Streaming inputs: `GiottoDisk::h5adInput()` (CSR / CSC / dense) and
+  `GiottoDisk::h5adEdgeInput()` when a `source` is given.
+- `anndataToGiotto(path, source = NULL)` replaces the reticulate version.
+- Then GiottoDisk drops `importH5adDisk()`, `H5adDiskReader` and its five
+  `h5ad*` loaders, before its next release (GiottoDisk `AGENTS.md`, "Importers
+  vs inputs").
+- Test data:
+  - squidpy example files in `Datasets/squidpy_examples/` (seqfish, merfish,
+    slideseqv2; anndata 0.7 layout);
+  - the 225k-cell seqFISH kidney file.

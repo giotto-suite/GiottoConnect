@@ -28,7 +28,8 @@
 #' @returns a `giottoProfile`: a list with `source`, `profiled_at`,
 #' `profiler_version`, `n_cells`, `n_feat`, `size_from`, `notes` and `nodes`
 #' (a data.frame with columns `path`, `kind`, `class`, `dtype`, `shape`,
-#' `n_children`, `truncated`, `role_hints`, `sample`)
+#' `n_children`, `truncated`, `role_hints`, `sample`, `value`; `value` holds
+#' scalar vectors and is not part of the fingerprint)
 #' @examples
 #' p <- profileObject(list(counts = matrix(1:6, 2), meta = data.frame(a = 1:3)))
 #' p
@@ -257,7 +258,7 @@ print.giottoProfileDiff <- function(x, ...) {
         path = path, kind = info$kind, class = info$class, dtype = info$dtype,
         shape = info$shape, n_children = as.integer(info$n_children),
         truncated = truncated, role_hints = NA_character_,
-        sample = info$sample, .flags = info$flags
+        sample = info$sample, value = info$value, .flags = info$flags
     )
     for (nm in names(children)) {
         .pf_walk(children[[nm]], .pf_join(path, nm), depth + 1L, env,
@@ -276,7 +277,7 @@ print.giottoProfileDiff <- function(x, ...) {
     out <- list(
         kind = "other", class = cls, dtype = NA_character_,
         shape = NA_character_, n_children = 0L, descend = FALSE,
-        sample = NA_character_, flags = "", note = NULL
+        sample = NA_character_, value = NA_character_, flags = "", note = NULL
     )
     if (is.null(x)) {
         out$kind <- "null"
@@ -372,6 +373,8 @@ print.giottoProfileDiff <- function(x, ...) {
         out$kind <- "vector"
         out$dtype <- tp
         out$shape <- as.character(length(x))
+        # scalar values can bind params (e.g. Seurat's active.assay)
+        if (length(x) == 1L && !is.na(x)) out$value <- as.character(x)
         vals <- x
         attributes(vals) <- NULL
         out$flags <- .pf_value_flags(vals, sample_n)
