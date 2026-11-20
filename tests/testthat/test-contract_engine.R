@@ -19,7 +19,8 @@ test_that("the bundled mapping reads, summarises and declares its losses", {
 test_that("hookRegistry lists the hooks and their packages", {
     h <- hookRegistry()
     expect_setequal(h$hook, c("seurat_graph_to_nn", "seurat_visium_to_um",
-        "anndata_distances_to_nn", "giotto_polygons_to_vertices", "giotto_nn_to_graph"))
+        "anndata_distances_to_nn", "seurat_reduction_misc", "anndata_pca_misc",
+        "anndata_spatial_network", "giotto_polygons_to_vertices", "giotto_nn_to_graph"))
     expect_match(h$packages[h$hook == "seurat_visium_to_um"], "Seurat")
 })
 
@@ -277,3 +278,16 @@ test_that("a spatial mapping without any coordinates warns", {
     expect_true(all(c("locs", "polygons") %in% mappingProvenance(g)$absent))
 })
 
+
+test_that("Seurat PCA loadings and stdev go to the reduction misc", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    g <- seuratToGiotto(s)
+    d <- GiottoClass::getDimReduction(g, reduction_method = "pca", name = "pca", output = "dimObj")
+    load <- SeuratObject::Loadings(s, reduction = "pca")
+    expect_equal(unname(d@misc$loadings), unname(load))
+    expect_equal(colnames(d@misc$loadings), paste0("Dim.", seq_len(ncol(load))))
+    expect_equal(d@misc$eigenvalues, SeuratObject::Stdev(s, reduction = "pca")^2)
+    expect_null(GiottoClass::getDimReduction(g, reduction_method = "umap", name = "umap",
+        output = "dimObj")@misc$loadings)
+})

@@ -20,6 +20,21 @@
         packages = c("hdf5r", "Matrix"),
         description = "AnnData obsp kNN distances -> nearest-neighbour edges; name and k from the scanpy neighbors record"
     ),
+    seurat_reduction_misc = list(
+        fn = function(node, params, ctx) .hook_seurat_reduction_misc(node, params, ctx),
+        packages = "SeuratObject",
+        description = "Seurat reduction loadings and standard deviations -> dimObj misc (as runPCA stores them)"
+    ),
+    anndata_pca_misc = list(
+        fn = function(node, params, ctx) .hook_anndata_pca_misc(node, params, ctx),
+        packages = "hdf5r",
+        description = "AnnData varm/PCs and uns/pca/variance -> dimObj misc of X_pca"
+    ),
+    anndata_spatial_network = list(
+        fn = function(node, params, ctx) .hook_anndata_spatial_network(node, params, ctx),
+        packages = c("hdf5r", "Matrix"),
+        description = "AnnData obsp spatial graph (squidpy) -> spatial network; Giotto name from the spatial_neighbors record"
+    ),
     giotto_polygons_to_vertices = list(
         fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
         packages = c("GiottoClass", "terra"),
@@ -271,13 +286,101 @@ hookRegistry <- function() {
 }
 
 # the uns entry (scanpy neighbors / key_added) whose distances_key is `key`
-.h5ad_neighbors_record <- function(h5, key) {
+.h5ad_neighbors_record <- function(h5, key) .h5ad_graph_record(h5, key, "distances_key")
+
+# the uns entry whose `field` (distances_key / connectivities_key) is `key`
+.h5ad_graph_record <- function(h5, key, field) {
     if (!.h5ad_exists(h5, "uns")) return(NULL)
     for (k in names(h5[["uns"]])) {
-        dk <- paste("uns", k, "distances_key", sep = "/")
+        dk <- paste("uns", k, field, sep = "/")
         if (!.h5ad_exists(h5, dk) || !identical(as.character(.h5ad_value(h5, dk)), key)) next
         pp <- paste("uns", k, "params", sep = "/")
         return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list()))
     }
     NULL
 }
+
+# PCA (or other reduction) loadings and eigenvalues, laid out as Giotto's
+# runPCA() stores them in the dimObj misc
+.reduction_misc <- function(loadings, eigenvalues) {
+    misc <- list()
+    if (length(eigenvalues)) misc$eigenvalues <- as.numeric(eigenvalues)
+    if (!is.null(loadings) && length(loadings)) {
+        colnames(loadings) <- paste0("Dim.", seq_len(ncol(loadings)))
+        misc$loadings <- loadings
+    }
+    misc
+}
+
+.hook_seurat_reduction_misc <- function(node, params, ctx) {
+    SO <- asNamespace("SeuratObject")
+    red <- ctx$part_spec$to$name
+    misc <- .reduction_misc(SO$Loadings(ctx$x, reduction = red), SO$Stdev(ctx$x, reduction = red)^2)
+    if (!length(misc)) return(node)
+    .hook_result(node, to = list(misc = misc))
+}
+
+# only X_pca has loadings (varm/PCs) and eigenvalues (uns/pca/variance)
+.hook_anndata_pca_misc <- function(node, params, ctx) {
+    if (!identical(ctx$part_spec$to$method, "pca")) return(node)
+    h5 <- .h5ad_open(.h5ad_path(ctx$x))
+    on.exit(h5$close_all())
+    load <- if (.h5ad_exists(h5, "varm/PCs")) {
+        m <- .h5ad_read_array(h5[["varm/PCs"]])
+        rownames(m) <- .h5ad_feat_ids(h5, "var")
+        m
+    }
+    ev <- if (.h5ad_exists(h5, "uns/pca/variance")) .h5ad_value(h5, "uns/pca/variance")
+    misc <- .reduction_misc(load, ev)
+    if (!length(misc)) return(node)
+    .hook_result(node, to = list(misc = misc))
+}
+
+# squidpy spatial graph (obs x obs) -> undirected edges with Giotto's
+# spatial network columns: distance from spatial_distances when present,
+# else Euclidean in obsm coordinates; weight = 1 / distance
+.hook_anndata_spatial_network <- function(node, params, ctx) {
+    m <- methods::as(node, "CsparseMatrix")
+    ids <- rownames(m)
+    sym <- Matrix::isSymmetric(m)
+    tr <- Matrix::summary(m)
+    tr <- tr[tr$i != tr$j & (!sym | tr$i < tr$j), , drop = FALSE]
+    h5 <- .h5ad_open(.h5ad_path(ctx$x))
+    on.exit(h5$close_all())
+    key <- params$spatial_net
+    rec <- .h5ad_graph_record(h5, key, "connectivities_key")
+    dkey <- if (!is.null(rec) && .h5ad_exists(h5, paste0("uns/", rec$key, "/distances_key"))) {
+        as.character(.h5ad_value(h5, paste0("uns/", rec$key, "/distances_key")))
+    }
+    d <- if (!is.null(dkey) && .h5ad_exists(h5, paste0("obsp/", dkey))) {
+        dm <- .h5ad_obsp(h5, paste0("obsp/", dkey))
+        dm[cbind(tr$i, tr$j)]
+    } else if (!is.null(params$spatial)) {
+        xy <- .h5ad_obsm(h5, paste0("obsm/", params$spatial))
+        sqrt(rowSums((xy[tr$i, 1:2, drop = FALSE] - xy[tr$j, 1:2, drop = FALSE])^2))
+    } else {
+        rep(NA_real_, nrow(tr))
+    }
+    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j], distance = d, weight = 1 / d)
+    # every cell is a node, also cells without a neighbour
+    attr(edges, "nodes") <- ids
+    name <- if (is.null(rec)) key else .squidpy_network_name(h5, rec$key)
+    ctx$add_loss("recovered_from_parameters", "name", sprintf("%s from %s%s", name,
+        if (is.null(rec)) paste0("obsp/", key) else paste0("uns/", rec$key),
+        if (is.null(dkey)) "; distances computed from the coordinates" else ""))
+    .hook_result(edges, to = list(name = name))
+}
+
+# squidpy spatial_neighbors params -> Giotto network name
+.squidpy_network_name <- function(h5, key) {
+    p <- paste0("uns/", key, "/params")
+    if (!.h5ad_exists(h5, p)) return(key)
+    has <- function(x) .h5ad_exists(h5, paste0(p, "/", x))
+    val <- function(x) if (has(x)) .h5ad_value(h5, paste0(p, "/", x))
+    if (identical(as.character(val("coord_type")), "grid")) return(key)
+    if (isTRUE(as.logical(val("delaunay")))) return("Delaunay_network")
+    if (has("n_neighbors") && !has("radius")) return("kNN_network")
+    if (!has("n_neighbors") && !length(val("radius"))) return("Delaunay_network")
+    key
+}
+

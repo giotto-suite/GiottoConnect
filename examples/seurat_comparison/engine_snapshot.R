@@ -69,6 +69,9 @@ giotto_content <- function(g) {
     for (i in seq_len(NROW(dr))) {
         m <- GiottoClass::getDimReduction(g, reduction_method = dr$dim_type[i], name = dr$name[i], output = "matrix")
         out[[paste("dimred", dr$name[i])]] <- h(unname(m[order(rownames(m)), ]))
+        misc <- GiottoClass::getDimReduction(g, reduction_method = dr$dim_type[i], name = dr$name[i],
+            output = "dimObj")@misc[c("loadings", "eigenvalues")]
+        if (length(Filter(Negate(is.null), misc))) out[[paste("dimred misc", dr$name[i])]] <- h(misc)
     }
     nn <- GiottoClass::list_nearest_networks(g)
     for (i in seq_len(NROW(nn))) {

@@ -45,6 +45,15 @@ setMethod("adapterRead", "anndataAdapter", function(adapter, x, node, params) {
 setMethod("adapterReads", "anndataAdapter", function(adapter, node, params) {
     fn <- node$get$fn
     if (identical(fn, "h5adMatrix")) return(.h5ad_var_group(.pf_bind(node$path, params)))
+    # X_pca carries its loadings (read by the anndata_pca_misc hook)
+    if (identical(fn, "h5adObsm") && identical(.pf_bind(node$path, params), "obsm/X_pca")) {
+        return("varm/PCs")
+    }
+    # a squidpy spatial graph is read with its <key>distances partner
+    if (identical(fn, "h5adObsp")) {
+        p <- .pf_bind(node$path, params)
+        if (grepl("connectivities$", p)) return(sub("connectivities$", "distances", p))
+    }
     m <- node$get$args$matrix
     if (identical(fn, "h5adVar") && is.character(m) && startsWith(.pf_bind(m, params), "raw/")) {
         return("raw/var")

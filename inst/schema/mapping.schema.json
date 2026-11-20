@@ -479,7 +479,8 @@
             "spatial_info",
             "dim_reduction",
             "nn_network",
-            "feature_info"
+            "feature_info",
+            "spatial_network"
           ]
         },
         "from": {

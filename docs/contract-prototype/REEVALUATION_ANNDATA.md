@@ -126,3 +126,16 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
   mean position per feature.
 - AnnData has no standard place for transcripts (that is SpatialData).
 
+## Follow-up: PCA information and spatial networks
+- PCA loadings and eigenvalues go into the reduction's `misc`, as Giotto's
+  `runPCA()` stores them: Seurat `Loadings()` and `Stdev()^2`, AnnData `varm/PCs`
+  and `uns/pca/variance`. Every Seurat object with a PCA gains them, and the
+  "loadings dropped" declarations are gone.
+- The Giotto contract has a `spatial_network` part. Giotto keeps spatial networks
+  as undirected igraphs over all cells, with `distance` and `weight = 1/distance`.
+- squidpy's `obsp/spatial_connectivities` becomes one: distances come from
+  `spatial_distances` (else from the coordinates), and the name (`kNN_network`,
+  `Delaunay_network`) comes from the `spatial_neighbors` record, using the rule
+  of GiottoDisk's removed loader. slideseqv2: 125,307 edges.
+- Seurat has no standard spatial network.
+

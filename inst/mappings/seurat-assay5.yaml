@@ -152,9 +152,9 @@ parts:
     part: dim_reduction
     from: reduction
     for_each: { list: Reductions, as: red, exclude: "^(spatial|coords?|centroids?|xy)$" }
+    # loadings and stdev^2 go to the misc as runPCA stores them
+    hook: seurat_reduction_misc
     to: { spat_unit: cell, feat_type: rna, name: "{red}", method: "{red}" }
-    lossy:
-      - { kind: dropped, path: "reductions/{red}/feature.loadings", note: "loadings and stdev are not carried over yet" }
 
   - id: nn
     part: nn_network

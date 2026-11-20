@@ -21,6 +21,8 @@
         setter = "setDimReduction", list_fn = "list_dim_reductions"),
     nn_network = list(slot = "nn_network", constructor = "createNearestNetObj", data_arg = "network",
         setter = "setNearestNetwork", list_fn = "list_nearest_networks"),
+    spatial_network = list(slot = "spatial_network", constructor = "createSpatNetObj", data_arg = "network",
+        setter = "setSpatialNetwork", list_fn = "list_spatial_networks"),
     # transcripts; `method` names the S4 method whose arguments apply
     feature_info = list(slot = "feat_info", constructor = "createGiottoPoints", method = "data.frame",
         data_arg = "x", setter = "setFeatureInfo", list_fn = "list_feature_info")
@@ -221,6 +223,9 @@ print.giottoContract <- function(x, ...) {
         nn_network = GiottoClass::createNearestNetObj(name = "kNN.pca",
             network = dt(from = "c1", to = "c2", weight = 1, distance = 0),
             nn_type = "kNN", spat_unit = "cell", feat_type = "rna"),
+        spatial_network = GiottoClass::createSpatNetObj(
+            network = .edges_to_igraph(dt(from = "c1", to = "c2", distance = 2, weight = 0.5), cells),
+            name = "Delaunay_network", spat_unit = "cell"),
         feature_info = GiottoClass::createGiottoPoints(
             data.frame(x = c(0.2, 2.2, 2.7), y = c(0.5, 0.4, 0.6), feat_ID = feats),
             feat_type = "rna", verbose = FALSE)

@@ -49,7 +49,7 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
             compare[[spec$part]](spec, pp$data, result, n_cells),
             error = function(e) list(.rb_row("placement", FALSE, conditionMessage(e), "placement"))
         )
-        for (r in res) {
+        for (r in Filter(Negate(is.null), res)) {
             status <- if (r$ok) {
                 "MATCH"
             } else if (.rb_declared(losses, spec$id, r$field)) {
@@ -194,7 +194,27 @@ print.giottoReadback <- function(x, ...) {
                 to$method, to$name)),
             .rb_row("ids", setequal(rownames(m), rownames(data)), sprintf("%d cells", nrow(m))),
             .rb_row("shape", identical(dim(m), dim(data)), paste(dim(m), collapse = "x")),
-            .rb_row("values", .rb_same(as.numeric(m[rownames(data), ]), as.numeric(data)), "")
+            .rb_row("values", .rb_same(as.numeric(m[rownames(data), ]), as.numeric(data)), ""),
+            if (!is.null(to$misc$loadings) || !is.null(to$misc$eigenvalues)) {
+                d <- GiottoClass::getDimReduction(g, spat_unit = to$spat_unit, feat_type = to$feat_type,
+                    reduction_method = to$method, name = to$name, output = "dimObj")
+                .rb_row("loadings", identical(d@misc$loadings, to$misc$loadings) &&
+                    identical(d@misc$eigenvalues, to$misc$eigenvalues), "loadings and eigenvalues")
+            }
+        )
+    },
+    spatial_network = function(spec, data, g, n_cells) {
+        to <- spec$to
+        e <- GiottoClass::getSpatialNetwork(g, spat_unit = to$spat_unit, name = to$name,
+            output = "networkDT")
+        und <- function(f, t) ifelse(f < t, paste(f, t, sep = "\r"), paste(t, f, sep = "\r"))
+        ka <- und(data$from, data$to)
+        kb <- und(e$from, e$to)
+        list(
+            .rb_row("placement", TRUE, sprintf("%s/%s", to$spat_unit, to$name)),
+            .rb_row("edges", setequal(ka, kb), sprintf("%d edges", nrow(e))),
+            .rb_row("distance", .rb_same(data$distance[order(ka)], e$distance[match(sort(ka), kb)]),
+                "", field = "distance")
         )
     },
     nn_network = function(spec, data, g, n_cells) {

@@ -67,6 +67,13 @@ setMethod("adapterAccessors", "seuratAdapter", function(adapter) c(
     "LayerData", "Embeddings", "Loadings", "Stdev", "GetTissueCoordinates", "Misc", "Key",
     "[[", "path"
 ))
+# a reduction's embeddings come with its loadings and stdev (read by the
+# seurat_reduction_misc hook)
+setMethod("adapterReads", "seuratAdapter", function(adapter, node, params) {
+    p <- .pf_bind(node$path, params)
+    if (!identical(node$get$fn, "Embeddings") || !grepl("/cell.embeddings$", p)) return(character())
+    sub("cell.embeddings$", c("feature.loadings", "stdev"), p)
+})
 setMethod("adapterObjectLists", "seuratAdapter", function(adapter) {
     c("Assays", "Images", "Reductions", "Graphs", "Neighbors")
 })

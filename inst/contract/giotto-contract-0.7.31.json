@@ -92,6 +92,18 @@
       "nesting": ["spat_unit", "feat_type", "nn_type", "name"],
       "disk_backable": true
     },
+    "spatial_network": {
+      "slot": "spatial_network",
+      "class": "spatialNetworkObj",
+      "constructor": "createSpatNetObj",
+      "data_arg": "network",
+      "args": ["network", "name", "unfiltered", "method", "spat_unit", "provenance", "parameters", "outputObj", "cellShapeObj", "crossSectionObjects", "misc"],
+      "required_args": "network",
+      "setter": "setSpatialNetwork",
+      "list_fn": "list_spatial_networks",
+      "nesting": ["spat_unit", "name"],
+      "disk_backable": true
+    },
     "feature_info": {
       "slot": "feat_info",
       "class": "giottoPoints",

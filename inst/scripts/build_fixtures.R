@@ -327,7 +327,9 @@ build_llm_cases <- function() {
 # Written with hdf5r following the anndata on-disk spec (no python).
 #   build_h5ad_fixture(path)                  modern scanpy: dense normalized X,
 #       layers/counts (csr), categorical obs, obsm X_pca/X_umap/spatial,
-#       obsp distances + connectivities with a uns/neighbors record
+#       varm/PCs + uns/pca/variance, obsp distances + connectivities with a
+#       uns/neighbors record, a squidpy spatial graph (4 nearest neighbours,
+#       symmetrised) with its uns/spatial_neighbors record
 #   build_h5ad_fixture(path, legacy = TRUE)   anndata 0.7: counts in X (csc),
 #       raw/X copy, pre-0.8 categorical (`__categories`), obsm spatial only
 #   build_h5ad_fixture(path, raw_extra = 5)   counts in raw/X over the var
@@ -456,6 +458,19 @@ build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
         enc(obsp, "dict")
         sparse(obsp, "distances", dist)
         sparse(obsp, "connectivities", methods::as(dist > 0, "dMatrix") * 0.5)
+        ds <- as.matrix(stats::dist(xy))
+        nb4 <- t(apply(ds, 1L, function(r) order(r)[2:5]))
+        adj <- Matrix::sparseMatrix(i = rep(seq_len(n_cells), each = 4L), j = as.vector(t(nb4)),
+            x = 1, dims = c(n_cells, n_cells))
+        adj <- methods::as(methods::as((adj + Matrix::t(adj)) > 0, "dMatrix"), "generalMatrix")
+        tri <- Matrix::summary(adj)
+        sparse(obsp, "spatial_connectivities", adj)
+        sparse(obsp, "spatial_distances", Matrix::sparseMatrix(i = tri$i, j = tri$j,
+            x = ds[cbind(tri$i, tri$j)], dims = c(n_cells, n_cells)))
+        load <- matrix(stats::rnorm(n_feat * 10L), n_feat, 10L)
+        varm <- h5$create_group("varm")
+        enc(varm, "dict")
+        dense(varm, "PCs", load)
         uns <- h5$create_group("uns")
         enc(uns, "dict")
         nb <- uns$create_group("neighbors")
@@ -474,7 +489,24 @@ build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
         pr[["metric"]] <- "euclidean"
         enc(pr[["method"]], "string", "0.2.0")
         enc(pr[["metric"]], "string", "0.2.0")
+        sp <- uns$create_group("spatial_neighbors")
+        enc(sp, "dict")
+        for (nm in c("connectivities_key", "distances_key")) {
+            sp[[nm]] <- paste0("spatial_", sub("_key$", "", nm))
+            enc(sp[[nm]], "string", "0.2.0")
+        }
+        spp <- sp$create_group("params")
+        enc(spp, "dict")
+        spp[["coord_type"]] <- "generic"
+        enc(spp[["coord_type"]], "string", "0.2.0")
+        spp[["n_neighbors"]] <- 4L
+        enc(spp[["n_neighbors"]], "numeric-scalar", "0.2.0")
+        pc <- uns$create_group("pca")
+        enc(pc, "dict")
+        pc[["variance"]] <- c(10, 8, 6, 5, 4, 3, 2.5, 2, 1.5, 1)
+        enc(pc[["variance"]], "array", "0.2.0")
     }
     invisible(list(path = path, counts = counts, norm = norm, xy = xy, pca = pca,
-        type = type, cells = cells, feats = feats))
+        type = type, cells = cells, feats = feats,
+        load = if (!legacy) load, spatial = if (!legacy) adj))
 }

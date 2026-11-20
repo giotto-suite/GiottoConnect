@@ -6,7 +6,7 @@
 
 # assembly order: data before the parts that index into it
 .PART_ORDER <- c("expression", "cell_metadata", "feat_metadata", "spatial_locs",
-    "spatial_info", "feature_info", "dim_reduction", "nn_network")
+    "spatial_info", "feature_info", "dim_reduction", "nn_network", "spatial_network")
 
 #' @title Convert an object with a mapping
 #' @name convertWithMapping
@@ -467,13 +467,18 @@ mappingProvenance <- function(gobject) {
     cp <- contract$parts[[p$part]]
     if (is.data.frame(data)) data <- data.table::as.data.table(data)
     if (p$part == "dim_reduction") data <- as.matrix(data)
+    # Giotto keeps spatial networks as undirected igraphs over all cells
+    if (p$part == "spatial_network" && is.data.frame(data)) {
+        data <- .edges_to_igraph(data, attr(data, "nodes"))
+    }
     ctor <- getExportedValue("GiottoClass", cp$constructor)
     args <- stats::setNames(list(data), cp$data_arg)
     to <- p$to
     for (k in intersect(names(to), cp$args)) args[[k]] <- to[[k]]
     if ("misc" %in% cp$args) {
-        args$misc <- list(giottoConnect = list(mapping = mapping$mapping$id,
-            version = mapping$mapping$version, part = p$id))
+        # kept next to misc a hook set (e.g. PCA loadings)
+        args$misc <- c(args$misc, list(giottoConnect = list(mapping = mapping$mapping$id,
+            version = mapping$mapping$version, part = p$id)))
     }
     if ("verbose" %in% cp$args) args$verbose <- FALSE
     if (p$part == "spatial_info") args$calc_centroids <- FALSE
@@ -486,6 +491,14 @@ mappingProvenance <- function(gobject) {
         if (!any(hit)) args$feat_type <- args$feat_type[1L]
     }
     suppressMessages(do.call(ctor, args))
+}
+
+# edge table (from, to, distance, weight) -> undirected igraph; `nodes`
+# defaults to the cells on an edge
+.edges_to_igraph <- function(edges, nodes = NULL) {
+    e <- as.data.frame(edges)[, intersect(c("from", "to", "distance", "weight"), names(edges))]
+    v <- data.frame(name = nodes %null% unique(c(e$from, e$to)))
+    igraph::graph_from_data_frame(e, directed = FALSE, vertices = v)
 }
 
 .assemble <- function(parts, source = NULL) {

@@ -32,6 +32,7 @@ params:
   spatial:    { list: Obsm, rule: first_where, where: { name_matches: "^(X_)?spatial$", kind: dense_matrix }, optional: true }
   nn_dist:    { list: Obsp, rule: first_where, where: { name_matches: "^distances$" }, optional: true }
   rna_type:   { list: FeatureTypes, rule: name_is, value: "Gene Expression", optional: true }
+  spatial_net: { list: Obsp, rule: first_where, where: { name_matches: "spatial_connectivities$" }, optional: true }
 
 source_nodes:
   counts:     { path: "{counts}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
@@ -46,6 +47,7 @@ source_nodes:
   spatial:    { path: "obsm/{spatial}", get: { fn: h5adObsm } }
   reduction:  { path: "obsm/{red}", get: { fn: h5adObsm } }
   nn:         { path: "obsp/{nn_dist}", get: { fn: h5adObsp } }
+  spatial_net: { path: "obsp/{spatial_net}", get: { fn: h5adObsp } }
 
 parts:
   - id: expr_raw
@@ -112,6 +114,8 @@ parts:
     part: dim_reduction
     from: reduction
     for_each: { list: Obsm, as: red, strip: "^X_", exclude: "spatial", where: { kind: dense_matrix } }
+    # X_pca: loadings (varm/PCs) and eigenvalues (uns/pca/variance) go to the misc
+    hook: anndata_pca_misc
     to: { spat_unit: cell, feat_type: rna, name: "{red_label}", method: "{red_label}" }
 
   # every other var/feature_types category is its own feature type, named as
@@ -151,7 +155,15 @@ parts:
     # the hook names it kNN.<space> from the scanpy neighbors record
     to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_dist}" }
 
+  # squidpy spatial graph -> Giotto spatial network (kNN_network /
+  # Delaunay_network from its spatial_neighbors record)
+  - id: spatial_network
+    part: spatial_network
+    from: spatial_net
+    hook: anndata_spatial_network
+    optional: true
+    to: { spat_unit: cell, name: "{spatial_net}" }
+
 lossy:
   - { kind: dropped, path: "obsp/connectivities", note: "UMAP connectivities; Giotto weights come from distances" }
-  - { kind: dropped, path: "varm/PCs", note: "PCA loadings are not carried over yet" }
   - { kind: dropped, path: "uns", note: "unstructured annotations (colours, parameters) are not mapped" }
