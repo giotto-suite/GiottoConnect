@@ -13,7 +13,6 @@ Description: A hub for Giotto interoperability functions and connections to
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     GiottoClass (>= 0.3.0),
     GiottoUtils (>= 0.2.5),
@@ -23,9 +22,13 @@ Imports:
     methods,
     igraph,
     jsonlite (>= 1.8.0),
-    checkmate (>= 2.3.0)
+    checkmate (>= 2.3.0),
+    digest,
+    yaml
 Suggests:
     GiottoData,
+    GiottoDisk,
+    httr2,
     rhdf5,
     Seurat,
     SeuratObject,
@@ -40,3 +43,4 @@ Remotes:
     drieslab/GiottoClass,
     drieslab/GiottoUtils
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

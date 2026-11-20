@@ -1,0 +1,96 @@
+{
+  "contract": "giotto",
+  "schema_version": "0.1.0",
+  "giottoclass_version": "0.7.31",
+  "generated_at": "2026-11-19",
+  "manifest_schema": "giotto-manifest-0.2.0",
+  "orientation": {
+    "expression": "features_x_cells"
+  },
+  "parts": {
+    "expression": {
+      "slot": "expression",
+      "class": "exprObj",
+      "constructor": "createExprObj",
+      "data_arg": "expression_data",
+      "args": ["expression_data", "name", "spat_unit", "feat_type", "provenance", "misc", "expression_matrix_class"],
+      "required_args": "expression_data",
+      "setter": "setExpression",
+      "list_fn": "list_expression",
+      "nesting": ["spat_unit", "feat_type", "name"],
+      "disk_backable": true
+    },
+    "cell_metadata": {
+      "slot": "cell_metadata",
+      "class": "cellMetaObj",
+      "constructor": "createCellMetaObj",
+      "data_arg": "metadata",
+      "args": ["metadata", "spat_unit", "feat_type", "provenance", "col_desc", "verbose"],
+      "required_args": "metadata",
+      "setter": "setCellMetadata",
+      "list_fn": "list_cell_metadata",
+      "nesting": ["spat_unit", "feat_type"],
+      "disk_backable": false
+    },
+    "feat_metadata": {
+      "slot": "feat_metadata",
+      "class": "featMetaObj",
+      "constructor": "createFeatMetaObj",
+      "data_arg": "metadata",
+      "args": ["metadata", "spat_unit", "feat_type", "provenance", "col_desc", "verbose"],
+      "required_args": "metadata",
+      "setter": "setFeatureMetadata",
+      "list_fn": "list_feat_metadata",
+      "nesting": ["spat_unit", "feat_type"],
+      "disk_backable": false
+    },
+    "spatial_locs": {
+      "slot": "spatial_locs",
+      "class": "spatLocsObj",
+      "constructor": "createSpatLocsObj",
+      "data_arg": "coordinates",
+      "args": ["coordinates", "name", "spat_unit", "provenance", "misc", "numeric_format", "verbose"],
+      "required_args": "coordinates",
+      "setter": "setSpatialLocations",
+      "list_fn": "list_spatial_locations",
+      "nesting": ["spat_unit", "name"],
+      "disk_backable": false
+    },
+    "spatial_info": {
+      "slot": "spatial_info",
+      "class": "giottoPolygon",
+      "constructor": "createGiottoPolygonsFromDfr",
+      "data_arg": "segmdfr",
+      "args": ["segmdfr", "name", "part_col", "calc_centroids", "make_valid", "verbose", "skip_eval_dfr", "copy_dt"],
+      "required_args": "segmdfr",
+      "setter": "setPolygonInfo",
+      "list_fn": "list_spatial_info",
+      "nesting": "spat_info",
+      "disk_backable": true
+    },
+    "dim_reduction": {
+      "slot": "dimension_reduction",
+      "class": "dimObj",
+      "constructor": "createDimObj",
+      "data_arg": "coordinates",
+      "args": ["coordinates", "name", "spat_unit", "feat_type", "method", "reduction", "provenance", "misc", "my_rownames"],
+      "required_args": "coordinates",
+      "setter": "setDimReduction",
+      "list_fn": "list_dim_reductions",
+      "nesting": ["spat_unit", "feat_type", "name"],
+      "disk_backable": false
+    },
+    "nn_network": {
+      "slot": "nn_network",
+      "class": "nnNetObj",
+      "constructor": "createNearestNetObj",
+      "data_arg": "name",
+      "args": ["name", "network", "nn_type", "spat_unit", "feat_type", "provenance", "misc"],
+      "required_args": "network",
+      "setter": "setNearestNetwork",
+      "list_fn": "list_nearest_networks",
+      "nesting": ["spat_unit", "feat_type", "nn_type", "name"],
+      "disk_backable": true
+    }
+  }
+}
