@@ -132,17 +132,17 @@ the mappings do not read: `findMapping` → `match`, readback PASS, identical pa
 
 ## LLM repair (`results/phase5_llm.csv`)
 
-| | situation | baseline (no model) | qwen3.8:27b (local Ollama) |
-|---|---|---|---|
-| L1 | counts moved to `misc` | declines | correct |
-| L2 | `counts_corrected` vs `umi_raw` | declines | correct |
-| L3 | CosMx local vs global coordinate columns | declines | **wrong, accepted** (local) |
-| L4 | coordinates in a `spatial` reduction | rules | rules |
-| L5 | no correct option | refuses | refuses |
+| | situation | baseline (no model) | qwen3.8:27b (local Ollama) | Haiku 4.5 (subagent replay) |
+|---|---|---|---|---|
+| L1 | counts moved to `misc` | declines | correct | correct |
+| L2 | `counts_corrected` vs `umi_raw` | declines | correct | correct |
+| L3 | CosMx local vs global coordinate columns | declines | **wrong, accepted** (local) | correct (global) |
+| L4 | coordinates in a `spatial` reduction | rules | rules | rules |
+| L5 | no correct option | refuses | refuses | refuses (its wrong pick was rejected by the gate) |
 
 - **Per call:** 400–800 input and 120–280 output tokens, 7–18 s on the local 27B model.
-- **Haiku 4.5 not measured:** no key on this machine. `ANTHROPIC_API_KEY=… Rscript
-  examples/seurat_comparison/llm_repair.R` adds it.
+- **Haiku 4.5** was measured through Claude Code subagents: exact prompts, answers replayed
+  through the gate (`llm_replay.R`). An API run needs `ANTHROPIC_API_KEY`.
 - **The L3 safety point:** internally consistent but wrong choices pass validation and
   readback, so `patched-unreviewed` must stay a hard stop before `verified`.
 

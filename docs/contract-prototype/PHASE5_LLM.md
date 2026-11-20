@@ -35,16 +35,20 @@ environment at call time; `httr2` redacts them.
 Declared before running: keep the LLM step only if it beats the baseline. The baseline
 takes the top-ranked candidate path when it leads by ≥ 0.5, and makes no param choices.
 
-| case | drift | truth | baseline | qwen3.8:27b (Ollama, local) |
-|---|---|---|---|---|
-| L1 | counts moved to `misc/stash` | `misc/stash` | not repaired (lead 0.33) | **correct**, 479 in / 117 out tokens, 7 s |
-| L2 | `misc/counts_corrected` + `misc/umi_raw` | `umi_raw` | not repaired (the wrong `counts_corrected` ranks first) | **correct**, 7 s |
-| L3 | CosMx columns: local and global `CenterX/Y_*_px`, FOV removed | global | not repaired | **WRONG ACCEPTED**: picked the local columns |
-| L4 | coordinates only as a `spatial` reduction | rules | correct (rules) | correct (rules) |
-| L5 | counts gone, nothing replaces them | refuse | refused | refused (its pick was dropped by the check) |
+| case | drift | truth | baseline | qwen3.8:27b (Ollama, local) | Haiku 4.5 (subagent) |
+|---|---|---|---|---|---|
+| L1 | counts moved to `misc/stash` | `misc/stash` | not repaired (lead 0.33) | **correct**, 479 in / 117 out tokens, 7 s | **correct** |
+| L2 | `misc/counts_corrected` + `misc/umi_raw` | `umi_raw` | not repaired (the wrong `counts_corrected` ranks first) | **correct**, 7 s | **correct** |
+| L3 | CosMx columns: local and global `CenterX/Y_*_px`, FOV removed | global | not repaired | **WRONG ACCEPTED**: picked the local columns | **correct** (global) |
+| L4 | coordinates only as a `spatial` reduction | rules | correct (rules) | correct (rules) | (rules) |
+| L5 | counts gone, nothing replaces them | refuse | refused | refused (its pick was dropped by the check) | refused: it picked the `data` layer (medium confidence); the gate rejected it (not integer counts) |
 
-Anthropic was not run: no credentials on this machine. Set `ANTHROPIC_API_KEY` and rerun
-the script.
+**How Haiku was run.** No API key is set on this machine, so each case's exact prompt and
+schema went to a Claude Code Haiku subagent in a fresh context. Its JSON answers were
+replayed through the same check and gate (`llm_replay.R`, rows `backend = replay`).
+- The output format was enforced by the checker, not by API structured outputs.
+- Token counts are not comparable.
+- `llm_repair.R` runs Haiku through the API once `ANTHROPIC_API_KEY` is set.
 
 ### Reading the results
 
@@ -73,7 +77,13 @@ the script.
 
 ## Recommendation
 
-Keep the LLM step, as opt-in and selector-only. It wins where naming carries the meaning
-(L1, L2). It can be wrong in ways the gate cannot see (L3), so `patched-unreviewed` must
-stay a hard stop before a patched mapping is verified. Next, measure Haiku on the same
-cases.
+Keep the LLM step, as opt-in and selector-only.
+- **It wins where naming carries the meaning.** Haiku got 3/3 where the baseline got 0/3,
+  and the local 27B model got 2/3.
+- **Model choice matters.** The local model accepted per-FOV coordinates; Haiku used the
+  FOV removal as the cue for global ones.
+- **The gate catches wrong picks it can measure.** Haiku's L5 pick (normalized values as
+  counts) was rejected.
+- **The gate cannot see semantically wrong but consistent choices** (the local model's
+  L3), so `patched-unreviewed` must stay a hard stop before a patched mapping is
+  verified.
