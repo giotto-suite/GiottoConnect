@@ -25,6 +25,7 @@ validateMapping <- function(mapping, profile, params = NULL, result = NULL,
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
     checkmate::assert_class(profile, "giottoProfile")
     params <- params %null% .bind_params(mapping, profile)
+    mapping <- .expand_for_each(mapping, profile, params)
     out <- .vm_collector()
 
     if (checks != "semantic") {

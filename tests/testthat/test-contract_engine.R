@@ -147,7 +147,9 @@ test_that("validateMapping reports unmapped data and missing sources", {
     s2@reductions$pca <- NULL
     v2 <- validateMapping(m, profileObject(s2))
     expect_true(any(v2$check == "unmapped" & grepl("misc/extra", v2$message)))
-    expect_equal(v2$level[v2$check == "source" & v2$part_id == "pca"], "WARN")
+    # reductions come from a for_each template: a missing one is simply absent
+    expect_false("dimred_pca" %in% v2$part_id)
+    expect_true("dimred_umap" %in% v2$part_id)
 
     m3 <- m
     m3$source_nodes$counts$path <- "assays/{assay}/layers/nope"
@@ -232,4 +234,25 @@ test_that("the assay param binds the default assay only", {
     f2 <- findMapping(profileObject(s), ecosystem = "seurat")
     expect_equal(f2$mapping$mapping$id, "seurat-assay")
     expect_equal(f2$params$values$assay, "Extra")
+})
+
+test_that("for_each expands one part per matching child", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    s[["harmony"]] <- SeuratObject::CreateDimReducObject(
+        embeddings = SeuratObject::Embeddings(s, "pca")[, 1:3], key = "harmony_", assay = "Xenium")
+    s[["spatial"]] <- SeuratObject::CreateDimReducObject(
+        embeddings = `colnames<-`(SeuratObject::Embeddings(s, "umap"), c("SPATIAL_1", "SPATIAL_2")),
+        key = "SPATIAL_", assay = "Xenium")
+    m <- readMapping("seurat-assay5")
+    p <- profileObject(s)
+    x <- GiottoConnect:::.expand_for_each(m, p, GiottoConnect:::.bind_params(m, p))
+    ids <- vapply(x$parts, `[[`, character(1), "id")
+    expect_setequal(grep("^dimred_", ids, value = TRUE), c("dimred_pca", "dimred_umap", "dimred_harmony"))
+    expect_equal(x$source_nodes$reduction__harmony$get$args$reduction, "harmony")
+    expect_length(GiottoConnect:::.mapping_schema_check(unclass(x)), 0L)
+    g <- seuratToGiotto(s)
+    expect_true("harmony" %in% GiottoClass::list_dim_reductions(g)$name)
+    expect_false("spatial" %in% GiottoClass::list_dim_reductions(g)$name)
+    expect_true(attr(readbackCheck(s, g), "pass"))
 })

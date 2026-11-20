@@ -6,7 +6,7 @@ test_that("readbackCheck passes for in-memory and disk conversions", {
     expect_true(attr(rb, "pass"))
     expect_true(all(rb$status == "MATCH"))
     expect_setequal(unique(rb$part_id), c("expr_raw", "expr_normalized", "cell_meta",
-        "feat_meta", "locs", "polygons", "pca", "umap", "nn"))
+        "feat_meta", "locs", "polygons", "dimred_pca", "dimred_umap", "nn"))
     expect_output(print(rb), "PASS")
 
     skip_if_not_installed("GiottoDisk")

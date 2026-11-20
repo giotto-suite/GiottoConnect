@@ -521,6 +521,84 @@
           "items": {
             "$ref": "#/$defs/loss"
           }
+        },
+        "for_each": {
+          "$ref": "#/$defs/for_each"
+        }
+      }
+    },
+    "for_each": {
+      "type": "object",
+      "required": [
+        "list",
+        "as"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "list": {
+          "type": "string",
+          "enum": [
+            "Assays",
+            "Layers",
+            "Reductions",
+            "Graphs",
+            "Neighbors",
+            "Images",
+            "Boundaries",
+            "columns",
+            "children"
+          ]
+        },
+        "on": {
+          "type": "string"
+        },
+        "as": {
+          "type": "string"
+        },
+        "where": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "has_child_role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "name_matches": {
+              "type": "string"
+            },
+            "or_role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "class": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            }
+          }
+        },
+        "exclude": {
+          "type": "string"
         }
       }
     }

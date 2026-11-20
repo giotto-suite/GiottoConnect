@@ -56,6 +56,8 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
 
     for (i in seq_along(m$parts)) {
         p <- m$parts[[i]]
+        # template parts expand to whatever the object has; nothing to repair
+        if (!is.null(p$for_each)) next
         node <- m$source_nodes[[p$from]]
         cur <- .pf_bind(node$path, pn$values)
         ok_new <- .part_bound(p, node, pn) && cur %in% new$nodes$path

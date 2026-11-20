@@ -46,6 +46,9 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     package_check(pkg)
 
     params <- .bind_params(mapping, profile)
+    # fingerprints describe the mapping as written, not its expansion
+    fp <- .mapping_fingerprint(mapping, profile, params$values)
+    mapping <- .expand_for_each(mapping, profile, params)
     if (isTRUE(validate)) {
         pre <- validateMapping(mapping, profile, params = params, checks = "structural")
         .stop_on_fail(pre, "structural validation")
@@ -61,7 +64,7 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         mapping = mapping$mapping$id,
         version = mapping$mapping$version,
         status = mapping$mapping$status,
-        fingerprint = .mapping_fingerprint(mapping, profile, params$values),
+        fingerprint = fp,
         params = params$values,
         parts = names(parts),
         targets = lapply(prepared, function(pp) pp$spec$to),
@@ -138,6 +141,54 @@ mappingProvenance <- function(gobject) {
     }
     types <- vapply(out, function(pp) pp$spec$part, character(1))
     out[order(match(types, .PART_ORDER))]
+}
+
+
+# for_each ####
+
+# Expand template parts (`for_each`) into one concrete, optional part per
+# matching child of the listing path, e.g. one dim_reduction part per
+# reduction. Each copy gets its own source node with the iteration value
+# bound, so the expanded mapping is an ordinary mapping.
+.expand_for_each <- function(mapping, profile, params) {
+    if (!any(vapply(mapping$parts, function(p) !is.null(p$for_each), logical(1)))) {
+        return(mapping)
+    }
+    lists <- .LIST_PATHS[[mapping$mapping$source$ecosystem]]
+    nodes <- profile$nodes
+    out <- list()
+    for (p in mapping$parts) {
+        fe <- p$for_each
+        if (is.null(fe)) {
+            out[[length(out) + 1L]] <- p
+            next
+        }
+        on <- .pf_bind(fe$on %null% "", params$values)
+        if (grepl("{", on, fixed = TRUE)) next
+        parent <- gsub("{on}", on, lists[[fe$list]], fixed = TRUE)
+        kids <- nodes[.pf_parent(nodes$path) == parent & nodes$path != parent &
+            !endsWith(nodes$path, "/*"), , drop = FALSE]
+        if (!nrow(kids)) next
+        name <- sub(".*/", "", kids$path)
+        keep <- if (is.null(fe$where)) rep(TRUE, nrow(kids)) else
+            .param_where(fe$where, kids, name, nodes)
+        vals <- name[keep]
+        if (!is.null(fe$exclude)) vals <- vals[!grepl(fe$exclude, vals)]
+        for (v in vals) {
+            sub_v <- function(x) gsub(sprintf("{%s}", fe$as), v, x, fixed = TRUE)
+            q <- p
+            q$for_each <- NULL
+            q <- rapply(q, sub_v, classes = "character", how = "replace")
+            q$optional <- TRUE
+            node_id <- sprintf("%s__%s", p$from, v)
+            mapping$source_nodes[[node_id]] <- rapply(mapping$source_nodes[[p$from]], sub_v,
+                classes = "character", how = "replace")
+            q$from <- node_id
+            out[[length(out) + 1L]] <- q
+        }
+    }
+    mapping$parts <- out
+    mapping
 }
 
 
@@ -425,7 +476,8 @@ mappingProvenance <- function(gobject) {
 # templated paths a mapping depends on: the source nodes its parts read (not
 # those only alternatives use) and the applies_to predicates
 .mapping_paths <- function(mapping) {
-    used <- unique(vapply(mapping$parts, `[[`, character(1), "from"))
+    fixed <- Filter(function(p) is.null(p$for_each), mapping$parts)
+    used <- unique(vapply(fixed, `[[`, character(1), "from"))
     unique(c(
         vapply(mapping$source_nodes[used], `[[`, character(1), "path"),
         vapply(mapping$mapping$source$applies_to$predicates %null% list(),

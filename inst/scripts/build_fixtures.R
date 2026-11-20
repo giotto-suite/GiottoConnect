@@ -220,7 +220,7 @@ DRIFT_EXPECTED <- data.frame(
         "coordinates moved to meta.data x_um/y_um, FOV removed", "counts stored as a dense matrix",
         "extra reduction tsne", "coordinates in mm", "graph Xenium_nn -> knn_graph",
         "unused graph Xenium_snn removed", "v3 Assay (counts only) instead of Assay5"),
-    expected = c("params", "params", "rules (alternative)", "rules (cast)", "params, WARN unmapped",
+    expected = c("params", "params", "rules (alternative)", "rules (cast)", "params, converted by the for_each template",
         "params, WARN looks like mm", "params", "params (fingerprint unchanged)",
         "seurat-assay mapping, optional parts absent"),
     stringsAsFactors = FALSE

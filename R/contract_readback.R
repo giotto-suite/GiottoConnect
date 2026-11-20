@@ -33,6 +33,7 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
     package_check(mapping$mapping$source$package)
     profile <- profileObject(x)
     params <- .bind_params(mapping, profile)
+    mapping <- .expand_for_each(mapping, profile, params)
     ctx <- .new_ctx(mapping, params, profile)
     prepared <- .prepare_parts(x, mapping, params, ctx)
     losses <- .collect_losses(mapping, ctx, params$values)

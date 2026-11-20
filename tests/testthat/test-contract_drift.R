@@ -63,13 +63,13 @@ test_that("a storage change gets a cast (D4)", {
     expect_true(attr(r$readback, "pass"))
 })
 
-test_that("new data is reported, not mapped (D5) and mm coordinates warn (D6)", {
+test_that("an extra reduction is converted by the template (D5) and mm coordinates warn (D6)", {
     skip_if_not_installed("SeuratObject")
     v <- drift()$variants
     r5 <- outcome(v$D5)$repair
     expect_equal(r5$status, "not_needed")
-    expect_match(r5$changes$detail[r5$changes$rule == "added"], "reductions/tsne")
-    expect_true(any(r5$validation$check == "unmapped" & grepl("tsne", r5$validation$message)))
+    expect_false(any(r5$validation$check == "unmapped" & grepl("tsne", r5$validation$message)))
+    expect_true("tsne" %in% GiottoClass::list_dim_reductions(seuratToGiotto(v$D5))$name)
 
     expect_warning(g6 <- seuratToGiotto(v$D6), "looks like mm")
     v6 <- validateMapping("seurat-assay5", profileObject(v$D6), result = g6, checks = "semantic")

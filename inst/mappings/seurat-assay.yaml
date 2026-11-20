@@ -17,7 +17,7 @@ mapping:
       predicates:
         - { path: "assays/{assay}", class: Assay }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "d876ef28dee4b61f"
+  fingerprint: "ab1e86a0a051cf17"
   fixtures: [seurat_v3_fixture]
   history: []
 
@@ -41,8 +41,7 @@ source_nodes:
                   get: { fn: GetTissueCoordinates, on: "images/{fov}/boundaries/{centroids}" } }
   segmentation: { path: "images/{fov}/boundaries/{segmentation}",
                   get: { fn: GetTissueCoordinates, on: "images/{fov}/boundaries/{segmentation}" } }
-  pca:          { path: "reductions/pca/cell.embeddings", get: { fn: Embeddings, args: { reduction: pca } } }
-  umap:         { path: "reductions/umap/cell.embeddings", get: { fn: Embeddings, args: { reduction: umap } } }
+  reduction:  { path: "reductions/{red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{red}" } } }
   nn:           { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
   spatial_reduction: { path: "reductions/{coord_red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{coord_red}" } } }
 
@@ -122,17 +121,15 @@ parts:
     lossy:
       - { kind: estimated, field: geometry, note: "invalid source rings are repaired (make_valid); their vertices can move" }
 
-  - id: pca
+  # one dim_reduction per reduction in the object (coordinate-like ones are
+  # read by the locs alternatives instead)
+  - id: "dimred_{red}"
     part: dim_reduction
-    from: pca
-    optional: true
-    to: { spat_unit: cell, feat_type: rna, name: pca, method: pca }
-
-  - id: umap
-    part: dim_reduction
-    from: umap
-    optional: true
-    to: { spat_unit: cell, feat_type: rna, name: umap, method: umap }
+    from: reduction
+    for_each: { list: Reductions, as: red, exclude: "^(spatial|coords?|centroids?|xy)$" }
+    to: { spat_unit: cell, feat_type: rna, name: "{red}", method: "{red}" }
+    lossy:
+      - { kind: dropped, path: "reductions/{red}/feature.loadings", note: "loadings and stdev are not carried over yet" }
 
   - id: nn
     part: nn_network
@@ -146,5 +143,4 @@ parts:
 lossy:
   - { kind: dropped, path: "assays/{assay}/scale.data", note: "recomputable from normalized values; no Giotto slot" }
   - { kind: dropped, path: "assays/{assay}/var.features", note: "variable features are not carried over yet" }
-  - { kind: dropped, path: "reductions/pca/feature.loadings", note: "loadings and stdev are not carried over yet" }
   - { kind: dropped, path: "graphs/{assay}_snn", note: "only the kNN graph is mapped; sNN can be rebuilt with createNearestNetwork()" }
