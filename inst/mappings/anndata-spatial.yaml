@@ -2,6 +2,8 @@
 # Counts are the first integer matrix among X, layers/* and raw/X; X is
 # mapped as normalized values when it is not integer. Coordinates come from
 # obsm/spatial (or X_spatial), else from obs columns.
+# With var/feature_types (10x), Gene Expression is the rna feature type and
+# every other category its own feature type.
 # Coordinates follow the Giotto convention: sdimx = x, sdimy = -y.
 mapping:
   id: anndata-spatial
@@ -29,13 +31,18 @@ params:
                 where: { name_matches: "^X$", kind: [sparse_matrix, dense_matrix], not_role: [integer_valued] } }
   spatial:    { list: Obsm, rule: first_where, where: { name_matches: "^(X_)?spatial$", kind: dense_matrix }, optional: true }
   nn_dist:    { list: Obsp, rule: first_where, where: { name_matches: "^distances$" }, optional: true }
+  rna_type:   { list: FeatureTypes, rule: name_is, value: "Gene Expression", optional: true }
 
 source_nodes:
-  counts:     { path: "{counts}", get: { fn: h5adMatrix } }
-  normalized: { path: "{normalized}", get: { fn: h5adMatrix } }
+  counts:     { path: "{counts}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
+  normalized: { path: "{normalized}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
   obs:        { path: obs, get: { fn: h5adFrame } }
   # the feature table of the counts: raw/var (plus var columns) for raw/X
-  var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}" } } }
+  var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}", feature_type: "{rna_type}" } } }
+  # one var/feature_types category
+  ft_counts:     { path: "{counts}", get: { fn: h5adMatrix, args: { feature_type: "{ft}" } } }
+  ft_normalized: { path: "{normalized}", get: { fn: h5adMatrix, args: { feature_type: "{ft}" } } }
+  ft_var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}", feature_type: "{ft}" } } }
   spatial:    { path: "obsm/{spatial}", get: { fn: h5adObsm } }
   reduction:  { path: "obsm/{red}", get: { fn: h5adObsm } }
   nn:         { path: "obsp/{nn_dist}", get: { fn: h5adObsp } }
@@ -106,6 +113,35 @@ parts:
     from: reduction
     for_each: { list: Obsm, as: red, strip: "^X_", exclude: "spatial", where: { kind: dense_matrix } }
     to: { spat_unit: cell, feat_type: rna, name: "{red_label}", method: "{red_label}" }
+
+  # every other var/feature_types category is its own feature type, named as
+  # Giotto's readers name them
+  - id: "expr_{ft_label}"
+    part: expression
+    from: ft_counts
+    for_each: &other_types
+      list: FeatureTypes
+      as: ft
+      exclude: "^Gene Expression$"
+      rename: { "Antibody Capture": protein, "Negative Control Probe": NegControlProbe,
+                "Negative Control Codeword": NegControlCodeword,
+                "Unassigned Codeword": UnassignedCodeword, "Blank Codeword": UnassignedCodeword,
+                "Genomic Control": GenomicControl }
+    to: { spat_unit: cell, feat_type: "{ft_label}", name: raw }
+
+  - id: "expr_norm_{ft_label}"
+    part: expression
+    from: ft_normalized
+    for_each: *other_types
+    to: { spat_unit: cell, feat_type: "{ft_label}", name: normalized }
+
+  - id: "feat_meta_{ft_label}"
+    part: feat_metadata
+    from: ft_var
+    for_each: *other_types
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: "{ft_label}" }
 
   - id: nn
     part: nn_network

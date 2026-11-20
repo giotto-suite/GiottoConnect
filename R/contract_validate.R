@@ -236,9 +236,13 @@ print.giottoValidation <- function(x, ...) {
             profile$n_cells))
     }
     if (!is.na(profile$n_feat)) {
-        # more features than the source counts (e.g. raw/X genes beyond var) lose nothing
-        lvl <- if (length(feats) >= profile$n_feat) "OK" else "WARN"
-        out$add("dims", NA, lvl, sprintf("%d features in giotto, %d in source", length(feats),
+        # features of every feature type; more than the source counts (e.g.
+        # raw/X genes beyond var) lose nothing
+        fts <- unique(GiottoClass::list_expression(g)$feat_type)
+        n_all <- sum(vapply(fts, function(ft) length(GiottoClass::featIDs(g, feat_type = ft)),
+            integer(1)))
+        lvl <- if (n_all >= profile$n_feat) "OK" else "WARN"
+        out$add("dims", NA, lvl, sprintf("%d features in giotto, %d in source", n_all,
             profile$n_feat))
     }
 

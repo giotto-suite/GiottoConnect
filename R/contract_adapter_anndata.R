@@ -14,6 +14,8 @@ setMethod("adapterListPaths", "anndataAdapter", function(adapter) c(
     # X, raw/X and every layer; bind with `as: path`
     Matrices = "|layers|raw", Layers = "layers",
     Obsm = "obsm", Obsp = "obsp", Varm = "varm", Uns = "uns",
+    # categories of var/feature_types (10x: Gene Expression, Antibody Capture, ...)
+    FeatureTypes = "var/feature_types",
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "anndataAdapter", function(adapter) c(
@@ -52,6 +54,8 @@ setMethod("adapterReads", "anndataAdapter", function(adapter, node, params) {
 
 # X, raw/X and layers stream into a GiottoDisk project with h5adInput()
 setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) {
+    # a feature-type subset is read into R
+    if (!is.null(node$get$args$feature_type)) return(NULL)
     if (!identical(node$get$fn, "h5adMatrix") || !requireNamespace("GiottoDisk", quietly = TRUE) ||
         !exists("h5adInput", envir = asNamespace("GiottoDisk"))) {
         return(NULL)
@@ -194,7 +198,13 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
 # Feature metadata for the features of `matrix`: var, or for raw/X the
 # raw/var table (which may hold more features) with the var columns added by
 # feature ID; a column in both takes the var value where var has the feature.
-.h5ad_var <- function(h5, path, matrix = NULL) {
+.h5ad_var <- function(h5, path, matrix = NULL, feature_type = NULL) {
+    out <- .h5ad_var_table(h5, path, matrix)
+    if (is.null(feature_type) || !"feature_types" %in% names(out)) return(out)
+    out[as.character(out$feature_types) %in% feature_type, , drop = FALSE]
+}
+
+.h5ad_var_table <- function(h5, path, matrix = NULL) {
     v <- .h5ad_frame(h5, path)
     if (is.null(matrix) || !startsWith(matrix, "raw/") || !.h5ad_exists(h5, "raw/var")) return(v)
     r <- .h5ad_frame(h5, "raw/var")
@@ -235,8 +245,24 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
     if (by_row == transposed) m else Matrix::t(m)
 }
 
-# X, raw/X or layers/<l> -> var x obs, named
-.h5ad_matrix <- function(h5, path) {
+# the feature_types of a var table, or NULL
+.h5ad_feature_types <- function(h5, group) {
+    p <- paste(group, "feature_types", sep = "/")
+    if (!.h5ad_exists(h5, p)) return(NULL)
+    as.character(.h5ad_read_elem(h5, p))
+}
+
+# rows of one feature type (all rows when `feature_type` is NULL)
+.h5ad_ft_rows <- function(h5, group, feature_type) {
+    if (is.null(feature_type)) return(NULL)
+    ft <- .h5ad_feature_types(h5, group)
+    if (is.null(ft)) return(NULL)
+    which(ft == feature_type)
+}
+
+# X, raw/X or layers/<l> -> var x obs, named; `feature_type` keeps the rows
+# of one var/feature_types category
+.h5ad_matrix <- function(h5, path, feature_type = NULL) {
     node <- h5[[path]]
     enc <- .h5ad_encoding(node)
     m <- if (enc %in% c("csr_matrix", "csc_matrix")) {
@@ -248,7 +274,8 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
         stop(wrap_txt(sprintf("'%s' has unsupported matrix encoding '%s'", path, enc)), call. = FALSE)
     }
     dimnames(m) <- list(.h5ad_feat_ids(h5, .h5ad_var_group(path)), .h5ad_index(h5, "obs"))
-    m
+    rows <- .h5ad_ft_rows(h5, .h5ad_var_group(path), feature_type)
+    if (is.null(rows)) m else m[rows, , drop = FALSE]
 }
 
 # obsm/<k> -> obs x k matrix (or the data.frame it is stored as)
@@ -318,6 +345,15 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
     env$notes <- character()
     .h5ad_walk(h5, h5, "", 0L, env, max_depth = max_depth, max_children = max_children,
         sample_n = sample_n)
+    # categories of var/feature_types as child nodes, for the FeatureTypes listing
+    ft <- .h5ad_feature_types(h5, "var")
+    for (cat in unique(ft)) {
+        env$rows[[length(env$rows) + 1L]] <- list(
+            path = .pf_join("var/feature_types", cat), kind = "category", class = "category",
+            dtype = NA_character_, shape = as.character(sum(ft == cat)), n_children = 0L,
+            truncated = FALSE, role_hints = NA_character_, sample = NA_character_,
+            value = NA_character_, .flags = "")
+    }
     n_cells <- if (.h5ad_exists(h5, "obs")) length(.h5ad_index(h5, "obs")) else NULL
     n_feat <- if (.h5ad_exists(h5, "var")) length(.h5ad_index(h5, "var")) else NULL
     enc_ver <- .h5ad_attr(h5, "encoding-version")

@@ -187,3 +187,25 @@ test_that("a file without counts converts its normalized values", {
     expect_true("expr_raw" %in% mappingProvenance(g)$absent)
     expect_equal(nrow(GiottoClass::fDataDT(g)), 60L)
 })
+
+test_that("var/feature_types categories become feature types", {
+    skip_if_not_installed("hdf5r")
+    env <- new.env()
+    sys.source(contract_script("build_fixtures.R"), envir = env)
+    fx <- env$build_h5ad_fixture(tempfile(fileext = ".h5ad"), feature_types = TRUE)
+    g <- anndataToGiotto(fx$path)
+    ex <- GiottoClass::list_expression(g)
+    expect_setequal(unique(ex$feat_type), c("rna", "NegControlProbe", "UnassignedCodeword"))
+    expect_equal(nrow(GiottoClass::fDataDT(g, feat_type = "rna")), 55L)
+    probes <- GiottoClass::getExpression(g, feat_type = "NegControlProbe", values = "raw",
+        output = "matrix")
+    want <- t(as.matrix(fx$counts))[56:58, ]
+    expect_equal(unname(as.matrix(probes)), unname(want))
+    # duplicated names are made unique over the whole var table
+    expect_equal(GiottoClass::fDataDT(g, feat_type = "UnassignedCodeword")$feat_ID,
+        c("gene59", "gene01--2"))
+    expect_true(attr(readbackCheck(fx$path, g), "pass"))
+    # also onto disk (subsets are read, not streamed)
+    gd <- anndataToGiotto(fx$path, source = withr_tempdir())
+    expect_true(attr(readbackCheck(fx$path, gd), "pass"))
+})

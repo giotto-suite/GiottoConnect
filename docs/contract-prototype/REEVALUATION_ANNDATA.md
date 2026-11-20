@@ -98,3 +98,19 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
    Validation flags them, but the units cannot be recovered from these files.
 7. **Reverse direction:** `giottoToAnnData()` is still the reticulate version. A
    Giotto → h5ad target (hdf5r writer) would follow the Seurat target pattern.
+
+## Follow-up: modalities
+- **Seurat:** every assay other than the main one becomes its own feature type
+  (counts, data and feature metadata; Assay5 and v3). The Xenium/Atera controls
+  take the names Giotto's readers use (`ControlProbe` → `NegControlProbe`,
+  `ControlCodeword` → `NegControlCodeword`, `BlankCodeword` → `UnassignedCodeword`),
+  and `ADT` becomes `protein`. Real Xenium and Atera objects gain their control
+  feature types; all existing content is byte-identical.
+- **AnnData:** the categories of `var/feature_types` (scanpy `read_10x_h5`) split the
+  same way: "Gene Expression" is `rna`, and the other categories get the same Giotto
+  names. None of the real files has `feature_types`, so this is tested on a fixture.
+  Feature-type subsets are read into R, not streamed.
+- Found on the way: GiottoDisk could not read back a store written from an
+  all-zero matrix (the Atera crop's `BlankCodeword`/`ControlCodeword`). The fix is
+  on GiottoDisk branch `fix/empty-store-write` (local, not pushed).
+

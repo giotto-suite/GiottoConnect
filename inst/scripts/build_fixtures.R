@@ -332,9 +332,13 @@ build_llm_cases <- function() {
 #       raw/X copy, pre-0.8 categorical (`__categories`), obsm spatial only
 #   build_h5ad_fixture(path, raw_extra = 5)   counts in raw/X over the var
 #       genes plus `raw_extra` more, described by raw/var (Visium-like)
+#   build_h5ad_fixture(path, feature_types = TRUE)   var/feature_types as
+#       scanpy's read_10x_h5 gives for Xenium: the last 5 features are
+#       controls (3 Negative Control Probe, 2 Unassigned Codeword)
 
 build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
-                               legacy = FALSE, raw_extra = 0L, seed = 1L) {
+                               legacy = FALSE, raw_extra = 0L, feature_types = FALSE,
+                               seed = 1L) {
     stopifnot(requireNamespace("hdf5r", quietly = TRUE))
     set.seed(seed)
     cells <- sprintf("cell_%03d", seq_len(n_cells))
@@ -431,7 +435,12 @@ build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
             layers <- h5$create_group("layers")
             enc(layers, "dict")
             sparse(layers, "counts", counts)
-            frame("var", feats, list(highly_variable = rep(c(1L, 0L), length.out = n_feat)))
+            vcols <- list(highly_variable = rep(c(1L, 0L), length.out = n_feat))
+            if (feature_types) {
+                vcols$feature_types <- factor(c(rep("Gene Expression", n_feat - 5L),
+                    rep("Negative Control Probe", 3L), rep("Unassigned Codeword", 2L)))
+            }
+            frame("var", feats, vcols)
         }
         obsm <- h5$create_group("obsm")
         enc(obsm, "dict")
