@@ -30,6 +30,12 @@ test_that("ops transform tables and matrices", {
     expect_named(op(df, list(op = "rename", map = list(x = "sdimx"))), c("sdimx", "y"))
     expect_equal(op(df, list(op = "scale", factor = -1, cols = "y"))$y, c(-3, -4))
     expect_equal(op(df, list(op = "rownames_to_col", col = "cell_ID"))$cell_ID, c("a", "b"))
+    same <- cbind(df, cell_ID = c("a", "b"))
+    expect_equal(names(op(same, list(op = "rownames_to_col", col = "cell_ID"))), c("cell_ID", "x", "y"))
+    other <- cbind(df, cell_ID = c("p", "q"))
+    out <- op(other, list(op = "rownames_to_col", col = "cell_ID"))
+    expect_equal(out$cell_ID, c("a", "b"))
+    expect_equal(out$cell_ID.source, c("p", "q"))
     expect_equal(op(df, list(op = "set", field = "z", value = "k"))$z, c("k", "k"))
     expect_error(op(df, list(op = "rename", map = list(q = "r"))), "missing column")
     m <- matrix(c(1, 2, 3, 4), 2)
@@ -155,7 +161,7 @@ test_that("semantic validation checks the converted object", {
     s <- seurat_fixture()
     v <- validateMapping("seurat-assay5", profileObject(s), result = fixture_giotto(),
         checks = "semantic")
-    expect_setequal(unique(v$check), c("raw_counts", "dims", "cell_ids", "coord_units",
+    expect_setequal(unique(v$check), c("raw_counts", "feat_ids", "dims", "cell_ids", "coord_units",
         "dim_reduction", "nn_network"))
     expect_true(all(v$level == "OK"))
 })

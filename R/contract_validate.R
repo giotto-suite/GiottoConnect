@@ -80,6 +80,7 @@ print.giottoValidation <- function(x, ...) {
 }
 
 .vm_params <- function(mapping, params, out) {
+    used <- unique(unlist(lapply(mapping$parts, function(p) .vm_part_params(mapping, p))))
     for (nm in names(mapping$params)) {
         pr <- mapping$params[[nm]]
         if (nm %in% names(params$values)) {
@@ -88,9 +89,10 @@ print.giottoValidation <- function(x, ...) {
             needed <- any(vapply(mapping$parts, function(p) {
                 !isTRUE(p$optional) && nm %in% .vm_part_params(mapping, p)
             }, logical(1)))
-            lvl <- if (needed) "FAIL" else if (isTRUE(pr$optional)) "WARN" else "FAIL"
-            out$add("param", NA, lvl, sprintf("%s could not be bound (%s %s)", nm,
-                pr$list, pr$rule))
+            # a param no part reads (e.g. after a patch) cannot block conversion
+            lvl <- if (needed) "FAIL" else if (isTRUE(pr$optional) || !nm %in% used) "WARN" else "FAIL"
+            out$add("param", NA, lvl, sprintf("%s could not be bound (%s)%s", nm,
+                .param_describe(pr), if (!nm %in% used) "; no part uses it" else ""))
         }
     }
 }
@@ -108,6 +110,9 @@ print.giottoValidation <- function(x, ...) {
             out$add("source", p$id, lvl_missing, sprintf("'%s' has unbound params", node$path))
         } else if (!path %in% profile$nodes$path) {
             out$add("source", p$id, lvl_missing, sprintf("path '%s' not found", path))
+        } else if (identical(node$get$fn, "path")) {
+            out$add("source", p$id, "WARN", sprintf(
+                "%s is read by path, not through an accessor (repair patch); review", path))
         } else {
             out$add("source", p$id, "OK", path)
         }
@@ -193,6 +198,20 @@ print.giottoValidation <- function(x, ...) {
         out$add("raw_counts", NA, if (ok_int && ok_pos) "OK" else "FAIL",
             sprintf("raw expression %s integer-valued, %s non-negative (sampled %d values)",
                 if (ok_int) "is" else "is NOT", if (ok_pos) "is" else "is NOT", length(v)))
+    }
+
+    # every expression matrix should be indexed by the same features
+    ex <- GiottoClass::list_expression(g)
+    ex <- ex[ex$spat_unit == "cell" & ex$feat_type == "rna", , drop = FALSE]
+    fm <- tryCatch(GiottoClass::fDataDT(g, spat_unit = "cell", feat_type = "rna")$feat_ID,
+        error = function(e) NULL)
+    ref <- if (length(fm)) fm else feats
+    for (nm in ex$name) {
+        e <- GiottoClass::getExpression(g, values = nm, spat_unit = "cell", feat_type = "rna",
+            output = "exprObj")
+        ov <- mean(GiottoClass::featIDs(e) %in% ref)
+        out$add("feat_ids", nm, if (ov >= 0.99) "OK" else "FAIL",
+            sprintf("%.1f%% of %s features are known features", 100 * ov, nm))
     }
 
     if (!is.na(profile$n_cells)) {

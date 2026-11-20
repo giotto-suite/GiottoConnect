@@ -4,19 +4,32 @@
 \alias{repairMapping}
 \title{Repair a mapping for a drifted object}
 \usage{
-repairMapping(mapping, x, llm = NULL, old_profile = NULL, file = NULL)
+repairMapping(
+  mapping,
+  x,
+  llm = NULL,
+  old_profile = NULL,
+  file = NULL,
+  request_file = NULL
+)
 }
 \arguments{
 \item{mapping}{a \code{giottoMapping}, mapping file or bundled mapping id}
 
 \item{x}{the drifted object, or its \code{giottoProfile}}
 
-\item{llm}{optional LLM backend used for parts the rules cannot repair}
+\item{llm}{optional \code{\link[=llmBackend]{llmBackend()}}. Parts the rules cannot repair, and
+declared alternatives whose params do not bind by rule, are offered to it as
+closed choices (see \code{\link[=llmPatch]{llmPatch()}}). Its choices pass the same validation,
+conversion and readback as rule repairs.}
 
 \item{old_profile}{profile the mapping was verified on. Defaults to the
 \verb{<id>.profile.json} stored next to the mapping file.}
 
 \item{file}{optional path to write the repaired mapping to (YAML)}
+
+\item{request_file}{optional path for a \code{\link[=writeMappingRequest]{writeMappingRequest()}} handoff,
+written when the repair fails}
 }
 \value{
 a \code{giottoRepair}: list with \code{status} (\code{"not_needed"},

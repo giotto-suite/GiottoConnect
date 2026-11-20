@@ -12,6 +12,7 @@
     scale = list(required = "factor", optional = "cols"),
     cast = list(required = "to"),
     rownames_to_col = list(required = "col"),
+    set_colnames = list(required = "cols"),
     set = list(required = c("field", "value"))
 )
 

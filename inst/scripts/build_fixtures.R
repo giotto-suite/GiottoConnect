@@ -225,3 +225,58 @@ DRIFT_EXPECTED <- data.frame(
         "seurat-assay mapping, optional parts absent"),
     stringsAsFactors = FALSE
 )
+
+# Drift that rules alone cannot resolve: input for the LLM repair benchmark.
+# truth: the option a correct repair picks (NA: no correct option exists)
+build_llm_cases <- function() {
+    stopifnot(requireNamespace("SeuratObject", quietly = TRUE))
+    SO <- asNamespace("SeuratObject")
+    base <- build_seurat_fixture()
+    counts <- SO$LayerData(base, layer = "counts")
+    drop_counts <- function(s) {
+        a <- s[["Xenium"]]
+        a$counts <- NULL
+        s[["Xenium"]] <- suppressWarnings(a)
+        s
+    }
+    ct <- SO$GetTissueCoordinates(base[["fov"]], which = "centroids")
+    ct <- ct[match(colnames(base), ct$cell), ]
+    cases <- list()
+
+    # L1 counts stashed under misc
+    s <- drop_counts(base)
+    s@misc$stash <- counts
+    cases$L1 <- list(object = s, truth = c(expr_raw.from = "misc/stash"))
+
+    # L2 two plausible integer matrices, the raw one has the less obvious name
+    s <- drop_counts(base)
+    corrected <- counts
+    corrected@x <- pmax(0, corrected@x - 1)
+    s@misc$counts_corrected <- Matrix::drop0(corrected)
+    s@misc$umi_raw <- counts
+    cases$L2 <- list(object = s, truth = c(expr_raw.from = "misc/umi_raw"))
+
+    # L3 CosMx-style coordinate columns, FOV removed
+    s <- base
+    s$CenterX_local_px <- ct$x %% 100
+    s$CenterY_local_px <- ct$y %% 100
+    s$CenterX_global_px <- ct$x
+    s$CenterY_global_px <- ct$y
+    s$Area <- stats::runif(ncol(s), 50, 150)
+    s[["fov"]] <- NULL
+    cases$L3 <- list(object = s, truth = c(
+        locs.locs_from_meta.x_col = "CenterX_global_px",
+        locs.locs_from_meta.y_col = "CenterY_global_px"))
+
+    # L4 coordinates only as a "spatial" reduction, FOV removed (rules)
+    s <- base
+    emb <- as.matrix(ct[, c("x", "y")])
+    dimnames(emb) <- list(ct$cell, c("SPATIAL_1", "SPATIAL_2"))
+    s[["spatial"]] <- SO$CreateDimReducObject(embeddings = emb, key = "SPATIAL_", assay = "Xenium")
+    s[["fov"]] <- NULL
+    cases$L4 <- list(object = s, truth = c(locs = "rules: locs_from_reduction"))
+
+    # L5 counts gone and nothing replaces them
+    cases$L5 <- list(object = drop_counts(base), truth = c(expr_raw.from = NA_character_))
+    cases
+}

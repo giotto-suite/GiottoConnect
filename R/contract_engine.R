@@ -243,6 +243,9 @@ mappingProvenance <- function(gobject) {
 
 .read_node <- function(x, node, params, pkg) {
     get <- node$get
+    # "path": the node at `on`, read structurally. Only patches use it; a
+    # verified mapping reads through the source package's accessors.
+    if (identical(get$fn, "path")) return(.resolve_path(x, .pf_bind(get$on, params)))
     fn <- if (identical(get$fn, "[[")) {
         base::`[[`
     } else {
@@ -298,9 +301,23 @@ mappingProvenance <- function(gobject) {
             }
         },
         cast = .cast(data, o$to),
+        set_colnames = {
+            if (length(o$cols) != ncol(data)) stop("set_colnames needs one name per column")
+            colnames(data) <- unlist(o$cols)
+            data
+        },
         rownames_to_col = {
             if (!tab) stop("rownames_to_col needs a table")
             rn <- rownames(data)
+            # an existing column of that name is reused when it holds the row
+            # names, otherwise kept as "<col>.source"
+            if (o$col %in% names(data)) {
+                if (identical(as.character(data[[o$col]]), rn)) {
+                    data <- data[, setdiff(names(data), o$col), drop = FALSE]
+                } else {
+                    names(data)[names(data) == o$col] <- paste0(o$col, ".source")
+                }
+            }
             out <- cbind(stats::setNames(data.frame(rn, stringsAsFactors = FALSE), o$col),
                 data)
             rownames(out) <- NULL
@@ -317,6 +334,7 @@ mappingProvenance <- function(gobject) {
 
 .cast <- function(data, to) {
     switch(to,
+        table = as.data.frame(as.matrix(data)),
         sparse = methods::as(data, "CsparseMatrix"),
         integer = {
             v <- if (methods::is(data, "sparseMatrix")) data@x else as.vector(data)
@@ -404,10 +422,12 @@ mappingProvenance <- function(gobject) {
     out
 }
 
-# templated paths a mapping depends on: source nodes and applies_to predicates
+# templated paths a mapping depends on: the source nodes its parts read (not
+# those only alternatives use) and the applies_to predicates
 .mapping_paths <- function(mapping) {
+    used <- unique(vapply(mapping$parts, `[[`, character(1), "from"))
     unique(c(
-        vapply(mapping$source_nodes, `[[`, character(1), "path"),
+        vapply(mapping$source_nodes[used], `[[`, character(1), "path"),
         vapply(mapping$mapping$source$applies_to$predicates %null% list(),
             `[[`, character(1), "path")
     ))

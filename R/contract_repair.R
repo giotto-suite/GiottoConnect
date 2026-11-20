@@ -20,15 +20,21 @@
 #' object, converted and read back) before it is accepted.
 #' @param mapping a `giottoMapping`, mapping file or bundled mapping id
 #' @param x the drifted object, or its `giottoProfile`
-#' @param llm optional LLM backend used for parts the rules cannot repair
+#' @param llm optional [llmBackend()]. Parts the rules cannot repair, and
+#' declared alternatives whose params do not bind by rule, are offered to it as
+#' closed choices (see [llmPatch()]). Its choices pass the same validation,
+#' conversion and readback as rule repairs.
 #' @param old_profile profile the mapping was verified on. Defaults to the
 #' `<id>.profile.json` stored next to the mapping file.
 #' @param file optional path to write the repaired mapping to (YAML)
+#' @param request_file optional path for a [writeMappingRequest()] handoff,
+#' written when the repair fails
 #' @returns a `giottoRepair`: list with `status` (`"not_needed"`,
 #' `"repaired"` or `"failed"`), `mapping` (the possibly patched mapping),
 #' `changes`, `unresolved`, `candidates`, `validation` and `readback`
 #' @export
-repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NULL) {
+repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NULL,
+    request_file = NULL) {
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
     is_obj <- !inherits(x, "giottoProfile")
     new <- if (is_obj) profileObject(x) else x
@@ -46,6 +52,7 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
             detail = detail, stringsAsFactors = FALSE)
     }
     unresolved <- character()
+    pending <- list()
 
     for (i in seq_along(m$parts)) {
         p <- m$parts[[i]]
@@ -86,6 +93,7 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
             note(p$id, "alternative", alt$detail)
             next
         }
+        pending <- c(pending, .alt_pending(m, i, new))
         if (isTRUE(p$optional)) {
             # optional data that is gone from the object: skipped, not repaired
             note(p$id, "absent", sprintf("%s is gone and nothing replaces it; optional part skipped",
@@ -97,20 +105,31 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
     if (!is.null(diff)) {
         # new nodes the (possibly patched) mapping now reads are not "unmapped"
         used <- unlist(.bind_params(m, new)$values)
-        added <- diff$new_path[diff$change == "added"]
-        added <- added[!sub(".*/", "", added) %in% used]
+        # report new data (matrices, tables), not new columns or settings
+        added <- diff$new_path[diff$change == "added" &
+            diff$kind %in% c("sparse_matrix", "dense_matrix", "data.frame", "S4")]
+        added <- added[!sub(".*/", "", added) %in% used & !startsWith(added, "commands/")]
         for (pth in added) {
             note(NA_character_, "added", sprintf("%s is new and unmapped (no change)", pth))
         }
     }
     candidates <- .repair_candidates(m, unresolved, old, new, po, pn)
     llm_log <- NULL
-    if (length(unresolved) && !is.null(llm)) {
-        lp <- .repair_with_llm(m, unresolved, candidates, diff, llm)
-        m <- lp$mapping
-        for (r in seq_len(nrow(lp$applied))) note(lp$applied$part_id[r], "llm", lp$applied$detail[r])
-        unresolved <- setdiff(unresolved, lp$applied$part_id)
-        llm_log <- lp$log
+    if (!is.null(llm) && (length(unresolved) || length(pending))) {
+        items <- .llm_items(m, unresolved, pending, candidates, new, pn)
+        if (length(items)) {
+            req <- .llm_request(m, items, new, diff)
+            ans <- llmPatch(req, llm)
+            llm_log <- ans$log
+            ap <- .apply_llm_patches(m, ans$patches, items)
+            m <- ap$mapping
+            for (r in seq_len(nrow(ap$applied))) {
+                note(ap$applied$part_id[r], "llm", ap$applied$detail[r])
+            }
+            resolved <- unique(ap$applied$part_id)
+            unresolved <- setdiff(unresolved, resolved)
+            changes <- Filter(function(ch) !(ch$rule == "absent" && ch$part_id %in% resolved), changes)
+        }
     }
     changes <- if (length(changes)) do.call(rbind, changes) else
         data.frame(part_id = character(), rule = character(), detail = character())
@@ -144,9 +163,11 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
     }
     if (!is.null(file) && status != "not_needed") .mapping_write(m, file)
 
-    structure(list(status = status, mapping = m, changes = changes, unresolved = unresolved,
+    res <- structure(list(status = status, mapping = m, changes = changes, unresolved = unresolved,
         candidates = candidates, validation = validation, readback = readback,
-        diff = diff, llm_log = llm_log), class = "giottoRepair")
+        diff = diff, llm_log = llm_log, profile = new), class = "giottoRepair")
+    if (status == "failed" && !is.null(request_file)) writeMappingRequest(res, request_file)
+    res
 }
 
 #' @export
@@ -355,7 +376,154 @@ print.giottoRepair <- function(x, ...) {
     invisible(file)
 }
 
-# LLM patches for unresolved parts (contract_llm.R)
-.repair_with_llm <- function(m, unresolved, candidates, diff, llm) {
-    stop(wrap_txt("LLM repair is not available yet"), call. = FALSE)
+
+# LLM items and patches ####
+
+# declared alternatives of part i whose source exists but whose own params
+# did not bind by rule: candidates for an LLM param choice
+.alt_pending <- function(m, i, new) {
+    p <- m$parts[[i]]
+    out <- list()
+    for (alt in p$alternatives) {
+        if (!length(alt$params)) next
+        mm <- m
+        mm$params <- c(m$params, alt$params)
+        b <- .bind_params(mm, new)
+        miss <- intersect(names(alt$params), b$unbound)
+        node <- m$source_nodes[[alt$from]]
+        if (!length(miss) || grepl("{", .pf_bind(node$path, b$values), fixed = TRUE)) next
+        if (!.pf_bind(node$path, b$values) %in% new$nodes$path) next
+        out[[length(out) + 1L]] <- list(i = i, part_id = p$id, alt = alt, unbound = miss,
+            values = b$values)
+    }
+    out
+}
+
+# closed-choice items: a source path per unresolved part, a value per
+# unbound param of a pending alternative
+.llm_items <- function(m, unresolved, pending, candidates, new, pn) {
+    items <- list()
+    ids <- vapply(m$parts, `[[`, character(1), "id")
+    for (pid in unresolved) {
+        cand <- candidates[candidates$part_id == pid, , drop = FALSE]
+        if (!nrow(cand)) next
+        p <- m$parts[[match(pid, ids)]]
+        node <- m$source_nodes[[p$from]]
+        items[[length(items) + 1L]] <- list(item = paste0(pid, ".from"), kind = "from", part_id = pid,
+            part = p$part, options = cand$path, option_paths = cand$path,
+            scores = stats::setNames(cand$score, cand$path),
+            question = sprintf("Part `%s` (%s) used to read `%s`, which is gone. Which node now holds it?",
+                pid, p$part, .pf_bind(node$path, pn$values)))
+    }
+    lists <- .LIST_PATHS[[m$mapping$source$ecosystem]]
+    for (pd in pending) {
+        p <- m$parts[[pd$i]]
+        for (prm in pd$unbound) {
+            pr <- pd$alt$params[[prm]]
+            parent <- gsub("{on}", .pf_bind(pr$on %null% "", pd$values), lists[[pr$list]], fixed = TRUE)
+            kids <- new$nodes[.pf_parent(new$nodes$path) == parent & new$nodes$path != parent &
+                !endsWith(new$nodes$path, "/*"), , drop = FALSE]
+            if (!is.null(pr$where$kind)) kids <- kids[kids$kind == pr$where$kind, , drop = FALSE]
+            if (!nrow(kids)) next
+            used_in <- paste(vapply(pd$alt$ops, function(o) {
+                if (!is.null(o$map)) paste(names(o$map), unlist(o$map), sep = " -> ", collapse = ", ") else o$op
+            }, character(1)), collapse = "; ")
+            items[[length(items) + 1L]] <- list(item = sprintf("%s.%s.%s", p$id, pd$alt$id, prm),
+                kind = "param", part_id = p$id, part = p$part, alt = pd$alt$id, param = prm,
+                options = sub(".*/", "", kids$path), option_paths = kids$path, scores = numeric(),
+                question = sprintf(paste0("Part `%s` (%s) has no source; its alternative `%s` reads `%s` ",
+                    "and needs param `%s` (used as: %s). Which entry is `%s`?"),
+                    p$id, p$part, pd$alt$id, parent, prm, used_in, prm))
+        }
+    }
+    items
+}
+
+.apply_llm_patches <- function(m, patches, items) {
+    applied <- data.frame(part_id = character(), detail = character(), stringsAsFactors = FALSE)
+    if (!nrow(patches)) return(list(mapping = m, applied = applied))
+    by_item <- stats::setNames(items, vapply(items, `[[`, character(1), "item"))
+    ids <- function() vapply(m$parts, `[[`, character(1), "id")
+    say <- function(pt) sprintf("%s = %s (%s): %s", pt$item, pt$value, pt$confidence, pt$rationale)
+
+    # source paths, read structurally
+    for (r in which(vapply(patches$item, function(x) by_item[[x]]$kind, character(1)) == "from")) {
+        pt <- patches[r, ]
+        it <- by_item[[pt$item]]
+        i <- match(it$part_id, ids())
+        node_id <- paste0(it$part_id, "_patched")
+        m$source_nodes[[node_id]] <- list(path = pt$value, get = list(fn = "path", on = pt$value))
+        m$parts[[i]]$from <- node_id
+        applied <- rbind(applied, data.frame(part_id = it$part_id, detail = say(pt)))
+    }
+    # params of an alternative: all of them must be chosen
+    param_items <- Filter(function(it) it$kind == "param", items)
+    groups <- split(param_items, vapply(param_items, function(it) paste(it$part_id, it$alt), character(1)))
+    for (g in groups) {
+        chosen <- patches[patches$item %in% vapply(g, `[[`, character(1), "item"), , drop = FALSE]
+        if (nrow(chosen) != length(g)) next
+        i <- match(g[[1]]$part_id, ids())
+        p <- m$parts[[i]]
+        alt <- Filter(function(a) a$id == g[[1]]$alt, p$alternatives)[[1]]
+        for (it in g) {
+            v <- chosen$value[chosen$item == it$item]
+            pr <- alt$params[[it$param]]
+            alt$params[[it$param]] <- list(list = pr$list, on = pr$on, rule = "name_is", value = v)
+        }
+        m <- .apply_alternative(m, i, list(alt = alt, detail = ""))
+        for (r in seq_len(nrow(chosen))) {
+            applied <- rbind(applied, data.frame(part_id = g[[1]]$part_id, detail = say(chosen[r, ])))
+        }
+    }
+    list(mapping = m, applied = applied)
+}
+
+#' @title Write a mapping repair request for a human or a stronger model
+#' @name writeMappingRequest
+#' @description Write a markdown handoff for a repair that failed: what the
+#' mapping expected, what changed in the object, which parts are unresolved
+#' with their ranked candidates, the validation and readback results, and the
+#' contract lines for the affected parts.
+#' @param repair a `giottoRepair` from [repairMapping()]
+#' @param file output path (`.md`)
+#' @returns `file`, invisibly
+#' @export
+writeMappingRequest <- function(repair, file) {
+    checkmate::assert_class(repair, "giottoRepair")
+    m <- repair$mapping
+    ct <- giottoContract()
+    tab <- function(df) {
+        if (is.null(df) || !nrow(df)) return("(none)")
+        df <- as.data.frame(unclass(df), stringsAsFactors = FALSE)
+        df[] <- lapply(df, function(v) gsub("|", "\\|", as.character(v), fixed = TRUE))
+        paste(c(paste0("| ", paste(names(df), collapse = " | "), " |"),
+            paste0("|", paste(rep("---", ncol(df)), collapse = "|"), "|"),
+            apply(df, 1, function(r) paste0("| ", paste(r, collapse = " | "), " |"))), collapse = "\n")
+    }
+    parts <- Filter(function(p) p$id %in% c(repair$unresolved, repair$changes$part_id), m$parts)
+    contract <- vapply(parts, function(p) {
+        cp <- ct$parts[[p$part]]
+        sprintf("- `%s` -> %s via `%s` (keys: %s)%s", p$id, p$part, cp$constructor,
+            paste(cp$nesting, collapse = "/"), if (isTRUE(p$optional)) ", optional" else "")
+    }, character(1))
+    val <- repair$validation[repair$validation$level != "OK", , drop = FALSE]
+    rb <- if (is.null(repair$readback)) NULL else repair$readback[repair$readback$status != "MATCH", ]
+    txt <- c(
+        sprintf("# Mapping repair request: %s v%s", m$mapping$id, m$mapping$version), "",
+        sprintf("Status: **%s**. Generated %s.", repair$status, format(Sys.time(), "%Y-%m-%d %H:%M")), "",
+        "## Unresolved parts",
+        if (length(repair$unresolved)) paste0("- `", repair$unresolved, "`") else "(none)", "",
+        "## Ranked candidates", tab(repair$candidates), "",
+        "## Changes applied so far", tab(repair$changes), "",
+        "## Structural changes in the object", tab(repair$diff), "",
+        "## Validation (non-OK)", tab(val), "",
+        "## Readback (non-MATCH)", tab(rb), "",
+        "## Contract for the affected parts", if (length(contract)) contract else "(none)", "",
+        "## How to answer",
+        paste("Edit the mapping YAML: point the part's `from` at a source node (add one under",
+            "`source_nodes` with `path` and an accessor `get`), or declare an alternative with",
+            "params. Then run `repairMapping()` or `convertWithMapping()` + `readbackCheck()`.")
+    )
+    writeLines(txt, file)
+    invisible(file)
 }

@@ -90,15 +90,21 @@ test_that("v3/v4 assays use the seurat-assay mapping (D9)", {
     expect_equal(mappingProvenance(g)$mapping, "seurat-assay")
 })
 
-test_that("objects no mapping applies to are refused, not mis-converted", {
+test_that("objects without required data are refused, not mis-converted", {
     skip_if_not_installed("SeuratObject")
     SO <- asNamespace("SeuratObject")
     norm <- log1p(SO$LayerData(seurat_fixture(), layer = "counts"))
     s <- SO$CreateSeuratObject(SO$CreateAssay5Object(data = norm), assay = "RNA")
     f <- findMapping(profileObject(s), ecosystem = "seurat")
-    expect_equal(f$status, "none")
-    expect_match(f$reasons, "param 'assay' could not be bound")
-    expect_error(seuratToGiotto(s), "No bundled mapping applies")
+    expect_equal(f$mapping$mapping$id, "seurat-assay5")
+    expect_true("layer_raw" %in% f$params$unbound)
+    expect_error(suppressWarnings(seuratToGiotto(s)), "structural validation failed")
+    expect_equal(repairMapping(f$mapping, s)$status, "failed")
+
+    # an object of a class no mapping covers
+    none <- findMapping(profileObject(list(a = 1)), ecosystem = "seurat")
+    expect_equal(none$status, "none")
+    expect_error(seuratToGiotto(list(a = 1)), "No bundled mapping applies")
 })
 
 test_that("a required part that cannot be repaired fails with candidates", {

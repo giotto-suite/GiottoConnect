@@ -22,7 +22,7 @@ mapping:
   history: []
 
 params:
-  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay, has_child_role: [integer_valued, nonneg] } }
+  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay } }
   layer_raw:  { list: children, on: "assays/{assay}", rule: first_where, where: { kind: sparse_matrix, role: [integer_valued, nonneg] } }
   layer_norm: { list: children, on: "assays/{assay}", rule: name_is, value: data, optional: true }
   fov:        { list: Images, rule: first_of_class, class: FOV, optional: true }
@@ -44,6 +44,7 @@ source_nodes:
   pca:          { path: "reductions/pca/cell.embeddings", get: { fn: Embeddings, args: { reduction: pca } } }
   umap:         { path: "reductions/umap/cell.embeddings", get: { fn: Embeddings, args: { reduction: umap } } }
   nn:           { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
+  spatial_reduction: { path: "reductions/{coord_red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{coord_red}" } } }
 
 parts:
   - id: expr_raw
@@ -96,6 +97,19 @@ parts:
         lossy:
           - { kind: estimated, field: units, note: "metadata coordinates carry no unit; assumed micron" }
           - { kind: ambiguous, field: orientation, note: "metadata coordinates assumed image-space (y down), like FOV" }
+      # coordinates kept as a 2-d reduction (e.g. one named "spatial")
+      - id: locs_from_reduction
+        from: spatial_reduction
+        params:
+          coord_red: { list: Reductions, rule: first_where, where: { name_matches: "^(spatial|coords?|centroids?|xy)$" } }
+        ops:
+          - { op: cast, to: table }
+          - { op: set_colnames, cols: [sdimx, sdimy] }
+          - { op: rownames_to_col, col: cell_ID }
+          - { op: scale, factor: -1, cols: [sdimy] }
+        lossy:
+          - { kind: estimated, field: units, note: "reduction coordinates carry no unit; assumed micron" }
+          - { kind: ambiguous, field: orientation, note: "reduction coordinates assumed image-space (y down), like FOV" }
 
   - id: polygons
     part: spatial_info

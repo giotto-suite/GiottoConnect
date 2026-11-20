@@ -309,7 +309,8 @@
                 "GetTissueCoordinates",
                 "Misc",
                 "Key",
-                "[["
+                "[[",
+                "path"
               ]
             },
             "on": {
@@ -339,7 +340,8 @@
             "scale",
             "cast",
             "rownames_to_col",
-            "set"
+            "set",
+            "set_colnames"
           ]
         },
         "cols": {
@@ -360,7 +362,8 @@
             "integer",
             "double",
             "character",
-            "sparse"
+            "sparse",
+            "table"
           ]
         },
         "col": {

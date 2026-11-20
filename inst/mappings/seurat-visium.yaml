@@ -24,7 +24,7 @@ mapping:
   history: []
 
 params:
-  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay5, has_child_role: [integer_valued, nonneg] } }
+  assay:      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay5 } }
   layer_raw:  { list: Layers, on: "{assay}", rule: first_where, where: { role: [integer_valued, nonneg] } }
   layer_norm: { list: Layers, on: "{assay}", rule: name_is, value: data, optional: true }
   image:      { list: Images, rule: first_of_class, class: VisiumV2 }
