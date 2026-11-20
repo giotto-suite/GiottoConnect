@@ -4,7 +4,7 @@ Interoperability hub of the Giotto Suite: conversions between Giotto and other
 ecosystems (Seurat, SingleCellExperiment, SpatialExperiment, AnnData,
 SpatialData, Bento, Stereo-seq GEF), plus a Vitessce static-site pipeline.
 
-Seurat → Giotto runs on the **mapping engine**, a declarative and
+Seurat ↔ Giotto runs on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
 hand-written converters and move to the engine one adapter at a time.
 
@@ -32,7 +32,7 @@ hand-written converters and move to the engine one adapter at a time.
 
 ```
 R/
-  seurat.R               seuratToGiotto() (mapping-based); legacy giottoToSeuratV4/V5 until the reverse mapping
+  seurat.R               seuratToGiotto() / giottoToSeurat(): thin wrappers over the mapping engine
   contract_profile.R     profileObject(), fingerprint(), diffProfiles()
   contract_schema.R      mapping schema checker (inst/schema/mapping.schema.json)
   contract_giotto.R      giottoContract(): part -> constructor/setter/nesting, generated from GiottoClass
@@ -100,8 +100,10 @@ inst/
 - **Library:** develop against the scratch library
   `R_LIBS=~/Documents/Software/rlibs/suite_dev` (suite packages at their pinned branches).
 - **Tests:** `testthat::test_local(filter = "contract")`. The live LLM test is skipped
-  unless `GIOTTO_LLM_PROVIDER` is set. `test-interoperability.R` and
-  `test-spatial_converters.R` fail on `dev_connect` as well (legacy).
+  unless `GIOTTO_LLM_PROVIDER` is set. Known legacy failures:
+  `giottoToSpatialExperiment()` calls the removed GiottoClass `get_spatial_locations`,
+  and `test-spatial_converters.R` fails (terra/sf conversions, `stars` not installed),
+  both as on `dev_connect`.
 - **Docs:** roxygen2 8.0.0 (suite pin).
 - **Branches:** feature branches off `dev_connect`; PRs target `dev_connect`.
 - **Results:** comparison results go in `examples/seurat_comparison/results/`, with time

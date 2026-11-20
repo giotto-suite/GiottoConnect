@@ -437,7 +437,8 @@ print.giottoProfileDiff <- function(x, ...) {
             from <- mats$path[best]
             # the shallowest table whose row count matches one dimension marks
             # the cells (object-level cell metadata sits above per-assay
-            # feature metadata); otherwise the larger dimension
+            # feature metadata), then a table named for cells; otherwise the
+            # larger dimension
             tabs <- nodes[nodes$kind == "data.frame", , drop = FALSE]
             trows <- as.numeric(sub("x.*", "", tabs$shape))
             hit <- trows %in% d
@@ -445,8 +446,14 @@ print.giottoProfileDiff <- function(x, ...) {
                 tdepth <- .pf_depth(tabs$path)
                 top <- hit & tdepth == min(tdepth[hit])
                 rows_top <- unique(trows[top])
+                # tie between cell and feature tables at the same depth:
+                # decide by their names
+                named <- top & grepl("cell", tabs$path, ignore.case = TRUE) &
+                    !grepl("feat|gene|var", tabs$path, ignore.case = TRUE)
                 if (length(rows_top) == 1L && sum(d == rows_top) == 1L) {
                     match(rows_top, d)
+                } else if (length(unique(trows[named])) == 1L && sum(d == unique(trows[named])) == 1L) {
+                    match(unique(trows[named]), d)
                 } else {
                     which.max(d)
                 }

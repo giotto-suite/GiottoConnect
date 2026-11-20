@@ -36,6 +36,16 @@ test_that("cells are inferred from the shallowest matching table", {
     expect_equal(p$n_cells, 10L)
     expect_equal(p$n_feat, 30L)
     expect_equal(profileObject(x, n_cells = 30L, n_feat = 10L)$size_from, "user")
+
+    # Giotto-style: cell and feature tables at the same depth
+    y <- list(
+        expression = list(raw = matrix(rep(0:2, 105L), 15, 21)),
+        cell_metadata = list(meta = data.frame(c = seq_len(21))),
+        feat_metadata = list(meta = data.frame(f = seq_len(15)))
+    )
+    py <- profileObject(y)
+    expect_equal(py$n_cells, 21L)
+    expect_equal(py$n_feat, 15L)
 })
 
 test_that("profileObject respects depth and child limits", {

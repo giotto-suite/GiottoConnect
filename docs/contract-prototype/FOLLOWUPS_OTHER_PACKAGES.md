@@ -109,3 +109,15 @@ data.table::fread(file.path(C, "S0_fov_positions_file.csv.gz"))   # 1 row
   has a 33 MB `S0_tx_file.csv.gz`.
 - If the zip is right, fix the description; if it is a stale upload, re-run the crop script
   (the GiottoData#75 crop code is referenced but not in the repo).
+
+---
+
+## 4. GiottoConnect `giottoToSpatialExperiment()` calls a removed GiottoClass function
+
+**Observed.** It fails with
+`could not find function "get_spatial_locations"`. GiottoClass removed the internal
+snake_case getters. Before the Seurat tests were ported this was hidden, because the
+interop test file failed earlier on `giottoToSeuratV5`.
+
+**Decide.** Port it to `getSpatialLocations()`, or move SpatialExperiment onto the
+mapping engine (the next adapter after AnnData).
