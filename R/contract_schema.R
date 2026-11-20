@@ -13,7 +13,8 @@
     cast = list(required = "to"),
     rownames_to_col = list(required = "col"),
     set_colnames = list(required = "cols"),
-    set = list(required = c("field", "value"))
+    set = list(required = c("field", "value")),
+    replace = list(required = c("cols", "pattern", "replacement"))
 )
 
 .mapping_schema <- local({

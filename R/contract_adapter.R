@@ -60,7 +60,7 @@ setMethod("adapterListPaths", "seuratAdapter", function(adapter) c(
     # Assay5 layers or v3 Assay slots
     AssayLayers = "assays/{on}/layers|assays/{on}",
     Reductions = "reductions", Graphs = "graphs", Neighbors = "neighbors",
-    Images = "images", Boundaries = "images/{on}/boundaries",
+    Images = "images", Boundaries = "images/{on}/boundaries", Molecules = "images/{on}/molecules",
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "seuratAdapter", function(adapter) c(

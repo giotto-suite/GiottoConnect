@@ -58,6 +58,13 @@ giotto_content <- function(g) {
         geo$id <- sv$poly_ID[geo$geom]
         out[[paste("poly", nm)]] <- h(geo[order(geo$id, geo$part, seq_len(nrow(geo))), c("id", "x", "y")])
     }
+    for (ft in GiottoClass::list_feature_info(g)$feat_info) {
+        p <- GiottoClass::getFeatureInfo(g, feat_type = ft, return_giottoPoints = TRUE)
+        sv <- if (inherits(p[], "SpatVector")) p[] else GiottoClass::as.terra(p[])
+        xy <- terra::crds(sv)
+        d <- data.frame(id = sv$feat_ID, x = xy[, 1], y = xy[, 2])
+        out[[paste("points", ft)]] <- h(d[order(d$id, d$x, d$y), ])
+    }
     dr <- GiottoClass::list_dim_reductions(g)
     for (i in seq_len(NROW(dr))) {
         m <- GiottoClass::getDimReduction(g, reduction_method = dr$dim_type[i], name = dr$name[i], output = "matrix")

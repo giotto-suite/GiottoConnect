@@ -20,12 +20,15 @@
     dim_reduction = list(slot = "dimension_reduction", constructor = "createDimObj", data_arg = "coordinates",
         setter = "setDimReduction", list_fn = "list_dim_reductions"),
     nn_network = list(slot = "nn_network", constructor = "createNearestNetObj", data_arg = "network",
-        setter = "setNearestNetwork", list_fn = "list_nearest_networks")
+        setter = "setNearestNetwork", list_fn = "list_nearest_networks"),
+    # transcripts; `method` names the S4 method whose arguments apply
+    feature_info = list(slot = "feat_info", constructor = "createGiottoPoints", method = "data.frame",
+        data_arg = "x", setter = "setFeatureInfo", list_fn = "list_feature_info")
 )
 
 # columns of list_* tables that are nesting keys (the rest are descriptive)
 .CONTRACT_KEY_COLS <- c("spat_unit", "feat_type", "name", "type", "nn_type",
-    "method", "spat_info")
+    "method", "spat_info", "feat_info")
 
 #' @title The Giotto contract
 #' @name giottoContract
@@ -116,7 +119,7 @@ print.giottoContract <- function(x, ...) {
     parts <- lapply(names(.CONTRACT_PARTS), function(nm) {
         d <- .CONTRACT_PARTS[[nm]]
         ctor <- get(d$constructor, envir = ns)
-        fm <- formals(ctor)
+        fm <- if (is.null(d$method)) formals(ctor) else .contract_method_formals(d$constructor, d$method, ns)
         no_default <- vapply(fm, function(a) {
             is.symbol(a) && !nzchar(as.character(a))
         }, logical(1))
@@ -158,6 +161,19 @@ print.giottoContract <- function(x, ...) {
 
 # A setter is disk-backable when one of its methods routes through the
 # giotto object's GiottoDisk source.
+# formals of an S4 method, including those of its `.local` function
+.contract_method_formals <- function(generic, signature, ns) {
+    m <- methods::getMethod(generic, signature, where = ns)
+    fm <- formals(m)
+    b <- body(m)
+    for (e in as.list(b)) {
+        if (is.call(e) && identical(e[[1L]], as.name("<-")) && identical(e[[2L]], as.name(".local"))) {
+            return(formals(eval(e[[3L]])))
+        }
+    }
+    fm
+}
+
 .contract_setter_writes_source <- function(setter, ns) {
     src <- if (methods::isGeneric(setter, where = ns)) {
         m <- methods::findMethods(setter, where = ns)
@@ -204,6 +220,9 @@ print.giottoContract <- function(x, ...) {
             spat_unit = "cell", feat_type = "rna"),
         nn_network = GiottoClass::createNearestNetObj(name = "kNN.pca",
             network = dt(from = "c1", to = "c2", weight = 1, distance = 0),
-            nn_type = "kNN", spat_unit = "cell", feat_type = "rna")
+            nn_type = "kNN", spat_unit = "cell", feat_type = "rna"),
+        feature_info = GiottoClass::createGiottoPoints(
+            data.frame(x = c(0.2, 2.2, 2.7), y = c(0.5, 0.4, 0.6), feat_ID = feats),
+            feat_type = "rna", verbose = FALSE)
     ))
 }

@@ -291,7 +291,8 @@
             "cast",
             "rownames_to_col",
             "set",
-            "set_colnames"
+            "set_colnames",
+            "replace"
           ]
         },
         "cols": {
@@ -322,7 +323,14 @@
         "field": {
           "type": "string"
         },
-        "value": {}
+        "value": {},
+        "pattern": {
+          "type": "string",
+          "description": "replace: fixed string to replace"
+        },
+        "replacement": {
+          "type": "string"
+        }
       }
     },
     "loss": {
@@ -361,7 +369,14 @@
           "type": "string"
         },
         "feat_type": {
-          "type": "string"
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "feature_info: several feat_types with split_keyword (first takes the rest)"
         },
         "name": {
           "type": "string"
@@ -392,6 +407,12 @@
         },
         "graph": {
           "type": "string"
+        },
+        "split_keyword": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -457,7 +478,8 @@
             "spatial_locs",
             "spatial_info",
             "dim_reduction",
-            "nn_network"
+            "nn_network",
+            "feature_info"
           ]
         },
         "from": {

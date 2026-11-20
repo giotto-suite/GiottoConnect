@@ -93,3 +93,25 @@ test_that("every other assay becomes its own feature type", {
     expect_setequal(GiottoClass::fDataDT(g, feat_type = "NegControlProbe")$feat_ID, sprintf("NegProbe%02d", 1:4))
     expect_true(attr(readbackCheck(s, g), "pass"))
 })
+
+test_that("FOV molecules become points, controls split by feature type", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    set.seed(3)
+    genes <- c(rownames(s)[1:5], "NegControlProbe_00001")
+    mol <- data.frame(x = stats::runif(60, 0, 2000), y = stats::runif(60, 0, 2000),
+        gene = rep(genes, each = 10))
+    fov <- s[["fov"]]
+    fov@molecules <- list(molecules = SO$CreateMolecules(mol))
+    s[["fov"]] <- fov
+    g <- seuratToGiotto(s)
+    expect_setequal(GiottoClass::list_feature_info(g)$feat_info, c("rna", "NegControlProbe"))
+    np <- GiottoClass::getFeatureInfo(g, feat_type = "NegControlProbe", return_giottoPoints = TRUE)
+    expect_equal(np[]$feat_ID, rep("NegControlProbe-00001", 10))
+    rp <- GiottoClass::getFeatureInfo(g, feat_type = "rna", return_giottoPoints = TRUE)
+    xy <- terra::crds(rp[])
+    want <- mol[mol$gene != "NegControlProbe_00001", ]
+    expect_equal(sort(xy[, 2]), sort(-want$y))
+    expect_true(attr(readbackCheck(s, g), "pass"))
+})

@@ -54,7 +54,8 @@ test_that("params bind on the profile without the source package", {
     expect_equal(b$values$layer_raw, "counts")
     expect_equal(b$values$segmentation, "segmentation")
     expect_equal(b$values$nn_graph, "Xenium_nn")
-    expect_length(b$unbound, 0L)
+    # the fixture has no molecules: the only param left unbound
+    expect_equal(b$unbound, "molecules")
 })
 
 test_that("findMapping matches the fixture and absorbs renamed assays", {

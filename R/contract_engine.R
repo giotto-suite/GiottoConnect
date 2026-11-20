@@ -6,7 +6,7 @@
 
 # assembly order: data before the parts that index into it
 .PART_ORDER <- c("expression", "cell_metadata", "feat_metadata", "spatial_locs",
-    "spatial_info", "dim_reduction", "nn_network")
+    "spatial_info", "feature_info", "dim_reduction", "nn_network")
 
 #' @title Convert an object with a mapping
 #' @name convertWithMapping
@@ -401,6 +401,10 @@ mappingProvenance <- function(gobject) {
             colnames(data) <- unlist(o$cols)
             data
         },
+        replace = {
+            for (cl in unlist(o$cols)) data[[cl]] <- gsub(o$pattern, o$replacement, data[[cl]], fixed = TRUE)
+            data
+        },
         rownames_to_col = {
             if (!tab) stop("rownames_to_col needs a table")
             rn <- rownames(data)
@@ -473,12 +477,22 @@ mappingProvenance <- function(gobject) {
     }
     if ("verbose" %in% cp$args) args$verbose <- FALSE
     if (p$part == "spatial_info") args$calc_centroids <- FALSE
+    if (p$part == "feature_info" && !is.null(args$split_keyword)) {
+        # split only on keywords that occur; the first feat_type takes the rest
+        kw <- unlist(args$split_keyword)
+        hit <- vapply(kw, function(k) any(grepl(k, data$feat_ID, fixed = TRUE)), logical(1))
+        args$feat_type <- c(unlist(args$feat_type)[1L], unlist(args$feat_type)[-1L][hit])
+        args$split_keyword <- if (any(hit)) as.list(kw[hit])
+        if (!any(hit)) args$feat_type <- args$feat_type[1L]
+    }
     suppressMessages(do.call(ctor, args))
 }
 
 .assemble <- function(parts, source = NULL) {
     g <- if (is.null(source)) GiottoClass::giotto() else GiottoClass::giotto(source = source)
-    g <- GiottoClass::setGiotto(g, unname(parts), initialize = FALSE, verbose = FALSE)
+    # a constructor may return several subobjects (points split by feat_type)
+    parts <- do.call(c, lapply(unname(parts), function(p) if (is.list(p) && !isS4(p)) p else list(p)))
+    g <- GiottoClass::setGiotto(g, parts, initialize = FALSE, verbose = FALSE)
     methods::initialize(g)
 }
 

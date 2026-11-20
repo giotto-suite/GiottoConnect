@@ -159,6 +159,32 @@ print.giottoReadback <- function(x, ...) {
                 sum(moved), nrow(m)))
         )
     },
+    feature_info = function(spec, data, g, n_cells) {
+        have <- GiottoClass::list_feature_info(g)$feat_info
+        fts <- intersect(unlist(spec$to$feat_type), have)
+        pts <- do.call(rbind, lapply(fts, function(ft) {
+            p <- GiottoClass::getFeatureInfo(g, feat_type = ft, return_giottoPoints = TRUE)
+            sv <- if (inherits(p[], "SpatVector")) p[] else GiottoClass::as.terra(p[])
+            xy <- terra::crds(sv)
+            data.frame(feat_ID = sv$feat_ID, x = xy[, 1], y = xy[, 2])
+        }))
+        # transcripts per feature and their mean position
+        per <- function(d) {
+            f <- as.character(d$feat_ID)
+            ids <- sort(unique(f))
+            list(feat_ID = ids, n = as.integer(table(f)[ids]),
+                mx = as.numeric(tapply(d$x, f, mean)[ids]), my = as.numeric(tapply(d$y, f, mean)[ids]))
+        }
+        a <- per(data)
+        b <- per(pts)
+        list(
+            .rb_row("placement", length(fts) > 0L, paste(fts, collapse = ", ")),
+            .rb_row("ids", identical(a$feat_ID, b$feat_ID) && identical(a$n, b$n),
+                sprintf("%d transcripts of %d features", nrow(data), length(a$feat_ID))),
+            .rb_row("values", identical(a$feat_ID, b$feat_ID) && .rb_same(c(a$mx, a$my), c(b$mx, b$my)),
+                "mean x, y per feature")
+        )
+    },
     dim_reduction = function(spec, data, g, n_cells) {
         to <- spec$to
         m <- GiottoClass::getDimReduction(g, spat_unit = to$spat_unit, feat_type = to$feat_type,

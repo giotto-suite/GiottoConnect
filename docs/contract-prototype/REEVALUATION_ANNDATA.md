@@ -114,3 +114,15 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
   all-zero matrix (the Atera crop's `BlankCodeword`/`ControlCodeword`). The fix is
   on GiottoDisk branch `fix/empty-store-write` (local, not pushed).
 
+## Follow-up: transcripts
+- The Giotto contract has a `feature_info` part (`createGiottoPoints`, written to
+  GiottoDisk when the object has a source).
+- `seurat-assay5` and `seurat-assay` map FOV molecules to points: y is flipped like
+  the centroids, and transcript names get Seurat's `-` for `_`. Control transcripts
+  are split into the control feature types with Giotto's `split_keyword`, as
+  Giotto's readers do.
+- Xenium: all 132,960 transcripts arrive (rna plus 3 control types). CosMx: 3.0M.
+  They are identical in memory and on disk, and readback compares the count and
+  mean position per feature.
+- AnnData has no standard place for transcripts (that is SpatialData).
+
