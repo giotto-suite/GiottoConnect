@@ -36,6 +36,13 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
 - **The node table and listing verbs** describe HDF5 just as well as S4 slots.
 - **One mapping covers** anndata 0.7 to current, CSR/CSC/dense matrices, counts in
   `X`, `layers/*` or `raw/X`, and files without counts.
+- **The package boundary is settled.** GiottoConnect decodes AnnData elements and
+  assembles the object. GiottoDisk keeps only the streaming inputs `h5adInput()` and
+  `h5adEdgeInput()`; its temporary loaders and `importH5adDisk()` are removed in
+  GiottoDisk PR #172. The Stereo-seq readers read GEF, not
+  h5ad, so they don't overlap. The removed loaders are a reference for parts not
+  mapped yet: PCA loadings and eigenvalues, 3-D coordinates, and squidpy
+  spatial-network names (GiottoDisk 7be5447, `R/h5ad.R`).
 
 ## Weak points and proposals
 
