@@ -217,7 +217,8 @@
             "SpatLocs",
             "Polygons",
             "DimMethods",
-            "NNNames"
+            "NNNames",
+            "AssayLayers"
           ]
         },
         "on": {
@@ -268,7 +269,13 @@
               }
             },
             "class": {
-              "type": "string"
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
             },
             "kind": {
               "type": "string"
@@ -586,7 +593,8 @@
             "SpatLocs",
             "Polygons",
             "DimMethods",
-            "NNNames"
+            "NNNames",
+            "AssayLayers"
           ]
         },
         "on": {

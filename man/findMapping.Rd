@@ -23,6 +23,7 @@ considered) and \code{reasons}
 Choose the mapping that applies to a profiled object. Mappings
 are filtered by their \code{applies_to} declaration (class, package version and
 structural predicates after parameter binding); among those that apply, a
-fingerprint match is preferred, otherwise the one whose source paths are
-best covered is returned with status \code{"repair_needed"}.
+fingerprint match is preferred, then the more specific mapping (more
+\code{applies_to} predicates satisfied), then the one whose source paths are best
+covered; without an exact match the status is \code{"repair_needed"}.
 }

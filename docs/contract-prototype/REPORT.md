@@ -3,7 +3,7 @@
 GiottoConnect, branch `contract-prototype` (off `dev_connect`, 11 commits, not pushed),
 2026-11-20.
 
-**Scope:** Seurat → Giotto, in memory and on GiottoDisk.
+**Scope:** Seurat ↔ Giotto, in memory and on GiottoDisk.
 
 **Stack:**
 - GiottoClass 0.7.31 (`gsource`)
@@ -251,3 +251,41 @@ The serialized RSS benchmark and the full Xenium lung run (162k cells) are still
    - `profileObject()` could later move into GiottoClass next to the manifest walker.
 8. **Remaining phases:** Phase 7 (Giotto → Seurat as a mapping) and Phase 8 (the full
    benchmark, including adaptability fix sizes and RSS).
+
+
+## Update 2026-11-20: Phase 7, `for_each`, retirements, new families
+
+- **`for_each` templates.** A mapping part can expand over a listing (e.g. every
+  reduction), producing one optional part per match. The Seurat mappings now convert
+  every reduction (an extra `tsne` in D5 converts instead of being reported unmapped),
+  except coordinate-like ones, which feed the `locs` alternatives.
+- **Phase 7: Giotto → Seurat as a mapping.** `giottoToSeurat()` runs
+  `giotto-seurat5.yaml` on the same engine:
+  - source: GiottoClass getters (in memory or GiottoDisk-backed);
+  - target: SeuratObject constructors (Assay5 layers, metadata, an FOV with centroids and
+    segmentation, reductions, kNN/sNN graphs).
+  - Readback and semantic validation cover Seurat results.
+  - **Round trip** Seurat → Giotto → Seurat returns the original counts, normalized
+    values, metadata, centroids, polygons, reductions and kNN graph.
+  - The legacy `giottoToSeuratV5` failed on every tested object ("Raw count data not
+    found"), including a native GiottoData Visium mini (`results/phase7_reverse.csv`).
+- **Retired:** `seuratToGiottoV4/V5` and `giottoToSeuratV4/V5` (with their helpers).
+  `seuratToGiotto()` / `giottoToSeurat()` are the only Seurat converters. Their
+  GiottoClass duplicates remain for a separate round in that repo.
+- **Mapping families now bundled (6):**
+
+| mapping | for |
+|---|---|
+| `seurat-assay5` | FOV objects: Xenium, CosMx, MERSCOPE, **Atera** (Seurat 6 `LoadAtera`, tested on the tiny bundle) |
+| `seurat-assay` | v3/v4 assays with FOV |
+| `seurat-visium` | `VisiumV2`: Visium HD and standard Visium (tested on the mouse olfactory bulb: 0.885 µm/px from the 100 µm pitch) |
+| `seurat-visium-v1` | `VisiumV1` with v3 or v5 assays (tested on the same data loaded as V1) |
+| `seurat-slideseq` | `SlideSeq` (built with Seurat's `ReadSlideSeq()`) |
+| `giotto-seurat5` | Giotto → Seurat |
+
+- **Selection without an exact match** now prefers the more specific mapping (more
+  `applies_to` predicates), then coverage.
+- **`verify_mapping.R`** now also requires a passing readback. That caught a Seurat
+  quirk: `GetTissueCoordinates(SlideSeq)` returns an extra `NA`-named column.
+- **Hooks: 4.** `seurat_graph_to_nn`, `seurat_visium_to_um` (V1 and V2),
+  `giotto_polygons_to_vertices`, `giotto_nn_to_graph`.

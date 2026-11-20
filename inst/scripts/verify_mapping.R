@@ -1,5 +1,6 @@
 # Verify a bundled mapping on its fixture and stamp it: converts in memory and
-# on disk, requires validation without FAIL, then writes the fingerprint,
+# on disk, requires validation without FAIL and a passing readback, then
+# writes the fingerprint,
 # status and build date into the YAML and stores the fixture profile next to
 # it (<id>.profile.json) for drift detection.
 # Run from the GiottoConnect package root:
@@ -13,7 +14,9 @@ builders <- list(
     seurat5_fixture_small = env$build_seurat_fixture,
     seurat5_visium_fixture = env$build_seurat_visium_fixture,
     seurat_v3_fixture = env$build_seurat_v3_fixture,
-    giotto_fixture_small = env$build_giotto_fixture
+    giotto_fixture_small = env$build_giotto_fixture,
+    seurat_visium_v1_fixture = env$build_seurat_visium_v1_fixture,
+    seurat_slideseq_fixture = env$build_seurat_slideseq_fixture
 )
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
@@ -32,6 +35,11 @@ if (identical(m$mapping$target$contract, "giotto")) {
     v <- validateMapping(m, profileObject(xd), result = res)
 }
 if (any(v$level == "FAIL")) stop("validation failed; mapping not stamped")
+rb <- readbackCheck(x, g, m)
+if (!isTRUE(attr(rb, "pass"))) {
+    print(rb[rb$status == "UNDECLARED", ])
+    stop("readback failed; mapping not stamped")
+}
 
 fp <- mappingProvenance(g)$fingerprint
 txt <- readLines(yaml_file)

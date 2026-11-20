@@ -8,6 +8,8 @@
 .LIST_PATHS <- list(
     seurat = c(
         Assays = "assays", Layers = "assays/{on}/layers",
+        # Assay5 layers or v3 Assay slots
+        AssayLayers = "assays/{on}/layers|assays/{on}",
         Reductions = "reductions", Graphs = "graphs", Neighbors = "neighbors",
         Images = "images", Boundaries = "images/{on}/boundaries",
         children = "{on}", columns = "{on}"
@@ -180,9 +182,7 @@ mappingProvenance <- function(gobject) {
         }
         on <- .pf_bind(fe$on %null% "", params$values)
         if (grepl("{", on, fixed = TRUE)) next
-        parent <- gsub("{on}", on, lists[[fe$list]], fixed = TRUE)
-        kids <- nodes[.pf_parent(nodes$path) == parent & nodes$path != parent &
-            !endsWith(nodes$path, "/*"), , drop = FALSE]
+        kids <- .list_kids(nodes, lists, fe$list, on)
         if (!nrow(kids)) next
         name <- sub(".*/", "", kids$path)
         keep <- if (is.null(fe$where)) rep(TRUE, nrow(kids)) else
@@ -207,6 +207,14 @@ mappingProvenance <- function(gobject) {
 }
 
 
+# children of a listing verb's path(s); "a|b" lists the children of both
+.list_kids <- function(nodes, lists, verb, on) {
+    parents <- strsplit(gsub("{on}", on %null% "", lists[[verb]], fixed = TRUE), "|", fixed = TRUE)[[1L]]
+    nodes[.pf_parent(nodes$path) %in% parents & !nodes$path %in% parents &
+        !endsWith(nodes$path, "/*"), , drop = FALSE]
+}
+
+
 # params ####
 
 # Bind each param on the profile, in declaration order. Returns list(values,
@@ -226,9 +234,7 @@ mappingProvenance <- function(gobject) {
             unbound <- c(unbound, nm)
             next
         }
-        parent <- gsub("{on}", on %null% "", lists[[pr$list]], fixed = TRUE)
-        kids <- nodes[.pf_parent(nodes$path) == parent & nodes$path != parent &
-            !endsWith(nodes$path, "/*"), , drop = FALSE]
+        kids <- .list_kids(nodes, lists, pr$list, on)
         val <- .param_pick(pr, kids, nodes)
         if (is.na(val)) unbound <- c(unbound, nm) else values[[nm]] <- val
     }
@@ -258,7 +264,7 @@ mappingProvenance <- function(gobject) {
         vapply(hs, function(x) all(roles %in% x), logical(1))
     }
     ok <- rep(TRUE, nrow(kids))
-    if (!is.null(w$class)) ok <- ok & kids$class == w$class
+    if (!is.null(w$class)) ok <- ok & kids$class %in% unlist(w$class)
     if (!is.null(w$kind)) ok <- ok & kids$kind == w$kind
     if (!is.null(w$role)) ok <- ok & has(kids$role_hints, unlist(w$role))
     if (!is.null(w$has_child_role)) {

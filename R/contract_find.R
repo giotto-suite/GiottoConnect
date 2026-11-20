@@ -100,8 +100,9 @@ summary.giottoMapping <- function(object, ...) {
 #' @description Choose the mapping that applies to a profiled object. Mappings
 #' are filtered by their `applies_to` declaration (class, package version and
 #' structural predicates after parameter binding); among those that apply, a
-#' fingerprint match is preferred, otherwise the one whose source paths are
-#' best covered is returned with status `"repair_needed"`.
+#' fingerprint match is preferred, then the more specific mapping (more
+#' `applies_to` predicates satisfied), then the one whose source paths are best
+#' covered; without an exact match the status is `"repair_needed"`.
 #' @param profile `giottoProfile` of the object
 #' @param mappings list of mappings (`giottoMapping`, files or ids). Defaults
 #' to all bundled mappings.
@@ -130,17 +131,22 @@ findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
         cover <- mean(paths %in% profile$nodes$path)
         status <- if (!why$ok) "none" else if (identical(fp, m$mapping$fingerprint)) "match" else "repair_needed"
         rows[[length(rows) + 1L]] <- data.frame(id = m$mapping$id, version = m$mapping$version,
-            status = status, coverage = cover, reason = why$reason, stringsAsFactors = FALSE)
+            status = status, coverage = cover,
+            specificity = length(m$mapping$source$applies_to$predicates),
+            reason = why$reason, stringsAsFactors = FALSE)
         res[[length(res) + 1L]] <- list(mapping = m, params = params, fingerprint = fp)
     }
     cand <- if (length(rows)) do.call(rbind, rows) else data.frame(id = character(),
-        version = character(), status = character(), coverage = numeric(), reason = character())
+        version = character(), status = character(), coverage = numeric(),
+        specificity = integer(), reason = character())
     ok <- which(cand$status != "none")
     if (!length(ok)) {
         return(list(status = "none", mapping = NULL, params = NULL, fingerprint = NA_character_,
             candidates = cand, reasons = if (nrow(cand)) paste(cand$id, cand$reason, sep = ": ") else "no mappings"))
     }
-    best <- ok[order(cand$status[ok] != "match", -cand$coverage[ok])][1L]
+    # an exact match first, then the more specific mapping (more satisfied
+    # applies_to predicates), then the best covered one
+    best <- ok[order(cand$status[ok] != "match", -cand$specificity[ok], -cand$coverage[ok])][1L]
     c(list(status = cand$status[best]), res[[best]],
         list(candidates = cand, reasons = cand$reason[best]))
 }

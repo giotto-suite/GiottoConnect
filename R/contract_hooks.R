@@ -13,7 +13,7 @@
     seurat_visium_to_um = list(
         fn = function(node, params, ctx) .hook_visium_to_um(node, params, ctx),
         packages = c("Seurat", "SeuratObject"),
-        description = "VisiumV2 spot/bin centers in full-resolution pixels -> microns"
+        description = "VisiumV1/V2 spot/bin centers in full-resolution pixels -> microns"
     ),
     giotto_polygons_to_vertices = list(
         fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
@@ -162,7 +162,14 @@ hookRegistry <- function() {
 # Standard Visium: spots sit on a 100 um center-to-center grid, so the pixel
 # size comes from the measured nearest-neighbour spacing.
 .hook_visium_to_um <- function(node, params, ctx) {
-    xy <- asNamespace("SeuratObject")$GetTissueCoordinates(node)
+    if (methods::is(node, "VisiumV1")) {
+        # VisiumV1 keeps full-resolution imagerow (y) / imagecol (x)
+        v1 <- asNamespace("SeuratObject")$GetTissueCoordinates(node, scale = NULL)
+        xy <- data.frame(x = v1$imagecol, y = v1$imagerow, cell = rownames(v1),
+            stringsAsFactors = FALSE)
+    } else {
+        xy <- asNamespace("SeuratObject")$GetTissueCoordinates(node)
+    }
     sf <- methods::slot(node, "scale.factors")
     bin <- regmatches(params$image, regexpr("(?<=\\.)\\d+(?=um$)", params$image, perl = TRUE))
     if (length(bin)) {

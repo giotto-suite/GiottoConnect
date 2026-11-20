@@ -423,8 +423,7 @@ print.giottoRepair <- function(x, ...) {
         for (prm in pd$unbound) {
             pr <- pd$alt$params[[prm]]
             parent <- gsub("{on}", .pf_bind(pr$on %null% "", pd$values), lists[[pr$list]], fixed = TRUE)
-            kids <- new$nodes[.pf_parent(new$nodes$path) == parent & new$nodes$path != parent &
-                !endsWith(new$nodes$path, "/*"), , drop = FALSE]
+            kids <- .list_kids(new$nodes, lists, pr$list, .pf_bind(pr$on %null% "", pd$values))
             if (!is.null(pr$where$kind)) kids <- kids[kids$kind == pr$where$kind, , drop = FALSE]
             if (!nrow(kids)) next
             used_in <- paste(vapply(pd$alt$ops, function(o) {

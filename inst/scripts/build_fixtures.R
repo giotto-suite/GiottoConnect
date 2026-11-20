@@ -82,6 +82,41 @@ build_seurat_v3_fixture <- function(n_cells = 200L, n_feat = 50L, assay = "Xeniu
     .fx_reductions_graphs(s, assay)
 }
 
+# VisiumV1 spots on a hexagonal grid (100 um pitch), Seurat v4-style v3 Assay
+build_seurat_visium_v1_fixture <- function(n_side = 12L, n_feat = 50L, um_per_px = 0.885,
+                                           assay_class = "Assay", seed = 1L) {
+    stopifnot(requireNamespace("Seurat", quietly = TRUE))
+    set.seed(seed)
+    n <- n_side^2
+    s <- .fx_expression(n, n_feat, "Spatial", cells = sprintf("SPOT%04d-1", seq_len(n)),
+        assay_class = assay_class)
+    pitch_px <- 100 / um_per_px
+    row <- rep(seq_len(n_side) - 1L, n_side)
+    col <- rep(seq_len(n_side) - 1L, each = n_side)
+    coords <- data.frame(tissue = 1L, row = row, col = col,
+        imagerow = 500 + row * pitch_px * sqrt(3) / 2,
+        imagecol = 500 + col * pitch_px + (row %% 2) * pitch_px / 2,
+        row.names = colnames(s))
+    sf <- Seurat::scalefactors(spot = 0.55 * pitch_px, fiducial = 0.9 * pitch_px, hires = 0.2, lowres = 0.06)
+    img <- methods::new("VisiumV1", image = array(0.5, c(8L, 8L, 3L)), scale.factors = sf,
+        coordinates = coords, spot.radius = 0.01, assay = "Spatial", key = "slice1_")
+    s[["slice1"]] <- img
+    .fx_reductions_graphs(s, "Spatial")
+}
+
+# Slide-seq beads read with Seurat's own ReadSlideSeq()
+build_seurat_slideseq_fixture <- function(n_cells = 200L, n_feat = 50L, seed = 1L) {
+    stopifnot(requireNamespace("Seurat", quietly = TRUE))
+    set.seed(seed)
+    s <- .fx_expression(n_cells, n_feat, "Spatial", cells = sprintf("BEAD%04d", seq_len(n_cells)))
+    f <- tempfile(fileext = ".csv")
+    writeLines(c("barcodes,xcoord,ycoord", sprintf("%s,%.3f,%.3f", colnames(s),
+        stats::runif(n_cells, 0, 3000), stats::runif(n_cells, 0, 3000))), f)
+    img <- Seurat::ReadSlideSeq(f, assay = "Spatial")
+    s[["puck"]] <- img[colnames(s)]
+    .fx_reductions_graphs(s, "Spatial")
+}
+
 # counts / data / scale.data layers and cell metadata
 .fx_expression <- function(n_cells, n_feat, assay,
                            cells = sprintf("cell_%03d", seq_len(n_cells)),
