@@ -3,3 +3,5 @@
 ^docs$
 ^examples$
 ^AGENTS\.md$
+^LICENSE\.md$
+^vignettes/articles$

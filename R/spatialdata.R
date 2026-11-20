@@ -385,7 +385,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = "Delaunay_network",
                         method = "delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 } else {
@@ -394,7 +394,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = net_name,
                         method = "non-delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 }

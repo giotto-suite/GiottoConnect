@@ -1,6 +1,6 @@
 # Integration test: full GiottoConnect pipeline with mini MERFISH dataset
 #
-# Run manually from R: source("tests/test_mini_merfish.R")
+# Run manually from R: source("examples/vitessce/test_mini_merfish.R")
 #
 # Requirements:
 #   - conda (miniconda or anaconda) installed and on PATH
