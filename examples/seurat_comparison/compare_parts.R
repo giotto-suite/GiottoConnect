@@ -65,6 +65,12 @@ checks <- list(
         fov <- Filter(function(i) inherits(s[[i]], "FOV"), Images(s))
         if (!length(fov)) return(row("n/a", "no FOV"))
         ct <- GetTissueCoordinates(s[[fov[1]]], which = "centroids")
+        if (inherits(s[[fov[1]]], "VisiumV2")) {
+            # Visium HD: full-resolution pixels -> microns (bin size / spot scale factor)
+            bin <- as.numeric(sub(".*\\.0*(\\d+)um$", "\\1", fov[1]))
+            ct$x <- ct$x * bin / s[[fov[1]]]@scale.factors$spot
+            ct$y <- ct$y * bin / s[[fov[1]]]@scale.factors$spot
+        }
         sl <- getSpatialLocations(g, spat_unit = "cell", output = "data.table")
         m <- merge(sl, ct, by.x = "cell_ID", by.y = "cell")
         if (nrow(m) != nrow(ct)) return(row("wrong", sprintf("%d of %d cells", nrow(m), nrow(ct))))
@@ -168,8 +174,8 @@ timing <- do.call(rbind, timing)
 wide <- reshape(parts[, c("dataset", "part", "impl", "status")], idvar = c("dataset", "part"),
     timevar = "impl", direction = "wide")
 names(wide) <- sub("^status\\.", "", names(wide))
-write.csv(parts, file.path(out_dir, "phase2_parts.csv"), row.names = FALSE)
-write.csv(timing, file.path(out_dir, "phase2_timing.csv"), row.names = FALSE)
+write.csv(parts, file.path(out_dir, paste0(Sys.getenv("RESULT_TAG", "phase2"), "_parts.csv")), row.names = FALSE)
+write.csv(timing, file.path(out_dir, paste0(Sys.getenv("RESULT_TAG", "phase2"), "_timing.csv")), row.names = FALSE)
 print(wide, row.names = FALSE)
 cat("\n")
 print(timing, row.names = FALSE)
@@ -212,6 +218,6 @@ oracle <- data.frame(
         sprintf("%.3f", max(abs(ml$sdimy.x - ml$sdimy.y))),
         "")
 )
-write.csv(oracle, file.path(out_dir, "phase2_xenium_oracle.csv"), row.names = FALSE)
+write.csv(oracle, file.path(out_dir, paste0(Sys.getenv("RESULT_TAG", "phase2"), "_xenium_oracle.csv")), row.names = FALSE)
 cat("\nXenium: seuratToGiotto(LoadXenium()) vs GiottoDisk::importXeniumDisk():\n")
 print(oracle, row.names = FALSE)

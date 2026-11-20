@@ -96,3 +96,29 @@ All nine reach the expected outcome. No variant needs the LLM step.
   - `has_child_role` only counts matrices. Assay5's integer `default` slot satisfied it.
   - Optional parts whose source path is absent are skipped. Only unbound ones were
     skipped before.
+
+## Follow-up: Seurat 6.0.0 (CRAN, 2026-11-09)
+
+Seurat 6 still builds on SeuratObject 5.4.0, which defines the object classes, so its
+objects are expected to fit the existing mappings. Tested by installing Seurat 6.0.0 in
+the scratch library (the user library keeps 5.5.0) and rebuilding the three crops with
+its loaders (`GIOTTOCONNECT_CACHE=.../seurat6`).
+
+- **Structure vs Seurat 5.5 objects** (`diffProfiles`): Xenium gains a
+  `meta.data/segmentation_method` column, and every object's RunUMAP record gains
+  `uwot.init`. Whole-object fingerprints change; mapping-scoped fingerprints do not.
+  `findMapping` returns `match` for all three, with no mapping edits.
+- **Readback** on the Seurat 6 objects: PASS everywhere, memory and disk. The only
+  DECLARED item is Xenium's 2 repaired polygons, as on 5.5.
+- **Part-by-part against the source** (`results/seurat6_parts.csv`): identical to Seurat
+  5.5 (`results/phase2_parts.csv`). The new route is correct on 35 of 35 mappable parts,
+  memory and disk. Legacy is correct on 20 and wrong on 15: feature metadata, locations,
+  polygons, nn networks.
+- **Visium HD locations in the comparison script** are now converted to microns like the
+  mapping does, so the earlier "missing" in Phase 2 is now `correct` (it also matched
+  `importVisiumHDDisk` exactly).
+- **Seurat 6 notes that confirm the mapping conventions:**
+  - FOV coordinates are stored with "y increasing downward" (now also the default plot
+    orientation), which is what the `sdimy = -y` flip assumes.
+  - `LoadXenium(flip.xy)` is soft-deprecated.
+  - New loader `LoadAtera` (10x Atera). Not tested: no Atera crop is available yet.
