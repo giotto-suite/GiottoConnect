@@ -97,8 +97,9 @@ print.giottoProfile <- function(x, ...) {
 #' @name fingerprint
 #' @description Hash the structure of a profiled object: the sorted set of
 #' (templated path, kind, dtype, ndim). Sizes and values are excluded, so two
-#' datasets with the same structure share a fingerprint. Parameter values in
-#' paths are replaced by their `{param}` placeholder first.
+#' datasets with the same structure share a fingerprint, and integer and
+#' double storage count as the same type. Parameter values in paths are
+#' replaced by their `{param}` placeholder first.
 #' @param profile a `giottoProfile`
 #' @param paths templated paths to restrict the fingerprint to (plus their
 #' ancestors). Missing paths are part of the hash. Ignored when
@@ -123,6 +124,8 @@ fingerprint <- function(profile,
     checkmate::assert_class(profile, "giottoProfile")
     scope <- match.arg(scope, c("paths", "full"))
     nd <- profile$nodes
+    # integer and floating-point storage of the same values is not a change
+    nd$dtype[nd$dtype %in% c("integer", "double")] <- "numeric"
     if (scope == "full") {
         tpath <- .pf_template(nd$path, params)
         sig <- paste(tpath, nd$kind, nd$dtype, .pf_ndim(nd$shape), sep = "|")

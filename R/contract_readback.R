@@ -33,7 +33,9 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
     }
     package_check(.adapter_for(mapping)@package)
     profile <- adapterProfile(.adapter_for(mapping), x)
-    params <- .bind_params(mapping, profile)
+    res <- .resolve_parts(mapping, profile)
+    mapping <- res$mapping
+    params <- res$params
     mapping <- .expand_for_each(mapping, profile, params)
     ctx <- .new_ctx(mapping, params, profile)
     prepared <- .prepare_parts(x, mapping, params, ctx)

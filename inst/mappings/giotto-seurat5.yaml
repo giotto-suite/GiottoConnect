@@ -17,7 +17,7 @@ mapping:
       predicates:
         - { path: "expression/{spat_unit}/{feat_type}/{expr_raw}", class: exprObj }
   target: { contract: seurat, version: "5.4.0" }
-  fingerprint: "d9d713f175f1efa9"
+  fingerprint: "9213d18abbc4d6bd"
   fixtures: [giotto_fixture_small]
   history: []
 

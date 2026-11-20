@@ -101,8 +101,10 @@ summary.giottoMapping <- function(object, ...) {
 #' are filtered by their `applies_to` declaration (class, package version and
 #' structural predicates after parameter binding); among those that apply, a
 #' fingerprint match is preferred, then the more specific mapping (more
-#' `applies_to` predicates satisfied), then the one whose source paths are best
-#' covered; without an exact match the status is `"repair_needed"`.
+#' `applies_to` predicates satisfied), then the one whose source paths
+#' (optional parts included) are best covered; without an exact match the status is `"repair_needed"`.
+#' Fingerprints cover the mapping's required parts: an optional part that is
+#' absent from the object does not change it.
 #' @param profile `giottoProfile` of the object
 #' @param mappings list of mappings (`giottoMapping`, files or ids). Defaults
 #' to all bundled mappings.
@@ -127,7 +129,8 @@ findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
         why <- .applies_to(m, profile)
         params <- if (is.null(why$params)) list(values = list()) else why$params
         fp <- if (why$ok) .mapping_fingerprint(m, profile, params$values) else NA_character_
-        paths <- .pf_bind(.mapping_paths(m), params$values)
+        # how much of what the mapping can read is in the object
+        paths <- .pf_bind(.mapping_paths(m, optional = TRUE), params$values)
         cover <- mean(paths %in% profile$nodes$path)
         status <- if (!why$ok) "none" else if (identical(fp, m$mapping$fingerprint)) "match" else "repair_needed"
         rows[[length(rows) + 1L]] <- data.frame(id = m$mapping$id, version = m$mapping$version,

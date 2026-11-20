@@ -14,7 +14,9 @@
 #' mapping file and the engine: parameters are bound on the object's profile,
 #' each source node is read through its declared accessor, ops or a hook are
 #' applied and the result is built with the GiottoClass constructor for the
-#' target part. With `source`, the giotto object is backed by a GiottoDisk
+#' target part. A part whose source is absent switches to the first of its
+#' declared alternatives that is present; otherwise an optional part is
+#' skipped. With `source`, the giotto object is backed by a GiottoDisk
 #' project and disk-backable parts (expression, polygons, networks) are
 #' written there.
 #' @param x object to convert
@@ -26,7 +28,8 @@
 #' after (semantic) conversion; FAIL stops, WARN warns.
 #' @param verbose logical
 #' @returns giotto object. The conversion (mapping id, version, fingerprint,
-#' params and declared losses) is recorded in the object history.
+#' params, losses, alternatives used and absent optional parts) is recorded
+#' in the object history.
 #' @export
 convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     validate = TRUE, verbose = FALSE) {
@@ -39,6 +42,9 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     params <- .bind_params(mapping, profile)
     # fingerprints describe the mapping as written, not its expansion
     fp <- .mapping_fingerprint(mapping, profile, params$values)
+    res <- .resolve_parts(mapping, profile)
+    mapping <- res$mapping
+    params <- res$params
     mapping <- .expand_for_each(mapping, profile, params)
     if (isTRUE(validate)) {
         pre <- validateMapping(mapping, profile, params = params, checks = "structural")
@@ -56,7 +62,9 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         params = params$values,
         parts = names(prepared),
         targets = lapply(prepared, function(pp) pp$spec$to),
-        losses = .collect_losses(mapping, ctx, params$values)
+        losses = .collect_losses(mapping, ctx, params$values),
+        alternatives = res$switched,
+        absent = ctx$absent
     )
     g <- targetBuild(target, prepared, mapping, prov, source = source)
 
@@ -102,6 +110,27 @@ mappingProvenance <- function(gobject) {
 # Read, hook and transform every bound part. Returns a list (in assembly
 # order) of list(spec, data): spec is the part with its final, bound `to`
 # keys; data is exactly what the constructor receives.
+# Bind params and, for a part whose source is absent, switch to the first
+# declared alternative that binds. repairMapping() can stamp the same switch
+# into a new mapping version.
+.resolve_parts <- function(mapping, profile) {
+    params <- .bind_params(mapping, profile)
+    switched <- character()
+    for (i in seq_along(mapping$parts)) {
+        p <- mapping$parts[[i]]
+        if (!length(p$alternatives) || !is.null(p$for_each)) next
+        node <- mapping$source_nodes[[p$from]]
+        if (.part_bound(p, node, params) &&
+            .pf_bind(node$path, params$values) %in% profile$nodes$path) next
+        alt <- .rule_alternative(mapping, p, profile)
+        if (is.null(alt)) next
+        mapping <- .apply_alternative(mapping, i, alt)
+        params <- .bind_params(mapping, profile)
+        switched <- c(switched, sprintf("%s: %s", p$id, alt$detail))
+    }
+    list(mapping = mapping, params = params, switched = switched)
+}
+
 # stream = TRUE: expression parts without ops or hook may come back as a
 # GiottoDisk input (see adapterStream) instead of an R matrix
 .prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE, stream = FALSE) {
@@ -113,7 +142,10 @@ mappingProvenance <- function(gobject) {
         node <- mapping$source_nodes[[p$from]]
         present <- .part_bound(p, node, params) && .pf_bind(node$path, params$values) %in% paths
         if (!present) {
-            if (isTRUE(p$optional)) next
+            if (isTRUE(p$optional)) {
+                ctx$absent <- c(ctx$absent, p$id)
+                next
+            }
             stop(wrap_txt(sprintf("Part '%s': source '%s' is not bound or not present", p$id,
                 .pf_bind(node$path, params$values))), call. = FALSE)
         }
@@ -440,6 +472,7 @@ mappingProvenance <- function(gobject) {
 .new_ctx <- function(mapping, params, profile) {
     ctx <- new.env(parent = emptyenv())
     ctx$losses <- list()
+    ctx$absent <- character()
     ctx$x <- NULL
     ctx$profile <- profile
     ctx$part <- NA_character_
@@ -454,7 +487,14 @@ mappingProvenance <- function(gobject) {
 }
 
 .collect_losses <- function(mapping, ctx, params) {
-    top <- lapply(mapping$lossy, function(l) data.frame(
+    # a declared drop only applies when the object holds that path
+    paths <- ctx$profile$nodes$path
+    held <- Filter(function(l) {
+        if (is.null(l$path)) return(TRUE)
+        p <- .pf_bind(l$path, params)
+        p %in% paths || any(startsWith(paths, paste0(p, "/")))
+    }, mapping$lossy)
+    top <- lapply(held, function(l) data.frame(
         part_id = NA_character_, kind = l$kind,
         field = .pf_bind(l$path %null% l$field %null% NA_character_, params),
         note = l$note, source = "declared", stringsAsFactors = FALSE
@@ -469,8 +509,12 @@ mappingProvenance <- function(gobject) {
 
 # templated paths a mapping depends on: the source nodes its parts read (not
 # those only alternatives use) and the applies_to predicates
-.mapping_paths <- function(mapping) {
-    fixed <- Filter(function(p) is.null(p$for_each), mapping$parts)
+# source paths of the fixed parts. For fingerprints: required parts only,
+# since optional parts may be absent without the structure having changed
+# (their absence is recorded in the provenance instead).
+.mapping_paths <- function(mapping, optional = FALSE) {
+    fixed <- Filter(function(p) is.null(p$for_each) && (optional || !isTRUE(p$optional)),
+        mapping$parts)
     used <- unique(vapply(fixed, `[[`, character(1), "from"))
     unique(c(
         vapply(mapping$source_nodes[used], `[[`, character(1), "path"),

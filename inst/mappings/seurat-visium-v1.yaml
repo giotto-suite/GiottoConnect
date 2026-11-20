@@ -17,7 +17,7 @@ mapping:
       predicates:
         - { path: "images/{image}", class: VisiumV1 }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "f7eefed9b983f4a7"
+  fingerprint: "cf18ed366471ffd6"
   fixtures: [seurat_visium_v1_fixture]
   history: []
 

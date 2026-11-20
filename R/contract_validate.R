@@ -248,6 +248,10 @@ print.giottoValidation <- function(x, ...) {
 
     sl <- tryCatch(GiottoClass::getSpatialLocations(g, spat_unit = "cell", output = "data.table"),
         error = function(e) NULL)
+    wants_locs <- any(vapply(mapping$parts, function(p) identical(p$part, "spatial_locs"), logical(1)))
+    if (wants_locs && (is.null(sl) || !nrow(sl))) {
+        out$add("spatial_locs", "locs", "WARN", "no spatial locations found in the source")
+    }
     if (!is.null(sl) && nrow(sl)) {
         rng <- max(diff(range(sl$sdimx)), diff(range(sl$sdimy)))
         lvl <- if (rng < 50 || rng > 1e6) "WARN" else "OK"

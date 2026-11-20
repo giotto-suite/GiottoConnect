@@ -4,11 +4,11 @@
     "package": "GiottoClass",
     "version": "0.7.31"
   },
-  "profiled_at": "2026-11-20T10:05:32-0500",
+  "profiled_at": "2026-11-20T14:19:03-0500",
   "profiler_version": "0.1.0",
   "n_cells": 200,
   "n_feat": 50,
-  "size_from": "expression/cell/rna/raw/exprMat",
+  "size_from": "user",
   "notes": "profiling SpatVector requires package terra",
   "nodes": [
     {
@@ -1748,8 +1748,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "g-20261120150532-...",
-      "value": "g-20261120150532-12f05545e21d6"
+      "sample": "g-20261120191903-...",
+      "value": "g-20261120191903-f90e7c08e521"
     },
     {
       "path": "join_info",

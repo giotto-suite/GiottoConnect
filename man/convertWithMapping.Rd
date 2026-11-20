@@ -30,14 +30,17 @@ after (semantic) conversion; FAIL stops, WARN warns.}
 }
 \value{
 giotto object. The conversion (mapping id, version, fingerprint,
-params and declared losses) is recorded in the object history.
+params, losses, alternatives used and absent optional parts) is recorded
+in the object history.
 }
 \description{
 Convert an external object into a giotto object using only a
 mapping file and the engine: parameters are bound on the object's profile,
 each source node is read through its declared accessor, ops or a hook are
 applied and the result is built with the GiottoClass constructor for the
-target part. With \code{source}, the giotto object is backed by a GiottoDisk
+target part. A part whose source is absent switches to the first of its
+declared alternatives that is present; otherwise an optional part is
+skipped. With \code{source}, the giotto object is backed by a GiottoDisk
 project and disk-backable parts (expression, polygons, networks) are
 written there.
 }

@@ -29,11 +29,21 @@ test_that("params absorb renamed assays, layers and graphs (D1, D2, D7, D8)", {
     expect_equal(findMapping(profileObject(v$D7))$params$values$nn_graph, "knn_graph")
 })
 
-test_that("a moved coordinate source is repaired through the declared alternative (D3)", {
+test_that("a moved coordinate source is read through the declared alternative (D3)", {
     skip_if_not_installed("SeuratObject")
     s <- drift()$variants$D3
     o <- outcome(s)
-    expect_equal(o$find$status, "repair_needed")
+    # the required structure is unchanged; the conversion switches by itself
+    expect_equal(o$find$status, "match")
+    g0 <- seuratToGiotto(s)
+    prov <- mappingProvenance(g0)
+    expect_match(prov$alternatives, "^locs: switched to alternative 'locs_from_meta'")
+    expect_true("polygons" %in% prov$absent)
+    sl0 <- GiottoClass::getSpatialLocations(g0, output = "data.table")
+    expect_equal(sl0$sdimx[match(colnames(s), sl0$cell_ID)], s$x_um, ignore_attr = TRUE)
+    expect_true(attr(readbackCheck(s, g0), "pass"))
+
+    # repair stamps the same switch into a new mapping version
     r <- o$repair
     expect_equal(r$status, "repaired")
     expect_equal(r$mapping$mapping$version, "0.1.1")
@@ -81,7 +91,8 @@ test_that("v3/v4 assays use the seurat-assay mapping (D9)", {
     s <- drift()$variants$D9
     f <- findMapping(profileObject(s), ecosystem = "seurat")
     expect_equal(f$mapping$mapping$id, "seurat-assay")
-    expect_equal(f$status, "repair_needed")
+    # optional parts (FOV, reductions, graphs) are absent, not changed
+    expect_equal(f$status, "match")
     r <- repairMapping(f$mapping, s)
     expect_equal(r$status, "not_needed")
     expect_true(all(r$changes$rule[r$changes$rule != "added"] == "absent"))

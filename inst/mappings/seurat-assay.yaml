@@ -17,7 +17,7 @@ mapping:
       predicates:
         - { path: "assays/{assay}", class: Assay }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "ab1e86a0a051cf17"
+  fingerprint: "eab84901e0f015d3"
   fixtures: [seurat_v3_fixture]
   history: []
 

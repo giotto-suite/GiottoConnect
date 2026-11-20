@@ -33,8 +33,9 @@ character, an xxhash64 digest
 \description{
 Hash the structure of a profiled object: the sorted set of
 (templated path, kind, dtype, ndim). Sizes and values are excluded, so two
-datasets with the same structure share a fingerprint. Parameter values in
-paths are replaced by their \code{{param}} placeholder first.
+datasets with the same structure share a fingerprint, and integer and
+double storage count as the same type. Parameter values in paths are
+replaced by their \code{{param}} placeholder first.
 }
 \examples{
 p <- profileObject(list(a = list(counts = matrix(1:4, 2))))

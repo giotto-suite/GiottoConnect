@@ -195,7 +195,8 @@ test_that("Visium objects select the Visium mapping and convert pixels to micron
     f <- findMapping(profileObject(s), ecosystem = "seurat")
     expect_equal(f$mapping$mapping$id, "seurat-visium")
     expect_equal(f$status, "match")
-    expect_equal(f$candidates$status[f$candidates$id == "seurat-assay5"], "repair_needed")
+    cand <- f$candidates
+    expect_lt(cand$coverage[cand$id == "seurat-assay5"], cand$coverage[cand$id == "seurat-visium"])
 
     g <- seuratToGiotto(s)
     sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
@@ -257,3 +258,21 @@ test_that("for_each expands one part per matching child", {
     expect_false("spatial" %in% GiottoClass::list_dim_reductions(g)$name)
     expect_true(attr(readbackCheck(s, g), "pass"))
 })
+
+test_that("declared drops are listed only when the object holds them", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    g <- seuratToGiotto(s)
+    l <- mappingProvenance(g)$losses
+    has_scale <- "scale.data" %in% SeuratObject::Layers(s)
+    expect_identical(any(grepl("scale.data", l$field)), has_scale)
+})
+
+test_that("a spatial mapping without any coordinates warns", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    s@images <- list()
+    expect_warning(g <- seuratToGiotto(s, mapping = "seurat-assay5"), "no spatial locations found")
+    expect_true(all(c("locs", "polygons") %in% mappingProvenance(g)$absent))
+})
+

@@ -16,7 +16,7 @@ mapping:
       predicates:
         - { path: "images/{image}", class: SlideSeq }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "90cfeb428e88bcec"
+  fingerprint: "425d6c70639ec4d1"
   fixtures: [seurat_slideseq_fixture]
   history: []
 

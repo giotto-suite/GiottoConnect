@@ -24,6 +24,8 @@ Choose the mapping that applies to a profiled object. Mappings
 are filtered by their \code{applies_to} declaration (class, package version and
 structural predicates after parameter binding); among those that apply, a
 fingerprint match is preferred, then the more specific mapping (more
-\code{applies_to} predicates satisfied), then the one whose source paths are best
-covered; without an exact match the status is \code{"repair_needed"}.
+\code{applies_to} predicates satisfied), then the one whose source paths
+(optional parts included) are best covered; without an exact match the status is \code{"repair_needed"}.
+Fingerprints cover the mapping's required parts: an optional part that is
+absent from the object does not change it.
 }

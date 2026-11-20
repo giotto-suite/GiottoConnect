@@ -18,7 +18,7 @@ mapping:
         - { path: obs, kind: data.frame }
         - { path: var, kind: data.frame }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "dbd6764d48022f73"
+  fingerprint: "9961c0994f399ad6"
   fixtures: [anndata_fixture]
   history: []
 

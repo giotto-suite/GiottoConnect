@@ -19,7 +19,7 @@ mapping:
         - { path: "assays/{assay}", class: Assay5 }
         - { path: "images/{image}", class: VisiumV2 }
   target: { contract: giotto, version: "0.7.31" }
-  fingerprint: "12f8eb19427663ec"
+  fingerprint: "3f80b7b3bdd3cf8e"
   fixtures: [seurat5_visium_fixture]
   history: []
 

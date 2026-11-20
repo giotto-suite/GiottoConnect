@@ -63,16 +63,22 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
    peak around 16 GB, because GiottoDisk sizes its batches from free RAM.
    Still open: data already in R (Seurat, SCE, BPCells) needs the deferred chunked
    writer in GiottoDisk; obsp networks are still read into R (6.75M edges, ~0.25 GB).
-2. **Fingerprints flag absent optional parts as drift.** 4 of the 5 real files are
-   `repair_needed` (and warn) although all convert correctly. The causes are an
-   absent optional part (normalized, nn) and counts stored as float. **Proposal:**
-   - treat unbound optional parts as neutral in the fingerprint;
-   - compare integer-valued storage by role, not dtype.
-
-   Seurat fingerprints would change, so this needs a separate re-stamp with the
-   snapshot proof.
-3. **Mapping-level declared losses are listed even when their path is absent**
-   (both ecosystems). **Proposal:** keep only those whose path is present.
+2. **Fingerprints flagged absent optional parts as drift: fixed.**
+   - Fingerprints now cover only a mapping's required parts and predicates, and
+     integer vs float storage counts as the same type.
+   - Conversion switches by itself to a declared alternative when a part's source
+     is absent. Drift case D3 (coordinates moved to `meta.data`) now converts with
+     its locations; before, it lost them.
+   - Absent optional parts and the alternatives used are recorded in the
+     provenance (`absent`, `alternatives`). A spatial mapping without any
+     coordinates warns.
+   - Mapping choice ranks by coverage of all source paths, optional ones included,
+     so a family mapping beats the generic one.
+   - Result: all 5 real h5ad files match, and the Seurat snapshot differs only as
+     intended (D3 gains locations; 4 objects go from `repair_needed` to `match`;
+     no mapping choice changes).
+3. **Declared losses were listed when their path was absent: fixed.** Only
+   drops of data the object holds are listed.
 4. **Feature metadata always comes from `var`**, even when the counts come from
    `raw/X` with their own `raw/var`. In slideseqv2, `raw` has 17,733 genes vs 4,000
    in `var`. That file has no integer `raw`, so it was not hit. **Proposal:** bind

@@ -45,15 +45,19 @@ test_that("Slide-seq objects convert", {
     expect_setequal(names(sl), c("sdimx", "sdimy", "cell_ID"))
 })
 
-test_that("the more specific mapping wins when nothing matches exactly", {
+test_that("the family mapping wins over the generic one", {
     skip_if_not_installed("Seurat")
     x <- fixtures_env()$build_seurat_visium_v1_fixture()
     x@reductions <- list()
     x@graphs <- list()
     f <- findMapping(profileObject(x), ecosystem = "seurat")
-    expect_equal(f$status, "repair_needed")
     expect_equal(f$mapping$mapping$id, "seurat-visium-v1")
-    expect_true("seurat-assay" %in% f$candidates$id[f$candidates$status == "repair_needed"])
+    # the generic mapping applies too, but reads less of the object
+    cand <- f$candidates
+    expect_true("seurat-assay" %in% cand$id[cand$status != "none"])
+    expect_lt(cand$coverage[cand$id == "seurat-assay"], cand$coverage[cand$id == "seurat-visium-v1"])
+    g <- seuratToGiotto(x)
+    expect_true("nn" %in% mappingProvenance(g)$absent)
 })
 
 test_that("Atera objects (Seurat 6 LoadAtera) use the FOV mapping", {
