@@ -46,7 +46,8 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     }
 
     ctx <- .new_ctx(mapping, params, profile)
-    prepared <- .prepare_parts(x, mapping, params, ctx, verbose = verbose)
+    prepared <- .prepare_parts(x, mapping, params, ctx, verbose = verbose,
+        stream = !is.null(source))
     prov <- list(
         mapping = mapping$mapping$id,
         version = mapping$mapping$version,
@@ -101,7 +102,9 @@ mappingProvenance <- function(gobject) {
 # Read, hook and transform every bound part. Returns a list (in assembly
 # order) of list(spec, data): spec is the part with its final, bound `to`
 # keys; data is exactly what the constructor receives.
-.prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE) {
+# stream = TRUE: expression parts without ops or hook may come back as a
+# GiottoDisk input (see adapterStream) instead of an R matrix
+.prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE, stream = FALSE) {
     adapter <- .adapter_for(mapping)
     ctx$x <- x
     paths <- ctx$profile$nodes$path
@@ -118,6 +121,13 @@ mappingProvenance <- function(gobject) {
         vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
         p$to <- lapply(p$to, function(v) if (is.character(v)) .pf_bind(v, params$values) else v)
         ctx$part_spec <- p
+        streamable <- stream && p$part == "expression" && is.null(p$hook) && !length(p$ops)
+        data <- if (streamable) adapterStream(adapter, x, node, params$values)
+        if (!is.null(data)) {
+            for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
+            out[[p$id]] <- list(spec = p, data = data)
+            next
+        }
         data <- adapterRead(adapter, x, node, params$values)
         if (!is.null(p$hook)) {
             data <- .hook_get(p$hook)(data, params$values, ctx)
@@ -419,13 +429,7 @@ mappingProvenance <- function(gobject) {
 }
 
 .assemble <- function(parts, source = NULL) {
-    g <- if (is.null(source)) {
-        GiottoClass::giotto()
-    } else {
-        package_check("GiottoDisk")
-        src <- GiottoDisk::sourceCreate(source, type = "gDirSource")
-        GiottoClass::giotto(source = src)
-    }
+    g <- if (is.null(source)) GiottoClass::giotto() else GiottoClass::giotto(source = source)
     g <- GiottoClass::setGiotto(g, unname(parts), initialize = FALSE, verbose = FALSE)
     methods::initialize(g)
 }

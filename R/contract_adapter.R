@@ -28,6 +28,8 @@ setGeneric("adapterListPaths", function(adapter) standardGeneric("adapterListPat
 setGeneric("adapterAccessors", function(adapter) standardGeneric("adapterAccessors"))
 setGeneric("adapterObjectLists", function(adapter) standardGeneric("adapterObjectLists"))
 setGeneric("adapterRead", function(adapter, x, node, params) standardGeneric("adapterRead"))
+# a GiottoDisk streaming input for a node, or NULL to read it into R
+setGeneric("adapterStream", function(adapter, x, node, params) standardGeneric("adapterStream"))
 
 # defaults: in-R objects profiled structurally, nodes read by an exported
 # function of the adapter's package, by `[[`, or structurally ("path", for
@@ -46,6 +48,8 @@ setMethod("adapterRead", "giottoConnectAdapter", function(adapter, x, node, para
     })
     do.call(fn, c(list(target), args))
 })
+
+setMethod("adapterStream", "giottoConnectAdapter", function(adapter, x, node, params) NULL)
 
 setMethod("adapterListPaths", "seuratAdapter", function(adapter) c(
     Assays = "assays", Layers = "assays/{on}/layers",
@@ -101,8 +105,19 @@ setGeneric("targetComparators", function(target) standardGeneric("targetComparat
 
 setMethod("targetBuild", "giottoTarget", function(target, prepared, mapping, prov, source = NULL) {
     contract <- giottoContract()
-    parts <- lapply(prepared, function(pp) .build_part(pp$spec, pp$data, contract, mapping))
-    g <- .assemble(parts, source = source)
+    src <- if (is.null(source)) NULL else {
+        package_check("GiottoDisk")
+        GiottoDisk::sourceCreate(source, type = "gDirSource")
+    }
+    parts <- lapply(prepared, function(pp) {
+        data <- pp$data
+        # streamed parts go straight from the input into the project
+        if (methods::is(data, "exprInput")) {
+            data <- GiottoDisk::sourceWrite(src, data, store_type = "parquetExpr")
+        }
+        .build_part(pp$spec, data, contract, mapping)
+    })
+    g <- .assemble(parts, source = src)
     .record_conversion(g, mapping_id = prov$mapping, mapping_version = prov$version, prov = prov)
 })
 setMethod("targetCheckKeys", "giottoTarget", function(target, mapping, out) {

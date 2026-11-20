@@ -39,14 +39,23 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
 
 ## Weak points and proposals
 
-1. **Disk conversion does not stream** (highest priority). AKI peak RSS is
-   **17.1 GB to GiottoDisk vs 9.8 GB in memory**: the adapter materialises the dense
-   X, and `storeWrite()` on an in-memory matrix builds every triplet. **Proposal:**
-   - when the target has a `source`, an adapter may return a lazy input for matrix
-     parts (`h5adInput()` here) and the Giotto target passes it to GiottoDisk;
-   - for Seurat, the deferred generic chunked R-matrix input in GiottoDisk.
+1. **Disk conversion did not stream: fixed.** The engine read every part into R, and
+   GiottoDisk's writer for in-memory matrices works in one piece, outside the memory
+   budget. Now, when the target is a GiottoDisk project, an adapter can return a
+   streaming input for expression parts (`adapterStream()`; `h5adInput()` for
+   AnnData). The Giotto target writes it straight into the project. Other ecosystems
+   are unaffected: the snapshot is identical on 17/17. AKI to disk, both routes
+   with `giottodisk.chunk_ram_frac = 0.02`:
 
-   This is a target/adapter seam decision, so I did not build it yet.
+   | Route | Peak RSS | Memory footprint | R heap during build | Time |
+   |---|---|---|---|---|
+   | read into R (before) | 16.9 GB | 13.3 GB | 13.1 GB | 29 s |
+   | stream (now) | 7.8 GB | 3.1 GB | 3.5 GB | 32 s |
+
+   At the default budget (25% of free RAM) on this 128 GB machine, both routes
+   peak around 16 GB, because GiottoDisk sizes its batches from free RAM.
+   Still open: data already in R (Seurat, SCE, BPCells) needs the deferred chunked
+   writer in GiottoDisk; obsp networks are still read into R (6.75M edges, ~0.25 GB).
 2. **Fingerprints flag absent optional parts as drift.** 4 of the 5 real files are
    `repair_needed` (and warn) although all convert correctly. The causes are an
    absent optional part (normalized, nn) and counts stored as float. **Proposal:**

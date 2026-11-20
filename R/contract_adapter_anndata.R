@@ -38,6 +38,17 @@ setMethod("adapterRead", "anndataAdapter", function(adapter, x, node, params) {
     do.call(fn, c(list(h5, el), args))
 })
 
+# X, raw/X and layers stream into a GiottoDisk project with h5adInput()
+setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) {
+    if (!identical(node$get$fn, "h5adMatrix") || !requireNamespace("GiottoDisk", quietly = TRUE) ||
+        !exists("h5adInput", envir = asNamespace("GiottoDisk"))) {
+        return(NULL)
+    }
+    el <- .pf_bind(node$get$on %null% node$path, params)
+    layer <- if (el == "X") NULL else if (el == "raw/X") "raw" else sub("^layers/", "", el)
+    suppressMessages(GiottoDisk::h5adInput(.h5ad_path(x), layer = layer))
+})
+
 .h5ad_path <- function(x) {
     if (!is.character(x) || length(x) != 1L || !file.exists(x)) {
         stop(wrap_txt("AnnData input must be the path to an existing .h5ad file"), call. = FALSE)

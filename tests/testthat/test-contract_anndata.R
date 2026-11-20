@@ -89,6 +89,34 @@ test_that("an h5ad converts onto a GiottoDisk project", {
     fx <- h5ad_fixture()
     g <- anndataToGiotto(fx$path, source = withr_tempdir())
     expect_true(attr(readbackCheck(fx$path, g), "pass"))
+    gm <- anndataToGiotto(fx$path)
+    for (v in c("raw", "normalized")) {
+        e <- GiottoClass::getExpression(g, values = v, output = "exprObj")[]
+        expect_s4_class(e, "parquetExprStore")
+        a <- as.matrix(GiottoClass::getExpression(gm, values = v, output = "matrix"))
+        expect_equal(as.matrix(GiottoConnect:::.rb_as_matrix(e)[rownames(a), colnames(a)]), a,
+            ignore_attr = TRUE)
+    }
+})
+
+test_that("matrices stream from the file when the target is on disk", {
+    skip_if_not_installed("hdf5r")
+    skip_if_not_installed("GiottoDisk")
+    skip_if_not(exists("h5adInput", envir = asNamespace("GiottoDisk")))
+    fx <- h5ad_fixture()
+    m <- readMapping("anndata-spatial")
+    p <- adapterProfile(GiottoConnect:::.adapter_for(m), fx$path)
+    params <- GiottoConnect:::.bind_params(m, p)
+    m <- GiottoConnect:::.expand_for_each(m, p, params)
+    prep <- function(stream) {
+        GiottoConnect:::.prepare_parts(fx$path, m, params,
+            GiottoConnect:::.new_ctx(m, params, p), stream = stream)
+    }
+    s <- prep(TRUE)
+    expect_s4_class(s$expr_raw$data, "exprInput")
+    expect_s4_class(s$expr_normalized$data, "exprInput")
+    expect_s3_class(s$cell_meta$data, "data.frame")
+    expect_true(methods::is(prep(FALSE)$expr_raw$data, "Matrix"))
 })
 
 test_that("mappings may only use the listings and accessors of their adapter", {
