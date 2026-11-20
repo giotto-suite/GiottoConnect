@@ -139,7 +139,8 @@
             "contract": {
               "type": "string",
               "enum": [
-                "giotto"
+                "giotto",
+                "seurat"
               ]
             },
             "version": {
@@ -209,7 +210,14 @@
             "Images",
             "Boundaries",
             "columns",
-            "children"
+            "children",
+            "SpatUnits",
+            "FeatTypes",
+            "Expressions",
+            "SpatLocs",
+            "Polygons",
+            "DimMethods",
+            "NNNames"
           ]
         },
         "on": {
@@ -310,7 +318,14 @@
                 "Misc",
                 "Key",
                 "[[",
-                "path"
+                "path",
+                "getExpression",
+                "getCellMetadata",
+                "getFeatureMetadata",
+                "getSpatialLocations",
+                "getPolygonInfo",
+                "getDimReduction",
+                "getNearestNetwork"
               ]
             },
             "on": {
@@ -423,6 +438,24 @@
           "type": "string"
         },
         "reduction": {
+          "type": "string"
+        },
+        "assay": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "fov": {
+          "type": "string"
+        },
+        "boundary": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "graph": {
           "type": "string"
         }
       }
@@ -546,7 +579,14 @@
             "Images",
             "Boundaries",
             "columns",
-            "children"
+            "children",
+            "SpatUnits",
+            "FeatTypes",
+            "Expressions",
+            "SpatLocs",
+            "Polygons",
+            "DimMethods",
+            "NNNames"
           ]
         },
         "on": {

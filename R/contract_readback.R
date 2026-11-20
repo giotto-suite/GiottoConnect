@@ -9,7 +9,8 @@
 #' Each comparison is `MATCH`, `DECLARED` (the difference is covered by a loss
 #' declared in the mapping or recorded during conversion) or `UNDECLARED`.
 #' @param x the source object
-#' @param result giotto object converted from `x`
+#' @param result object converted from `x` (giotto, or Seurat for a
+#' Giotto-to-Seurat mapping)
 #' @param mapping mapping used for the conversion. Defaults to the one
 #' recorded in `result` (see [mappingProvenance()]).
 #' @param n_cells number of cells sampled for expression values
@@ -38,11 +39,12 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
     prepared <- .prepare_parts(x, mapping, params, ctx)
     losses <- .collect_losses(mapping, ctx, params$values)
 
+    compare <- if (identical(mapping$mapping$target$contract, "seurat")) .RB_COMPARE_SEURAT else .RB_COMPARE
     rows <- list()
     for (pp in prepared) {
         spec <- pp$spec
         res <- tryCatch(
-            .RB_COMPARE[[spec$part]](spec, pp$data, result, n_cells),
+            compare[[spec$part]](spec, pp$data, result, n_cells),
             error = function(e) list(.rb_row("placement", FALSE, conditionMessage(e), "placement"))
         )
         for (r in res) {

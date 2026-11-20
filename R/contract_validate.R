@@ -36,7 +36,13 @@ validateMapping <- function(mapping, profile, params = NULL, result = NULL,
         .vm_hooks(mapping, out)
         .vm_unmapped(mapping, profile, params, out)
     }
-    if (checks != "structural" && !is.null(result)) .vm_semantic(mapping, profile, result, out)
+    if (checks != "structural" && !is.null(result)) {
+        if (identical(mapping$mapping$target$contract, "seurat")) {
+            .vm_semantic_seurat(mapping, profile, result, out)
+        } else {
+            .vm_semantic(mapping, profile, result, out)
+        }
+    }
 
     res <- out$table()
     class(res) <- c("giottoValidation", "data.frame")
@@ -90,10 +96,12 @@ print.giottoValidation <- function(x, ...) {
             needed <- any(vapply(mapping$parts, function(p) {
                 !isTRUE(p$optional) && nm %in% .vm_part_params(mapping, p)
             }, logical(1)))
-            # a param no part reads (e.g. after a patch) cannot block conversion
-            lvl <- if (needed) "FAIL" else if (isTRUE(pr$optional) || !nm %in% used) "WARN" else "FAIL"
-            out$add("param", NA, lvl, sprintf("%s could not be bound (%s)%s", nm,
-                .param_describe(pr), if (!nm %in% used) "; no part uses it" else ""))
+            # absent optional data is normal; a param no part reads (e.g.
+            # after a patch) cannot block conversion
+            lvl <- if (needed) "FAIL" else if (isTRUE(pr$optional)) "OK" else if (!nm %in% used) "WARN" else "FAIL"
+            out$add("param", NA, lvl, if (lvl == "OK") sprintf("%s not present (optional)", nm) else
+                sprintf("%s could not be bound (%s)%s", nm, .param_describe(pr),
+                    if (!nm %in% used) "; no part uses it" else ""))
         }
     }
 }
@@ -106,11 +114,12 @@ print.giottoValidation <- function(x, ...) {
             next
         }
         path <- .pf_bind(node$path, params$values)
-        lvl_missing <- if (isTRUE(p$optional)) "WARN" else "FAIL"
-        if (grepl("{", path, fixed = TRUE)) {
-            out$add("source", p$id, lvl_missing, sprintf("'%s' has unbound params", node$path))
+        if (isTRUE(p$optional) && (grepl("{", path, fixed = TRUE) || !path %in% profile$nodes$path)) {
+            out$add("source", p$id, "OK", "not present (optional part skipped)")
+        } else if (grepl("{", path, fixed = TRUE)) {
+            out$add("source", p$id, "FAIL", sprintf("'%s' has unbound params", node$path))
         } else if (!path %in% profile$nodes$path) {
-            out$add("source", p$id, lvl_missing, sprintf("path '%s' not found", path))
+            out$add("source", p$id, "FAIL", sprintf("path '%s' not found", path))
         } else if (identical(node$get$fn, "path")) {
             out$add("source", p$id, "WARN", sprintf(
                 "%s is read by path, not through an accessor (repair patch); review", path))
@@ -121,6 +130,18 @@ print.giottoValidation <- function(x, ...) {
 }
 
 .vm_targets <- function(mapping, out) {
+    if (identical(mapping$mapping$target$contract, "seurat")) {
+        for (p in mapping$parts) {
+            need <- .SEURAT_TARGET[[p$part]]
+            miss <- setdiff(need, names(p$to))
+            unknown <- setdiff(names(p$to), need)
+            lvl <- if (length(miss) || length(unknown)) "FAIL" else "OK"
+            out$add("target", p$id, lvl, if (lvl == "OK") sprintf("%s -> Seurat", p$part) else
+                sprintf("Seurat %s needs keys %s (missing: %s; unknown: %s)", p$part,
+                    paste(need, collapse = ", "), paste(miss, collapse = ", "), paste(unknown, collapse = ", ")))
+        }
+        return(invisible())
+    }
     ct <- giottoContract()
     for (p in mapping$parts) {
         cp <- ct$parts[[p$part]]

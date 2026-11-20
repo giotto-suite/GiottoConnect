@@ -9,7 +9,8 @@ readbackCheck(x, result, mapping = NULL, n_cells = 99L)
 \arguments{
 \item{x}{the source object}
 
-\item{result}{giotto object converted from \code{x}}
+\item{result}{object converted from \code{x} (giotto, or Seurat for a
+Giotto-to-Seurat mapping)}
 
 \item{mapping}{mapping used for the conversion. Defaults to the one
 recorded in \code{result} (see \code{\link[=mappingProvenance]{mappingProvenance()}}).}

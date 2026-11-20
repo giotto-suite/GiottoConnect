@@ -14,6 +14,16 @@
         fn = function(node, params, ctx) .hook_visium_to_um(node, params, ctx),
         packages = c("Seurat", "SeuratObject"),
         description = "VisiumV2 spot/bin centers in full-resolution pixels -> microns"
+    ),
+    giotto_polygons_to_vertices = list(
+        fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoPolygon (in memory or GiottoDisk) -> vertex table x, y, cell"
+    ),
+    giotto_nn_to_graph = list(
+        fn = function(node, params, ctx) .hook_nn_to_graph(node, params, ctx),
+        packages = c("GiottoClass", "Matrix"),
+        description = "Giotto nearest-neighbour edges -> cells x cells adjacency for a Seurat Graph"
     )
 )
 
@@ -175,4 +185,36 @@ hookRegistry <- function() {
     d <- as.matrix(stats::dist(m))
     diag(d) <- Inf
     stats::median(apply(d, 1L, min))
+}
+
+# outer ring vertices of each polygon (holes are dropped), in Giotto's
+# y-up convention; the mapping's ops flip y back
+.hook_polygons_to_vertices <- function(node) {
+    sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
+    geo <- as.data.frame(terra::geom(sv))
+    geo <- geo[geo$hole == 0 & geo$part == 1, , drop = FALSE]
+    data.frame(x = geo$x, y = geo$y, cell = sv$poly_ID[geo$geom], stringsAsFactors = FALSE)
+}
+
+# Seurat kNN graphs are binary and count each cell as its own neighbour;
+# sNN graphs carry the edge weights
+.hook_nn_to_graph <- function(node, params, ctx) {
+    cells <- GiottoClass::spatIDs(ctx$x, spat_unit = params$spat_unit)
+    e <- as.data.frame(node)
+    i <- match(e$from, cells)
+    j <- match(e$to, cells)
+    knn <- grepl("_nn$", ctx$part_spec$to$graph %null% "")
+    if (knn) {
+        i <- c(i, seq_along(cells))
+        j <- c(j, seq_along(cells))
+        x <- rep(1, length(i))
+        ctx$add_loss("estimated", "weight", "kNN graph written as binary adjacency with self edges (Seurat convention); distances dropped")
+    } else {
+        x <- e$weight
+        ctx$add_loss("ambiguous", "weight", "Giotto sNN weights are not Seurat's Jaccard shared-neighbour weights")
+    }
+    m <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(length(cells), length(cells)),
+        dimnames = list(cells, cells))
+    m@x[m@x > 1 & knn] <- 1
+    m
 }

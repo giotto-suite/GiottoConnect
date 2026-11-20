@@ -2,23 +2,29 @@
 % Please edit documentation in R/seurat.R
 \name{giottoToSeurat}
 \alias{giottoToSeurat}
-\title{Deprecated}
+\title{Convert a Giotto object to a Seurat object}
 \usage{
-giottoToSeurat(gobject, spat_unit = NULL, obj_use = NULL, ...)
+giottoToSeurat(gobject, mapping = NULL, verbose = FALSE)
 }
 \arguments{
-\item{gobject}{Giotto object}
+\item{gobject}{giotto object}
 
-\item{spat_unit}{spatial unit (e.g. 'cell')}
+\item{mapping}{optional \code{giottoMapping}, mapping file or bundled mapping id}
 
-\item{obj_use}{Giotto object (deprecated, use gobject)}
-
-\item{...}{additional params to pass to \code{\link{getSpatialLocations}}}
+\item{verbose}{logical}
 }
 \value{
-Seurat object
+Seurat object; see \code{\link[=mappingProvenance]{mappingProvenance()}} for what was converted and
+which losses apply
 }
 \description{
-Deprecated. Please use either \link{giottoToSeuratV4} or
-\link{giottoToSeuratV5}
+Convert a giotto object (in memory or GiottoDisk-backed) to a
+Seurat v5 object with the bundled mapping that fits its structure (see
+\code{\link[=findMapping]{findMapping()}}). The active spatial unit and feature type are converted:
+expression (raw counts and normalized values), cell and feature metadata,
+spatial locations and polygons as an FOV, dimension reductions and
+nearest-neighbour networks.
+}
+\seealso{
+\code{\link[=seuratToGiotto]{seuratToGiotto()}}, \code{\link[=convertWithMapping]{convertWithMapping()}}, \code{\link[=readbackCheck]{readbackCheck()}}
 }

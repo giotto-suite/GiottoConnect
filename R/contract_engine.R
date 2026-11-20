@@ -11,6 +11,12 @@
         Reductions = "reductions", Graphs = "graphs", Neighbors = "neighbors",
         Images = "images", Boundaries = "images/{on}/boundaries",
         children = "{on}", columns = "{on}"
+    ),
+    giotto = c(
+        SpatUnits = "expression", FeatTypes = "expression/{on}", Expressions = "expression/{on}",
+        SpatLocs = "spatial_locs/{on}", Polygons = "spatial_info",
+        DimMethods = "dimension_reduction/cells/{on}", NNNames = "nn_network/{on}",
+        children = "{on}", columns = "{on}"
     )
 )
 
@@ -54,24 +60,28 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         .stop_on_fail(pre, "structural validation")
     }
 
-    contract <- giottoContract()
     ctx <- .new_ctx(mapping, params, profile)
     prepared <- .prepare_parts(x, mapping, params, ctx, verbose = verbose)
-    parts <- lapply(prepared, function(pp) .build_part(pp$spec, pp$data, contract, mapping))
-
-    g <- .assemble(parts, source = source)
     prov <- list(
         mapping = mapping$mapping$id,
         version = mapping$mapping$version,
         status = mapping$mapping$status,
         fingerprint = fp,
         params = params$values,
-        parts = names(parts),
+        parts = names(prepared),
         targets = lapply(prepared, function(pp) pp$spec$to),
         losses = .collect_losses(mapping, ctx, params$values)
     )
-    g <- .record_conversion(g, mapping_id = prov$mapping, mapping_version = prov$version,
-        prov = prov)
+    if (identical(mapping$mapping$target$contract, "seurat")) {
+        if (!is.null(source)) stop(wrap_txt("`source` applies to Giotto targets only"), call. = FALSE)
+        g <- .record_seurat_conversion(.assemble_seurat(prepared), prov)
+    } else {
+        contract <- giottoContract()
+        parts <- lapply(prepared, function(pp) .build_part(pp$spec, pp$data, contract, mapping))
+        g <- .assemble(parts, source = source)
+        g <- .record_conversion(g, mapping_id = prov$mapping, mapping_version = prov$version,
+            prov = prov)
+    }
 
     if (isTRUE(validate)) {
         post <- validateMapping(mapping, profile, params = params, result = g,
@@ -86,10 +96,14 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
 #' @description Retrieve what [convertWithMapping()] recorded in the giotto
 #' object history: mapping id, version, status, fingerprint, bound params,
 #' converted parts and losses.
-#' @param gobject giotto object
+#' @param gobject giotto object, or a Seurat object produced by a mapping
 #' @returns list, or `NULL` if the object was not produced by a mapping
 #' @export
 mappingProvenance <- function(gobject) {
+    if (!inherits(gobject, "giotto")) {
+        misc <- tryCatch(methods::slot(gobject, "misc"), error = function(e) NULL)
+        return(misc$giottoConnect)
+    }
     hist <- gobject@parameters
     for (h in rev(hist)) {
         a <- attr(h, "attachments")
@@ -126,6 +140,8 @@ mappingProvenance <- function(gobject) {
         }
         ctx$part <- p$id
         vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
+        p$to <- lapply(p$to, function(v) if (is.character(v)) .pf_bind(v, params$values) else v)
+        ctx$part_spec <- p
         data <- .read_node(x, node, params$values, pkg)
         if (!is.null(p$hook)) {
             data <- .hook_get(p$hook)(data, params$values, ctx)
@@ -134,7 +150,6 @@ mappingProvenance <- function(gobject) {
                 data <- data$data
             }
         }
-        p$to <- lapply(p$to, function(v) if (is.character(v)) .pf_bind(v, params$values) else v)
         data <- .apply_ops(data, p$ops, params$values, p$id)
         for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
         out[[p$id]] <- list(spec = p, data = data)
@@ -206,6 +221,7 @@ mappingProvenance <- function(gobject) {
     for (nm in names(mapping$params)) {
         pr <- mapping$params[[nm]]
         on <- if (is.null(pr$on)) NULL else .pf_bind(pr$on, values)
+        if (!is.null(pr$value)) pr$value <- .pf_bind(pr$value, values)
         if (!is.null(on) && grepl("{", on, fixed = TRUE)) {
             unbound <- c(unbound, nm)
             next
@@ -386,7 +402,11 @@ mappingProvenance <- function(gobject) {
 .cast <- function(data, to) {
     switch(to,
         table = as.data.frame(as.matrix(data)),
-        sparse = methods::as(data, "CsparseMatrix"),
+        sparse = if (methods::is(data, "Matrix") || is.matrix(data)) {
+            methods::as(data, "CsparseMatrix")
+        } else {
+            methods::as(data, "dgCMatrix")
+        },
         integer = {
             v <- if (methods::is(data, "sparseMatrix")) data@x else as.vector(data)
             if (any(v != round(v), na.rm = TRUE)) stop("values are not integer-valued")

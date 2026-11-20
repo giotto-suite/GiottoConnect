@@ -9,24 +9,32 @@ NULL
 
 
 
-#' @title Deprecated
+#' @title Convert a Giotto object to a Seurat object
 #' @name giottoToSeurat
-#' @description Deprecated. Please use either [giottoToSeuratV4] or
-#' [giottoToSeuratV5]
-#' @param gobject Giotto object
-#' @param obj_use Giotto object (deprecated, use gobject)
-#' @param spat_unit spatial unit (e.g. 'cell')
-#' @param ... additional params to pass to \code{\link{getSpatialLocations}}
-#' @returns Seurat object
+#' @description Convert a giotto object (in memory or GiottoDisk-backed) to a
+#' Seurat v5 object with the bundled mapping that fits its structure (see
+#' [findMapping()]). The active spatial unit and feature type are converted:
+#' expression (raw counts and normalized values), cell and feature metadata,
+#' spatial locations and polygons as an FOV, dimension reductions and
+#' nearest-neighbour networks.
+#' @param gobject giotto object
+#' @param mapping optional `giottoMapping`, mapping file or bundled mapping id
+#' @param verbose logical
+#' @returns Seurat object; see [mappingProvenance()] for what was converted and
+#' which losses apply
+#' @seealso [seuratToGiotto()], [convertWithMapping()], [readbackCheck()]
 #' @export
-giottoToSeurat <- function(
-        gobject,
-        spat_unit = NULL,
-        obj_use = NULL,
-        ...) {
-    stop(wrap_txt(
-        "Deprecated. Please use either giottoToSeuratV4() or giottoToSeuratV5()"
-    ))
+giottoToSeurat <- function(gobject, mapping = NULL, verbose = FALSE) {
+    profile <- profileObject(gobject)
+    if (is.null(mapping)) {
+        found <- findMapping(profile, ecosystem = "giotto")
+        if (found$status == "none") {
+            stop(wrap_txt("No bundled mapping applies to this giotto object:",
+                paste(found$reasons, collapse = "; ")), call. = FALSE)
+        }
+        mapping <- found$mapping
+    }
+    convertWithMapping(gobject, mapping, profile = profile, verbose = verbose)
 }
 
 

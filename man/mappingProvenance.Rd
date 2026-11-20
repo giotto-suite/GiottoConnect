@@ -7,7 +7,7 @@
 mappingProvenance(gobject)
 }
 \arguments{
-\item{gobject}{giotto object}
+\item{gobject}{giotto object, or a Seurat object produced by a mapping}
 }
 \value{
 list, or \code{NULL} if the object was not produced by a mapping

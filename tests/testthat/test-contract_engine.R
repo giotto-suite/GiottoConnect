@@ -18,7 +18,8 @@ test_that("the bundled mapping reads, summarises and declares its losses", {
 
 test_that("hookRegistry lists the hooks and their packages", {
     h <- hookRegistry()
-    expect_setequal(h$hook, c("seurat_graph_to_nn", "seurat_visium_to_um"))
+    expect_setequal(h$hook, c("seurat_graph_to_nn", "seurat_visium_to_um",
+        "giotto_polygons_to_vertices", "giotto_nn_to_graph"))
     expect_match(h$packages[h$hook == "seurat_visium_to_um"], "Seurat")
 })
 
