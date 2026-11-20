@@ -28,6 +28,7 @@ Imports:
 Suggests:
     GiottoData,
     GiottoDisk,
+    hdf5r,
     httr2,
     rhdf5,
     Seurat,

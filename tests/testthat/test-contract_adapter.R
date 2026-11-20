@@ -1,6 +1,6 @@
 test_that("adapters and targets are registered and dispatch", {
     reg <- adapterRegistry()
-    expect_setequal(reg$name[reg$role == "adapter"], c("seurat", "giotto"))
+    expect_setequal(reg$name[reg$role == "adapter"], c("seurat", "giotto", "anndata"))
     expect_setequal(reg$name[reg$role == "target"], c("giotto", "seurat"))
 
     sa <- GiottoConnect:::.adapter_for("seurat")
@@ -12,7 +12,8 @@ test_that("adapters and targets are registered and dispatch", {
     expect_true("LayerData" %in% GiottoConnect:::adapterAccessors(sa))
     expect_false("LayerData" %in% GiottoConnect:::adapterAccessors(ga))
     expect_s4_class(GiottoConnect:::.target_for("seurat"), "giottoConnectTarget")
-    expect_error(GiottoConnect:::.adapter_for("anndata"), "No adapter for ecosystem 'anndata'")
+    expect_equal(GiottoConnect:::.adapter_for("anndata")@package, "hdf5r")
+    expect_error(GiottoConnect:::.adapter_for("spatialdata"), "No adapter for ecosystem 'spatialdata'")
 })
 
 test_that("mappings may only call accessors of their adapter", {
@@ -21,8 +22,8 @@ test_that("mappings may only call accessors of their adapter", {
     expect_error(readMapping(m),
         "source_nodes.counts.get.fn: 'getExpression' is not an accessor of the seurat adapter")
     m2 <- unclass(readMapping("seurat-assay5"))
-    m2$mapping$source$ecosystem <- "anndata"
-    expect_error(readMapping(m2), "no adapter for 'anndata'")
+    m2$mapping$source$ecosystem <- "spatialdata"
+    expect_error(readMapping(m2), "no adapter for 'spatialdata'")
     m3 <- unclass(readMapping("seurat-assay5"))
     m3$mapping$target$contract <- "sce"
     expect_error(readMapping(m3), "no target 'sce'")

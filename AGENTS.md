@@ -90,7 +90,8 @@ inst/
 ## Adding an ecosystem
 
 Everything ecosystem-specific sits behind two S4 classes in `R/contract_adapter.R`;
-the engine only dispatches.
+the engine only dispatches. `R/contract_adapter_anndata.R` is the example of an
+adapter whose input is a file (.h5ad, read with hdf5r) rather than an R object.
 
 - **Source side:** a `giottoConnectAdapter` subclass supplying `adapterProfile()` (how
   to walk the input; the default is `profileObject()`), `adapterListPaths()` (listing
@@ -102,8 +103,10 @@ the engine only dispatches.
   `targetBuild()`, `targetCheckKeys()`, `targetSemantic()` and `targetComparators()`.
   Register it in `.TARGETS` under the mapping's `target.contract`.
 - Then mapping files, hooks if the op list cannot express a step, and a thin
-  `<eco>ToGiotto()` / `giottoTo<Eco>()` wrapper. `readMapping()` rejects accessors the
-  adapter does not list.
+  `<eco>ToGiotto()` / `giottoTo<Eco>()` wrapper. `readMapping()` rejects listing verbs
+  and accessors the adapter does not supply.
+- Add a fixture builder to `inst/scripts/build_fixtures.R` and stamp the mapping with
+  `Rscript inst/scripts/verify_mapping.R <id>`.
 - Prove refactors with `examples/seurat_comparison/engine_snapshot.R`: it records
   mapping choice, fingerprints, params, content hashes and readback for every fixture
   and crop, and compares against a saved baseline.

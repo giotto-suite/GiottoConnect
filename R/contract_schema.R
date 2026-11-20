@@ -51,7 +51,26 @@
         return(c(probs, sprintf("mapping.source.ecosystem: no adapter for '%s' (available: %s)", eco,
             paste(names(.ADAPTERS), collapse = ", "))))
     }
-    allowed <- adapterAccessors(.adapter_for(eco))
+    adapter <- .adapter_for(eco)
+    verbs <- names(adapterListPaths(adapter))
+    # malformed entries are reported by the schema check
+    objs <- function(x) Filter(is.list, x)
+    lists <- c(
+        lapply(objs(m$params), function(pr) list(at = "params", v = pr$list)),
+        unlist(lapply(objs(m$parts), function(p) c(
+            if (is.list(p$for_each)) list(list(at = sprintf("parts.%s.for_each", p$id), v = p$for_each$list)),
+            unlist(lapply(objs(p$alternatives), function(a) lapply(objs(a$params), function(pr) {
+                list(at = sprintf("parts.%s.alternatives.%s.params", p$id, a$id), v = pr$list)
+            })), recursive = FALSE)
+        )), recursive = FALSE)
+    )
+    for (l in lists) {
+        if (is.character(l$v) && length(l$v) == 1L && !l$v %in% verbs) {
+            probs <- c(probs, sprintf("%s: list '%s' is not a listing of the %s adapter (allowed: %s)",
+                l$at, l$v, eco, paste(verbs, collapse = ", ")))
+        }
+    }
+    allowed <- adapterAccessors(adapter)
     for (nm in names(m$source_nodes)) {
         fn <- m$source_nodes[[nm]]$get$fn
         if (is.character(fn) && length(fn) == 1L && !fn %in% allowed) {

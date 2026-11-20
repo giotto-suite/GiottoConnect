@@ -31,7 +31,7 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
         warning(wrap_txt(sprintf("result was converted with %s v%s, checking against v%s",
             prov$mapping, prov$version, mapping$mapping$version)), call. = FALSE)
     }
-    package_check(mapping$mapping$source$package)
+    package_check(.adapter_for(mapping)@package)
     profile <- adapterProfile(.adapter_for(mapping), x)
     params <- .bind_params(mapping, profile)
     mapping <- .expand_for_each(mapping, profile, params)

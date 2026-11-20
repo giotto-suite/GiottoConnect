@@ -128,7 +128,7 @@ setMethod("targetComparators", "seuratTarget", function(target) .RB_COMPARE_SEUR
 
 # registries ####
 
-.ADAPTERS <- list(seurat = "seuratAdapter", giotto = "giottoAdapter")
+.ADAPTERS <- list(seurat = "seuratAdapter", giotto = "giottoAdapter", anndata = "anndataAdapter")
 .TARGETS <- list(giotto = "giottoTarget", seurat = "seuratTarget")
 
 .adapter_for <- function(x) {

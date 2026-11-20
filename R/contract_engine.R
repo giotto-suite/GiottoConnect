@@ -164,7 +164,11 @@ mappingProvenance <- function(gobject) {
         vals <- name[keep]
         if (!is.null(fe$exclude)) vals <- vals[!grepl(fe$exclude, vals)]
         for (v in vals) {
-            sub_v <- function(x) gsub(sprintf("{%s}", fe$as), v, x, fixed = TRUE)
+            label <- if (is.null(fe$strip)) v else sub(fe$strip, "", v)
+            sub_v <- function(x) {
+                x <- gsub(sprintf("{%s_label}", fe$as), label, x, fixed = TRUE)
+                gsub(sprintf("{%s}", fe$as), v, x, fixed = TRUE)
+            }
             q <- p
             q$for_each <- NULL
             q <- rapply(q, sub_v, classes = "character", how = "replace")
@@ -227,7 +231,9 @@ mappingProvenance <- function(gobject) {
         first_of_class = kids$class == pr$class,
         first_where = .param_where(pr$where, kids, name, nodes)
     )
-    if (!any(ok)) NA_character_ else name[which(ok)[1L]]
+    if (!any(ok)) return(NA_character_)
+    hit <- which(ok)[1L]
+    if (identical(pr$as, "path")) kids$path[hit] else name[hit]
 }
 
 .param_where <- function(w, kids, name, nodes) {
@@ -237,8 +243,12 @@ mappingProvenance <- function(gobject) {
     }
     ok <- rep(TRUE, nrow(kids))
     if (!is.null(w$class)) ok <- ok & kids$class %in% unlist(w$class)
-    if (!is.null(w$kind)) ok <- ok & kids$kind == w$kind
+    if (!is.null(w$kind)) ok <- ok & kids$kind %in% unlist(w$kind)
     if (!is.null(w$role)) ok <- ok & has(kids$role_hints, unlist(w$role))
+    if (!is.null(w$not_role)) {
+        hs <- strsplit(ifelse(is.na(kids$role_hints), "", kids$role_hints), ",", fixed = TRUE)
+        ok <- ok & !vapply(hs, function(x) any(unlist(w$not_role) %in% x), logical(1))
+    }
     if (!is.null(w$has_child_role)) {
         # data held below the node: matrices only, not scalar slots
         ok <- ok & vapply(kids$path, function(p) {

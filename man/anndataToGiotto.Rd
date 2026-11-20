@@ -2,69 +2,31 @@
 % Please edit documentation in R/anndata.R
 \name{anndataToGiotto}
 \alias{anndataToGiotto}
-\title{Convert anndata to Giotto}
+\title{Convert an AnnData .h5ad file to a Giotto object}
 \usage{
-anndataToGiotto(
-  anndata_path = NULL,
-  n_key_added = NULL,
-  spatial_n_key_added = NULL,
-  delaunay_spat_net = TRUE,
-  spat_enrich_key_added = NULL,
-  spat_unit = NULL,
-  feat_type = NULL,
-  h5_file = NULL,
-  python_path = NULL,
-  env_name = "giotto_env"
-)
+anndataToGiotto(anndata_path, mapping = NULL, source = NULL, verbose = FALSE)
 }
 \arguments{
 \item{anndata_path}{path to the .h5ad file}
 
-\item{n_key_added}{equivalent of "key_added" argument from scanpy.pp.
-neighbors(). If multiple spatial networks are in the anndata object, a list
-of key_added terms may be provided. If converting an anndata object from
-giottoToAnnData, the keys are saved in \code{.uns['NN_keys']}
-and all keys are used in conversion unless specified in the function call.
-Cannot be "spatial". This becomes the name of the nearest network in the gobject.}
+\item{mapping}{optional \code{giottoMapping}, mapping file or bundled mapping id.
+By default the bundled mapping that applies to the file is used.}
 
-\item{spatial_n_key_added}{equivalent of "key_added" argument from
-squidpy.gr.spatial_neighbors. If multiple spatial networks are in the
-anndata object, a list of key_added terms may be provided. If converting an
-anndata object from giottoToAnnData, the keys are saved in \code{.uns['SN_keys']}
-and all keys are used in conversion unless specified in the function call.
-Cannot be the same as n_key_added.}
+\item{source}{\code{NULL} for an in-memory giotto object, or a directory for a
+GiottoDisk-backed object}
 
-\item{delaunay_spat_net}{binary parameter for spatial network. If TRUE, the
-spatial network is a delaunay network.}
-
-\item{spat_enrich_key_added}{list of names of spatial enrichment annotations present in the anndata object.
-If converting an anndata object from giottoToAnnData and the original Giotto object had
-spatial enrichment annotations, the keys are saved in
-\code{.uns['SE_keys']}
-and all keys are used in conversion unless specified in the function call.}
-
-\item{spat_unit}{desired spatial unit to use for conversion, default NULL}
-
-\item{feat_type}{desired feature type to use for conversion, default NULL}
-
-\item{h5_file}{name to create and on-disk HDF5 file}
-
-\item{python_path}{path to python executable within a conda/miniconda
-environment}
-
-\item{env_name}{name of environment containing python_path executable}
+\item{verbose}{logical}
 }
 \value{
-Giotto object
+giotto object; see \code{\link[=mappingProvenance]{mappingProvenance()}} for what was converted
+and which losses apply
 }
 \description{
-Converts a spatial anndata (e.g. scanpy) .h5ad file into a
-Giotto object
+Convert an AnnData (.h5ad) file with the mapping that fits
+its structure. The file is read directly (hdf5r, no python): it is
+profiled, the matching bundled mapping is selected (or the one given) and
+the conversion runs through \code{\link[=convertWithMapping]{convertWithMapping()}}.
 }
-\details{
-Function in beta. Converts a .h5ad file into a Giotto object.
-The returned Giotto Object will take default instructions with the
-exception of the python path, which may be customized.
-See \code{\link{changeGiottoInstructions}} to modify instructions after
-creation.
+\seealso{
+\code{\link[=findMapping]{findMapping()}}, \code{\link[=convertWithMapping]{convertWithMapping()}}, \code{\link[=readbackCheck]{readbackCheck()}}
 }

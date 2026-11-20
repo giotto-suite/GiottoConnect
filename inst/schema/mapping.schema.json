@@ -201,25 +201,7 @@
       "properties": {
         "list": {
           "type": "string",
-          "enum": [
-            "Assays",
-            "Layers",
-            "Reductions",
-            "Graphs",
-            "Neighbors",
-            "Images",
-            "Boundaries",
-            "columns",
-            "children",
-            "SpatUnits",
-            "FeatTypes",
-            "Expressions",
-            "SpatLocs",
-            "Polygons",
-            "DimMethods",
-            "NNNames",
-            "AssayLayers"
-          ]
+          "description": "a listing verb of the mapping's adapter (see adapterRegistry())"
         },
         "on": {
           "type": "string"
@@ -235,52 +217,7 @@
           ]
         },
         "where": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "has_child_role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "name_matches": {
-              "type": "string"
-            },
-            "or_role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "class": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "kind": {
-              "type": "string"
-            }
-          }
+          "$ref": "#/$defs/where"
         },
         "value": {
           "type": "string"
@@ -293,6 +230,14 @@
         },
         "path": {
           "type": "string"
+        },
+        "as": {
+          "type": "string",
+          "enum": [
+            "name",
+            "path"
+          ],
+          "description": "bind the matched child's name (default) or its full path"
         }
       }
     },
@@ -560,25 +505,7 @@
       "properties": {
         "list": {
           "type": "string",
-          "enum": [
-            "Assays",
-            "Layers",
-            "Reductions",
-            "Graphs",
-            "Neighbors",
-            "Images",
-            "Boundaries",
-            "columns",
-            "children",
-            "SpatUnits",
-            "FeatTypes",
-            "Expressions",
-            "SpatLocs",
-            "Polygons",
-            "DimMethods",
-            "NNNames",
-            "AssayLayers"
-          ]
+          "description": "a listing verb of the mapping's adapter (see adapterRegistry())"
         },
         "on": {
           "type": "string"
@@ -587,49 +514,77 @@
           "type": "string"
         },
         "where": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "has_child_role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "name_matches": {
-              "type": "string"
-            },
-            "or_role": {
-              "type": [
-                "string",
-                "array"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "class": {
-              "type": "string"
-            },
-            "kind": {
-              "type": "string"
-            }
-          }
+          "$ref": "#/$defs/where"
         },
         "exclude": {
           "type": "string"
+        },
+        "strip": {
+          "type": "string",
+          "description": "regex removed from each name to give the placeholder {<as>_label}"
+        }
+      }
+    },
+    "where": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "not_role": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "has_child_role": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "name_matches": {
+          "type": "string"
+        },
+        "or_role": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "class": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "kind": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

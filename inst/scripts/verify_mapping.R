@@ -16,13 +16,14 @@ builders <- list(
     seurat_v3_fixture = env$build_seurat_v3_fixture,
     giotto_fixture_small = env$build_giotto_fixture,
     seurat_visium_v1_fixture = env$build_seurat_visium_v1_fixture,
-    seurat_slideseq_fixture = env$build_seurat_slideseq_fixture
+    seurat_slideseq_fixture = env$build_seurat_slideseq_fixture,
+    anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path
 )
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
 m <- readMapping(yaml_file)
 x <- builders[[m$mapping$fixtures[[1]]]]()
-p <- profileObject(x)
+p <- adapterProfile(GiottoConnect:::.adapter_for(m), x)
 g <- convertWithMapping(x, m, profile = p)
 if (identical(m$mapping$target$contract, "giotto")) {
     # the same mapping onto a GiottoDisk project

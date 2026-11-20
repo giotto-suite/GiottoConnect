@@ -1,0 +1,120 @@
+# AnnData (.h5ad, scanpy / squidpy layout) -> Giotto.
+# Counts are the first integer matrix among X, layers/* and raw/X; X is
+# mapped as normalized values when it is not integer. Coordinates come from
+# obsm/spatial (or X_spatial), else from obs columns.
+# Coordinates follow the Giotto convention: sdimx = x, sdimy = -y.
+mapping:
+  id: anndata-spatial
+  version: 0.1.0
+  status: verified
+  built: "2026-11-20"
+  schema_version: 0.1.0
+  source:
+    ecosystem: anndata
+    class: AnnData
+    package: anndata
+    applies_to:
+      predicates:
+        - { path: obs, kind: data.frame }
+        - { path: var, kind: data.frame }
+  target: { contract: giotto, version: "0.7.31" }
+  fingerprint: "dbd6764d48022f73"
+  fixtures: [anndata_fixture]
+  history: []
+
+params:
+  counts:     { list: Matrices, rule: first_where, as: path, optional: true,
+                where: { kind: [sparse_matrix, dense_matrix], role: [integer_valued, nonneg, rows_eq_ncells] } }
+  normalized: { list: Matrices, on: "", rule: first_where, as: path, optional: true,
+                where: { name_matches: "^X$", kind: [sparse_matrix, dense_matrix], not_role: [integer_valued] } }
+  spatial:    { list: Obsm, rule: first_where, where: { name_matches: "^(X_)?spatial$", kind: dense_matrix }, optional: true }
+  nn_dist:    { list: Obsp, rule: first_where, where: { name_matches: "^distances$" }, optional: true }
+
+source_nodes:
+  counts:     { path: "{counts}", get: { fn: h5adMatrix } }
+  normalized: { path: "{normalized}", get: { fn: h5adMatrix } }
+  obs:        { path: obs, get: { fn: h5adFrame } }
+  var:        { path: var, get: { fn: h5adFrame } }
+  spatial:    { path: "obsm/{spatial}", get: { fn: h5adObsm } }
+  reduction:  { path: "obsm/{red}", get: { fn: h5adObsm } }
+  nn:         { path: "obsp/{nn_dist}", get: { fn: h5adObsp } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: normalized }
+    lossy:
+      - { kind: ambiguous, field: transform, note: "X holds whatever scanpy left there (normalized, log1p and/or scaled); mapped as normalized" }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: obs
+    ops:
+      - { op: rownames_to_col, col: cell_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: feat_meta
+    part: feat_metadata
+    from: var
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: locs
+    part: spatial_locs
+    from: spatial
+    optional: true
+    ops:
+      - { op: cast, to: table }
+      - { op: select_cols, cols: [Dim.1, Dim.2] }
+      - { op: set_colnames, cols: [sdimx, sdimy] }
+      - { op: rownames_to_col, col: cell_ID }
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: { spat_unit: cell, name: raw }
+    lossy:
+      - { kind: estimated, field: units, note: "obsm coordinates carry no unit (Visium: full-resolution pixels); kept as stored" }
+      - { kind: ambiguous, field: orientation, note: "obsm coordinates assumed image-space (y down), as scanpy/squidpy plot them" }
+    alternatives:
+      # coordinates kept as obs columns
+      - id: locs_from_obs
+        from: obs
+        params:
+          x_col: { list: columns, on: obs, rule: first_where, where: { name_matches: "^(x|.*_x)([_.].*)?$|^x$", kind: vector } }
+          y_col: { list: columns, on: obs, rule: first_where, where: { name_matches: "^(y|.*_y)([_.].*)?$|^y$", kind: vector } }
+        ops:
+          - { op: select_cols, cols: ["{x_col}", "{y_col}"] }
+          - { op: rownames_to_col, col: cell_ID }
+          - { op: rename, map: { "{x_col}": sdimx, "{y_col}": sdimy } }
+          - { op: scale, factor: -1, cols: [sdimy] }
+        lossy:
+          - { kind: estimated, field: units, note: "obs coordinates carry no unit; kept as stored" }
+          - { kind: ambiguous, field: orientation, note: "obs coordinates assumed image-space (y down)" }
+
+  # one dim_reduction per obsm embedding (X_pca -> pca); coordinates are
+  # read by locs instead
+  - id: "dimred_{red_label}"
+    part: dim_reduction
+    from: reduction
+    for_each: { list: Obsm, as: red, strip: "^X_", exclude: "spatial", where: { kind: dense_matrix } }
+    to: { spat_unit: cell, feat_type: rna, name: "{red_label}", method: "{red_label}" }
+
+  - id: nn
+    part: nn_network
+    from: nn
+    hook: anndata_distances_to_nn
+    optional: true
+    # the hook names it kNN.<space> from the scanpy neighbors record
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_dist}" }
+
+lossy:
+  - { kind: dropped, path: "obsp/connectivities", note: "UMAP connectivities; Giotto weights come from distances" }
+  - { kind: dropped, path: "varm/PCs", note: "PCA loadings are not carried over yet" }
+  - { kind: dropped, path: "uns", note: "unstructured annotations (colours, parameters) are not mapped" }

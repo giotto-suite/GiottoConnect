@@ -47,20 +47,25 @@ profileObject <- function(x,
         max_depth = max_depth, max_children = max_children,
         sample_n = sample_n
     )
-    nodes <- as.data.frame(data.table::rbindlist(env$rows))
+    .pf_finish(env$rows, env$notes, .pf_source(x), n_cells = n_cells, n_feat = n_feat)
+}
+
+# node rows (from any walker) -> giottoProfile: size inference and role hints
+.pf_finish <- function(rows, notes, source, n_cells = NULL, n_feat = NULL) {
+    nodes <- as.data.frame(data.table::rbindlist(rows))
 
     size <- .pf_infer_size(nodes, n_cells = n_cells, n_feat = n_feat)
     nodes$role_hints <- .pf_size_hints(nodes, size$n_cells, size$n_feat)
     nodes$.flags <- NULL
 
     structure(list(
-        source = .pf_source(x),
+        source = source,
         profiled_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
         profiler_version = .PROFILER_VERSION,
         n_cells = size$n_cells,
         n_feat = size$n_feat,
         size_from = size$from,
-        notes = unique(env$notes),
+        notes = unique(notes),
         nodes = nodes
     ), class = "giottoProfile")
 }

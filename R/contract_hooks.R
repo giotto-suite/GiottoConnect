@@ -15,6 +15,11 @@
         packages = c("Seurat", "SeuratObject"),
         description = "VisiumV1/V2 spot/bin centers in full-resolution pixels -> microns"
     ),
+    anndata_distances_to_nn = list(
+        fn = function(node, params, ctx) .hook_distances_to_nn(node, params, ctx),
+        packages = c("hdf5r", "Matrix"),
+        description = "AnnData obsp kNN distances -> nearest-neighbour edges; name and k from the scanpy neighbors record"
+    ),
     giotto_polygons_to_vertices = list(
         fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
         packages = c("GiottoClass", "terra"),
@@ -224,4 +229,55 @@ hookRegistry <- function() {
         dimnames = list(cells, cells))
     m@x[m@x > 1 & knn] <- 1
     m
+}
+
+# scanpy kNN distances (obs x obs, rows = from) -> edges without self pairs,
+# weight 1 / (1 + distance). Whether the cell itself is stored depends on the
+# scanpy version, so k is counted. The uns record whose distances_key names
+# this matrix gives the space: use_rep, else X_pca when n_pcs != 0 and there
+# are more than 50 variables (scanpy's choice), else X. The network is named
+# "kNN.<space>" (X_ prefix dropped).
+.hook_distances_to_nn <- function(node, params, ctx) {
+    m <- methods::as(node, "CsparseMatrix")
+    ids <- rownames(m)
+    tr <- Matrix::summary(m)
+    tr <- tr[tr$i != tr$j, , drop = FALSE]
+    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
+        weight = 1 / (1 + tr$x), distance = tr$x)
+    key <- params$nn_dist
+    h5 <- .h5ad_open(.h5ad_path(ctx$x))
+    on.exit(h5$close_all())
+    rec <- .h5ad_neighbors_record(h5, key)
+    k <- stats::median(tabulate(tr$i, nbins = nrow(m)))
+    if (is.null(rec)) {
+        name <- paste0("kNN.", key)
+        ctx$add_loss("ambiguous", "name", sprintf(
+            "no uns neighbors record names obsp/%s; its space is unknown, kNN.%s used", key, key))
+        ctx$add_loss("recovered_from_parameters", "k", sprintf("k = %s recovered from out-degree", k))
+    } else {
+        p <- rec$params
+        rep <- p$use_rep %null% {
+            n_var <- length(.h5ad_index(h5, "var"))
+            if (identical(as.integer(p$n_pcs), 0L) || n_var <= 50L) "X" else "X_pca"
+        }
+        name <- paste0("kNN.", sub("^X_", "", rep))
+        ctx$add_loss("recovered_from_parameters", "name", sprintf(
+            "uns/%s: %s neighbours on %s%s (%s, n_neighbors %s); k = %s non-self neighbours stored",
+            rec$key, p$method %null% "scanpy", rep,
+            if (is.null(p$n_pcs)) "" else sprintf(", %s PCs", p$n_pcs),
+            p$metric %null% "euclidean", p$n_neighbors %null% "?", k))
+    }
+    .hook_result(edges, to = list(nn_type = "kNN", name = name))
+}
+
+# the uns entry (scanpy neighbors / key_added) whose distances_key is `key`
+.h5ad_neighbors_record <- function(h5, key) {
+    if (!.h5ad_exists(h5, "uns")) return(NULL)
+    for (k in names(h5[["uns"]])) {
+        dk <- paste("uns", k, "distances_key", sep = "/")
+        if (!.h5ad_exists(h5, dk) || !identical(as.character(.h5ad_value(h5, dk)), key)) next
+        pp <- paste("uns", k, "params", sep = "/")
+        return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list()))
+    }
+    NULL
 }

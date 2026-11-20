@@ -321,3 +321,135 @@ build_llm_cases <- function() {
     cases$L5 <- list(object = drop_counts(base), truth = c(expr_raw.from = NA_character_))
     cases
 }
+
+
+# AnnData .h5ad ####
+# Written with hdf5r following the anndata on-disk spec (no python).
+#   build_h5ad_fixture(path)                  modern scanpy: dense normalized X,
+#       layers/counts (csr), categorical obs, obsm X_pca/X_umap/spatial,
+#       obsp distances + connectivities with a uns/neighbors record
+#   build_h5ad_fixture(path, legacy = TRUE)   anndata 0.7: counts in X (csc),
+#       raw/X copy, pre-0.8 categorical (`__categories`), obsm spatial only
+
+build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
+                               legacy = FALSE, seed = 1L) {
+    stopifnot(requireNamespace("hdf5r", quietly = TRUE))
+    set.seed(seed)
+    cells <- sprintf("cell_%03d", seq_len(n_cells))
+    feats <- sprintf("gene%02d", seq_len(n_feat))
+    feats[n_feat] <- feats[1L]                     # one duplicated gene name
+    counts <- Matrix::rsparsematrix(n_cells, n_feat, density = 0.2,
+        rand.x = function(n) as.double(stats::rpois(n, 4) + 1))
+    xy <- cbind(stats::runif(n_cells, 0, 2000), stats::runif(n_cells, 0, 2000))
+    pca <- matrix(stats::rnorm(n_cells * 10L), n_cells, 10L)
+    type <- factor(sample(c("T cell", "B cell", "tumor"), n_cells, TRUE))
+    type[3L] <- NA
+
+    if (file.exists(path)) unlink(path)
+    h5 <- hdf5r::H5File$new(path, mode = "w")
+    on.exit(h5$close_all())
+    enc <- function(node, type, version = "0.1.0") {
+        hdf5r::h5attr(node, "encoding-type") <- type
+        hdf5r::h5attr(node, "encoding-version") <- version
+    }
+    # obs x var matrices; hdf5r writes dims reversed, so write t()
+    dense <- function(where, name, m) {
+        where[[name]] <- t(m)
+        if (!legacy) enc(where[[name]], "array", "0.2.0")
+    }
+    sparse <- function(where, name, m, csr = TRUE) {
+        g <- where$create_group(name)
+        cm <- methods::as(if (csr) Matrix::t(m) else m, "CsparseMatrix")
+        g[["data"]] <- if (all(cm@x == round(cm@x))) as.integer(cm@x) else cm@x
+        g[["indices"]] <- cm@i
+        g[["indptr"]] <- cm@p
+        enc(g, if (csr) "csr_matrix" else "csc_matrix")
+        hdf5r::h5attr(g, "shape") <- dim(m)
+    }
+    frame <- function(name, ids, cols) {
+        g <- h5$create_group(name)
+        g[["_index"]] <- ids
+        for (cn in names(cols)) {
+            v <- cols[[cn]]
+            if (is.factor(v) && legacy) {
+                codes <- as.integer(v) - 1L
+                codes[is.na(codes)] <- -1L
+                g[[cn]] <- codes
+                if (!g$exists("__categories")) g$create_group("__categories")
+                g[["__categories"]][[cn]] <- levels(v)
+                hdf5r::h5attr(g[[cn]], "categories") <- "__categories"
+            } else if (is.factor(v)) {
+                cg <- g$create_group(cn)
+                codes <- as.integer(v) - 1L
+                codes[is.na(codes)] <- -1L
+                cg[["codes"]] <- codes
+                cg[["categories"]] <- levels(v)
+                enc(cg, "categorical", "0.2.0")
+                hdf5r::h5attr(cg, "ordered") <- FALSE
+            } else {
+                g[[cn]] <- v
+                if (!legacy) enc(g[[cn]], if (is.character(v)) "string-array" else "array", "0.2.0")
+            }
+        }
+        enc(g, "dataframe", "0.2.0")
+        hdf5r::h5attr(g, "_index") <- "_index"
+        hdf5r::h5attr(g, "column-order") <- if (length(cols)) names(cols) else character()
+        g
+    }
+    norm <- log1p(as.matrix(counts) / Matrix::rowSums(counts) * 1e4)
+    if (legacy) {
+        sparse(h5, "X", counts, csr = FALSE)
+        raw <- h5$create_group("raw")
+        sparse(raw, "X", counts, csr = FALSE)
+        frame("obs", cells, list(n_counts = Matrix::rowSums(counts), cell_type = type))
+        frame("var", feats, list())
+        h5$link_move_from(h5, "var", "raw/var")
+        frame("var", feats, list())
+        obsm <- h5$create_group("obsm")
+        dense(obsm, "spatial", xy)
+        h5$create_group("uns")
+    } else {
+        enc(h5, "anndata")
+        dense(h5, "X", norm)
+        layers <- h5$create_group("layers")
+        enc(layers, "dict")
+        sparse(layers, "counts", counts)
+        frame("obs", cells, list(n_counts = Matrix::rowSums(counts), cell_type = type,
+            center_x = xy[, 1], center_y = xy[, 2]))
+        frame("var", feats, list(highly_variable = rep(c(1L, 0L), length.out = n_feat)))
+        obsm <- h5$create_group("obsm")
+        enc(obsm, "dict")
+        dense(obsm, "X_pca", pca)
+        dense(obsm, "X_umap", pca[, 1:2])
+        dense(obsm, "spatial", xy)
+        # kNN in PCA space (30 dims would be scanpy's; 10 here), self excluded
+        d <- as.matrix(stats::dist(pca))
+        nn <- t(apply(d, 1L, function(r) order(r)[2:(k + 1L)]))
+        dist <- Matrix::sparseMatrix(i = rep(seq_len(n_cells), each = k), j = as.vector(t(nn)),
+            x = d[cbind(rep(seq_len(n_cells), each = k), as.vector(t(nn)))], dims = c(n_cells, n_cells))
+        obsp <- h5$create_group("obsp")
+        enc(obsp, "dict")
+        sparse(obsp, "distances", dist)
+        sparse(obsp, "connectivities", methods::as(dist > 0, "dMatrix") * 0.5)
+        uns <- h5$create_group("uns")
+        enc(uns, "dict")
+        nb <- uns$create_group("neighbors")
+        enc(nb, "dict")
+        nb[["connectivities_key"]] <- "connectivities"
+        nb[["distances_key"]] <- "distances"
+        enc(nb[["connectivities_key"]], "string", "0.2.0")
+        enc(nb[["distances_key"]], "string", "0.2.0")
+        pr <- nb$create_group("params")
+        enc(pr, "dict")
+        for (nm in c("n_neighbors", "n_pcs")) {
+            pr[[nm]] <- if (nm == "n_neighbors") k + 1L else 10L
+            enc(pr[[nm]], "numeric-scalar", "0.2.0")
+        }
+        pr[["method"]] <- "umap"
+        pr[["metric"]] <- "euclidean"
+        enc(pr[["method"]], "string", "0.2.0")
+        enc(pr[["metric"]], "string", "0.2.0")
+    }
+    invisible(list(path = path, counts = counts, norm = norm, xy = xy, pca = pca,
+        type = type, cells = cells, feats = feats))
+}
