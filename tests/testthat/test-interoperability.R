@@ -5,8 +5,6 @@ giotto_obj <- GiottoData::loadGiottoMini("visium")
 seurat_obj <- giottoToSeuratV5(giotto_obj)
 spe_obj <- giottoToSpatialExperiment(giotto_obj)
 
-giotto_obj_roundtrip <- seuratToGiottoV5(seurat_obj, "rna")
-
 test_that("giottotoseurat function handles basic conversion", {
     # Basic checks
     expect_s4_class(seurat_obj, "Seurat")
@@ -20,7 +18,6 @@ test_that("giottotoseurat function handles basic conversion", {
     if ("images" %in% slotNames(giotto_obj)) {
         expect_true(length(seurat_obj@images) > 0)
         expect_equal(length(seurat_obj@images), length(giotto_obj@images))
-        expect_s4_class(giotto_obj_roundtrip@images$alignment, "giottoLargeImage")
         expect_s4_class(seurat_obj@images$alignment, "VisiumV1")
     }
 })

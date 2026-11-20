@@ -32,7 +32,7 @@ hand-written converters and move to the engine one adapter at a time.
 
 ```
 R/
-  seurat.R               seuratToGiotto() (mapping-based); legacy V4/V5 converters (being retired)
+  seurat.R               seuratToGiotto() (mapping-based); legacy giottoToSeuratV4/V5 until the reverse mapping
   contract_profile.R     profileObject(), fingerprint(), diffProfiles()
   contract_schema.R      mapping schema checker (inst/schema/mapping.schema.json)
   contract_giotto.R      giottoContract(): part -> constructor/setter/nesting, generated from GiottoClass

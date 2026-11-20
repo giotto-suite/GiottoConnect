@@ -231,9 +231,10 @@ The serialized RSS benchmark and the full Xenium lung run (162k cells) are still
 
 ## Open decisions
 
-1. **Retire the legacy converters**, in GiottoConnect and the GiottoClass duplicates, in a
-   separate round with your review. The new route now covers everything they got right.
-   They still cover images, molecules and spatial networks, which the mappings do not.
+1. **Legacy converters:** `seuratToGiottoV4/V5` are retired in GiottoConnect (agreed
+   2026-11-20). `giottoToSeuratV4/V5` stay until the Giotto → Seurat mapping (Phase 7)
+   replaces them. The GiottoClass duplicates are a separate round in that repo. Not yet
+   covered by mappings: images, molecules, spatial networks.
 2. **Adapter seam before AnnData,** or AnnData directly on the current engine?
 3. **Part templates** (for each reduction / extra assay): add to the schema now or after
    the second ecosystem?
