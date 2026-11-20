@@ -24,3 +24,10 @@ run_fresh_r <- function(code) {
     attr(out, "status") <- attr(out, "status") %||% 0L
     out
 }
+
+withr_tempdir <- function(env = parent.frame()) {
+    d <- tempfile("gc_test_")
+    withr_defer <- function() unlink(d, recursive = TRUE)
+    do.call(on.exit, list(substitute(withr_defer()), add = TRUE), envir = env)
+    d
+}

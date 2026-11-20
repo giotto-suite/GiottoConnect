@@ -113,18 +113,23 @@ fingerprint <- function(profile,
     checkmate::assert_class(profile, "giottoProfile")
     scope <- match.arg(scope, c("paths", "full"))
     nd <- profile$nodes
-    tpath <- .pf_template(nd$path, params)
-    sig <- paste(tpath, nd$kind, nd$dtype, .pf_ndim(nd$shape), sep = "|")
-    if (scope == "paths") {
+    if (scope == "full") {
+        tpath <- .pf_template(nd$path, params)
+        sig <- paste(tpath, nd$kind, nd$dtype, .pf_ndim(nd$shape), sep = "|")
+    } else {
         if (is.null(paths)) stop(wrap_txt("`paths` is required when scope = 'paths'"))
+        # bind templated paths forward and look the concrete paths up
         want <- unique(unlist(lapply(paths, .pf_with_ancestors)))
-        found <- match(want, tpath)
+        found <- match(.pf_bind(want, params), nd$path)
+        hit <- !is.na(found)
         sig <- c(
-            sig[found[!is.na(found)]],
-            paste(want[is.na(found)], "(missing)", sep = "|")
+            paste(want[hit], nd$kind[found[hit]], nd$dtype[found[hit]],
+                .pf_ndim(nd$shape[found[hit]]), sep = "|"),
+            paste(want[!hit], "(missing)", sep = "|")
         )
     }
-    digest::digest(paste(sort(unique(sig)), collapse = "\n"),
+    # radix sort is C-locale ordering, so the hash does not depend on LC_COLLATE
+    digest::digest(paste(sort(unique(sig), method = "radix"), collapse = "\n"),
         algo = "xxhash64", serialize = FALSE
     )
 }
@@ -500,16 +505,16 @@ print.giottoProfileDiff <- function(x, ...) {
     }, character(1))
 }
 
-# replace bound param values by {param}, as whole tokens within a segment
-# (delimited by the segment edges or by non-alphanumeric characters), so
-# "Xenium_nn" and "nCount_Xenium" template like "Xenium" itself
+# replace bound param values by {param}, as whole segments or as
+# underscore-delimited tokens within a segment ("Xenium_nn",
+# "nCount_Xenium"); dots are part of names ("meta.data", "Spatial.016um")
 .pf_template <- function(paths, params) {
     if (!length(params)) return(paths)
     vals <- unlist(params, use.names = TRUE)
     vals <- vals[nzchar(vals)]
     vals <- vals[order(nchar(vals), decreasing = TRUE)]
     for (nm in names(vals)) {
-        pat <- sprintf("(^|(?<=[^A-Za-z0-9]))%s(?=[^A-Za-z0-9]|$)",
+        pat <- sprintf("(?<=^|/|_)%s(?=_|/|$)",
             .pf_regex_escape(vals[[nm]]))
         paths <- gsub(pat, sprintf("{%s}", nm), paths, perl = TRUE)
     }

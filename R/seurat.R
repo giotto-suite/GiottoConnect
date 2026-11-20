@@ -772,27 +772,42 @@ giottoToSeuratV5 <- function(gobject,
 }
 
 
-#' @title Deprecated
+#' @title Convert a Seurat object to a Giotto object
 #' @name seuratToGiotto
-#' @description Deprecated. Please use either [seuratToGiottoV4] or
-#' [seuratToGiottoV5]
-#' @param sobject Input Seurat object to convert to Giotto object
-#' @param spatial_assay Specify name of the spatial assay slot in Seurat.
-#' Default is \code{"Spatial"}.
-#' @param dim_reduction Specify which dimensional reduction computations to
-#' fetch from
-#' @param subcellular_assay Specify name of the subcellular assay in input
-#' object. Default is \code{"Vizgen"}.
-#' @returns giotto object
+#' @description Convert a Seurat object with the mapping that fits its
+#' structure. The object is profiled, the matching mapping is selected from
+#' those bundled with GiottoConnect (or the one given), and the conversion runs
+#' through [convertWithMapping()]. Object versions are handled by choosing a
+#' mapping, not by separate functions.
+#' @param sobject Seurat object
+#' @param mapping optional `giottoMapping`, mapping file or bundled mapping id.
+#' By default the bundled mapping that applies to `sobject` is used.
+#' @param source `NULL` for an in-memory giotto object, or a directory for a
+#' GiottoDisk-backed object
+#' @param verbose logical
+#' @returns giotto object; see [mappingProvenance()] for what was converted
+#' and which losses apply
+#' @seealso [findMapping()], [convertWithMapping()], [validateMapping()]
 #' @export
-seuratToGiotto <- function(
-        sobject,
-        spatial_assay = "Spatial",
-        dim_reduction = c("pca", "umap"),
-        subcellular_assay = "Vizgen") {
-    stop(wrap_txt(
-        "Deprecated. Please use either seuratToGiottoV4() or seuratToGiottoV5()"
-    ))
+seuratToGiotto <- function(sobject, mapping = NULL, source = NULL, verbose = FALSE) {
+    profile <- profileObject(sobject)
+    if (is.null(mapping)) {
+        found <- findMapping(profile, ecosystem = "seurat")
+        if (found$status == "none") {
+            stop(wrap_txt("No bundled mapping applies to this Seurat object:",
+                paste(found$reasons, collapse = "; ")), call. = FALSE)
+        }
+        if (found$status == "repair_needed") {
+            warning(wrap_txt(sprintf(
+                "Structure differs from mapping '%s' (fingerprint %s, expected %s); converting with re-bound params",
+                found$mapping$mapping$id, found$fingerprint,
+                found$mapping$mapping$fingerprint %null% "unset"
+            )), call. = FALSE)
+        }
+        mapping <- found$mapping
+    }
+    convertWithMapping(sobject, mapping, profile = profile, source = source,
+        verbose = verbose)
 }
 
 

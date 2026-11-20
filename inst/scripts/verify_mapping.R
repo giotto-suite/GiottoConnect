@@ -1,0 +1,40 @@
+# Verify a bundled mapping on its fixture and stamp it: converts in memory and
+# on disk, requires validation without FAIL, then writes the fingerprint,
+# status and build date into the YAML and stores the fixture profile next to
+# it (<id>.profile.json) for drift detection.
+# Run from the GiottoConnect package root:
+#   Rscript inst/scripts/verify_mapping.R seurat-assay5
+args <- commandArgs(trailingOnly = TRUE)
+id <- if (length(args)) args[[1]] else "seurat-assay5"
+pkgload::load_all(".", quiet = TRUE)
+env <- new.env()
+sys.source(file.path("inst", "scripts", "build_fixtures.R"), envir = env)
+x <- env$build_seurat_fixture()
+
+yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
+m <- readMapping(yaml_file)
+p <- profileObject(x)
+g <- convertWithMapping(x, m, profile = p)
+disk <- tempfile("verify_")
+gd <- convertWithMapping(x, m, profile = p, source = disk)
+v <- validateMapping(m, p, result = gd)
+if (any(v$level == "FAIL")) stop("validation failed; mapping not stamped")
+
+fp <- mappingProvenance(g)$fingerprint
+txt <- readLines(yaml_file)
+set_field <- function(txt, field, value, after) {
+    i <- grep(sprintf("^  %s:", field), txt)
+    line <- sprintf("  %s: %s", field, value)
+    if (length(i)) txt[i[1]] <- line else {
+        j <- grep(sprintf("^  %s:", after), txt)[1]
+        txt <- append(txt, line, after = j)
+    }
+    txt
+}
+txt <- set_field(txt, "status", "verified", "version")
+txt <- set_field(txt, "built", sprintf('"%s"', Sys.Date()), "status")
+txt <- set_field(txt, "fingerprint", sprintf('"%s"', fp), "target")
+writeLines(txt, yaml_file)
+GiottoConnect:::.profile_write(p, file.path("inst", "mappings", paste0(id, ".profile.json")))
+message(sprintf("%s verified: fingerprint %s (%d OK, %d WARN)", id, fp,
+    sum(v$level == "OK"), sum(v$level == "WARN")))

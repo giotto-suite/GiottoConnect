@@ -84,7 +84,7 @@
       "slot": "nn_network",
       "class": "nnNetObj",
       "constructor": "createNearestNetObj",
-      "data_arg": "name",
+      "data_arg": "network",
       "args": ["name", "network", "nn_type", "spat_unit", "feat_type", "provenance", "misc"],
       "required_args": "network",
       "setter": "setNearestNetwork",

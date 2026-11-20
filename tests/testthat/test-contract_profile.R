@@ -182,3 +182,16 @@ test_that("diffProfiles uses params to absorb dataset-specific names", {
     )
     expect_equal(nrow(d), 0L)
 })
+
+test_that("fingerprints do not depend on the collation locale", {
+    p <- profileObject(list(B = 1, a = list(`{x}` = 2, Z.y = 3)))
+    old <- Sys.getlocale("LC_COLLATE")
+    on.exit(Sys.setlocale("LC_COLLATE", old), add = TRUE)
+    Sys.setlocale("LC_COLLATE", "C")
+    fp_c <- fingerprint(p)
+    if (nzchar(Sys.setlocale("LC_COLLATE", "en_US.UTF-8"))) {
+        expect_equal(fingerprint(p), fp_c)
+    } else {
+        skip("en_US.UTF-8 collation not available")
+    }
+})

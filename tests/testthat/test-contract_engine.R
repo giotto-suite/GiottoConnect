@@ -1,0 +1,157 @@
+fixture_giotto <- local({
+    cache <- NULL
+    function() {
+        if (is.null(cache)) cache <<- seuratToGiotto(seurat_fixture())
+        cache
+    }
+})
+
+test_that("the bundled mapping reads, summarises and declares its losses", {
+    m <- readMapping("seurat-assay5")
+    expect_equal(m$mapping$status, "verified")
+    expect_match(m$mapping$fingerprint, "^[0-9a-f]{16}$")
+    # `on:` keys survive YAML 1.1 boolean parsing
+    expect_equal(m$params$layer_raw$on, "{assay}")
+    s <- expect_output(summary(m), "Declared losses")
+    expect_true(all(c("dropped", "estimated", "ambiguous") %in% s$losses$kind))
+})
+
+test_that("hookRegistry lists the graph hook", {
+    h <- hookRegistry()
+    expect_equal(h$hook, "seurat_graph_to_nn")
+    expect_true(h$available)
+})
+
+test_that("ops transform tables and matrices", {
+    op <- GiottoConnect:::.apply_op
+    df <- data.frame(x = 1:2, y = c(3, 4), row.names = c("a", "b"))
+    expect_named(op(df, list(op = "select_cols", cols = "y")), "y")
+    expect_named(op(df, list(op = "exclude_cols", cols = "y")), "x")
+    expect_named(op(df, list(op = "rename", map = list(x = "sdimx"))), c("sdimx", "y"))
+    expect_equal(op(df, list(op = "scale", factor = -1, cols = "y"))$y, c(-3, -4))
+    expect_equal(op(df, list(op = "rownames_to_col", col = "cell_ID"))$cell_ID, c("a", "b"))
+    expect_equal(op(df, list(op = "set", field = "z", value = "k"))$z, c("k", "k"))
+    expect_error(op(df, list(op = "rename", map = list(q = "r"))), "missing column")
+    m <- matrix(c(1, 2, 3, 4), 2)
+    expect_equal(op(m, list(op = "transpose")), t(m))
+    expect_s4_class(op(m, list(op = "cast", to = "sparse")), "CsparseMatrix")
+    expect_equal(storage.mode(op(m, list(op = "cast", to = "integer"))), "integer")
+    expect_error(op(m + 0.5, list(op = "cast", to = "integer")), "not integer-valued")
+})
+
+test_that("params bind on the profile without the source package", {
+    skip_if_not_installed("SeuratObject")
+    m <- readMapping("seurat-assay5")
+    b <- GiottoConnect:::.bind_params(m, profileObject(seurat_fixture()))
+    expect_equal(b$values$assay, "Xenium")
+    expect_equal(b$values$layer_raw, "counts")
+    expect_equal(b$values$segmentation, "segmentation")
+    expect_equal(b$values$nn_graph, "Xenium_nn")
+    expect_length(b$unbound, 0L)
+})
+
+test_that("findMapping matches the fixture and absorbs renamed assays", {
+    skip_if_not_installed("SeuratObject")
+    f <- findMapping(profileObject(seurat_fixture()), ecosystem = "seurat")
+    expect_equal(f$status, "match")
+    expect_equal(f$mapping$mapping$id, "seurat-assay5")
+
+    env <- new.env()
+    sys.source(contract_script("build_fixtures.R"), envir = env)
+    f2 <- findMapping(profileObject(env$build_seurat_fixture(assay = "Spatial")))
+    expect_equal(f2$status, "match")
+    expect_equal(f2$params$values$assay, "Spatial")
+
+    none <- findMapping(profileObject(list(a = 1)))
+    expect_equal(none$status, "none")
+})
+
+test_that("seuratToGiotto converts every mapped part in memory", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    g <- fixture_giotto()
+    expect_s4_class(g, "giotto")
+
+    raw <- GiottoClass::getExpression(g, values = "raw", output = "matrix")
+    src <- SeuratObject::LayerData(s, "counts")
+    expect_equal(as.matrix(raw[rownames(src), colnames(src)]), as.matrix(src),
+        ignore_attr = TRUE)
+
+    sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
+    ct <- SeuratObject::GetTissueCoordinates(s[["fov"]], which = "centroids")
+    sl <- sl[match(ct$cell, sl$cell_ID), ]
+    expect_equal(sl$sdimx, ct$x)
+    expect_equal(sl$sdimy, -ct$y)
+
+    expect_length(GiottoClass::spatIDs(GiottoClass::getPolygonInfo(g, name = "cell",
+        return_giottoPolygon = TRUE)), 200L)
+    nn <- GiottoClass::list_nearest_networks(g)
+    expect_equal(nn$nn_type, "kNN")
+    expect_equal(nn$name, "kNN.pca")
+    e <- GiottoClass::getNearestNetwork(g, nn_type = "kNN", name = "kNN.pca", output = "data.table")
+    expect_false(any(e$from == e$to))
+
+    fm <- GiottoClass::fDataDT(g)
+    expect_false(any(c("nCount_Xenium", "seurat_clusters") %in% names(fm)))
+})
+
+test_that("conversions are recorded with their losses", {
+    skip_if_not_installed("SeuratObject")
+    prov <- mappingProvenance(fixture_giotto())
+    expect_equal(prov$mapping, "seurat-assay5")
+    expect_equal(prov$fingerprint, readMapping("seurat-assay5")$mapping$fingerprint)
+    k <- prov$losses[prov$losses$kind == "recovered_from_parameters", ]
+    expect_equal(k$part_id, "nn")
+    expect_match(k$note, "k = 9")
+    expect_true("assays/Xenium/layers/scale.data" %in% prov$losses$field)
+    expect_null(mappingProvenance(GiottoClass::giotto()))
+})
+
+test_that("seuratToGiotto writes disk-backable parts to a GiottoDisk project", {
+    skip_if_not_installed("SeuratObject")
+    skip_if_not_installed("GiottoDisk")
+    s <- seurat_fixture()
+    d <- withr_tempdir()
+    g <- seuratToGiotto(s, source = d)
+    store <- GiottoClass::getExpression(g, values = "raw")[]
+    expect_s4_class(store, "parquetExprStore")
+    src <- SeuratObject::LayerData(s, "counts")
+    m <- methods::as(store, "dgCMatrix")
+    expect_equal(as.matrix(m[rownames(src), colnames(src)]), as.matrix(src), ignore_attr = TRUE)
+    expect_true(inherits(GiottoClass::getPolygonInfo(g, name = "cell",
+        return_giottoPolygon = TRUE)[], "dataStore"))
+    expect_true(inherits(GiottoClass::getSpatialLocations(g)@coordinates, "data.table"))
+})
+
+test_that("validateMapping reports unmapped data and missing sources", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    m <- readMapping("seurat-assay5")
+    v <- validateMapping(m, profileObject(s))
+    expect_s3_class(v, "giottoValidation")
+    expect_false(any(v$level == "FAIL"))
+    expect_false(any(v$level == "WARN"))
+
+    s2 <- s
+    s2@misc$extra <- matrix(1:4, 2)
+    s2@reductions$pca <- NULL
+    v2 <- validateMapping(m, profileObject(s2))
+    expect_true(any(v2$check == "unmapped" & grepl("misc/extra", v2$message)))
+    expect_equal(v2$level[v2$check == "source" & v2$part_id == "pca"], "WARN")
+
+    m3 <- m
+    m3$source_nodes$counts$path <- "assays/{assay}/layers/nope"
+    v3 <- validateMapping(m3, profileObject(s))
+    expect_equal(v3$level[v3$check == "source" & v3$part_id == "expr_raw"], "FAIL")
+    expect_error(convertWithMapping(s, m3), "structural validation failed")
+})
+
+test_that("semantic validation checks the converted object", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    v <- validateMapping("seurat-assay5", profileObject(s), result = fixture_giotto(),
+        checks = "semantic")
+    expect_setequal(unique(v$check), c("raw_counts", "dims", "cell_ids", "coord_units",
+        "dim_reduction", "nn_network"))
+    expect_true(all(v$level == "OK"))
+})

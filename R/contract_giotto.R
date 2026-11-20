@@ -7,19 +7,19 @@
 .CONTRACT_SCHEMA_VERSION <- "0.1.0"
 
 .CONTRACT_PARTS <- list(
-    expression = list(slot = "expression", constructor = "createExprObj",
+    expression = list(slot = "expression", constructor = "createExprObj", data_arg = "expression_data",
         setter = "setExpression", list_fn = "list_expression"),
-    cell_metadata = list(slot = "cell_metadata", constructor = "createCellMetaObj",
+    cell_metadata = list(slot = "cell_metadata", constructor = "createCellMetaObj", data_arg = "metadata",
         setter = "setCellMetadata", list_fn = "list_cell_metadata"),
-    feat_metadata = list(slot = "feat_metadata", constructor = "createFeatMetaObj",
+    feat_metadata = list(slot = "feat_metadata", constructor = "createFeatMetaObj", data_arg = "metadata",
         setter = "setFeatureMetadata", list_fn = "list_feat_metadata"),
-    spatial_locs = list(slot = "spatial_locs", constructor = "createSpatLocsObj",
+    spatial_locs = list(slot = "spatial_locs", constructor = "createSpatLocsObj", data_arg = "coordinates",
         setter = "setSpatialLocations", list_fn = "list_spatial_locations"),
-    spatial_info = list(slot = "spatial_info", constructor = "createGiottoPolygonsFromDfr",
+    spatial_info = list(slot = "spatial_info", constructor = "createGiottoPolygonsFromDfr", data_arg = "segmdfr",
         setter = "setPolygonInfo", list_fn = "list_spatial_info"),
-    dim_reduction = list(slot = "dimension_reduction", constructor = "createDimObj",
+    dim_reduction = list(slot = "dimension_reduction", constructor = "createDimObj", data_arg = "coordinates",
         setter = "setDimReduction", list_fn = "list_dim_reductions"),
-    nn_network = list(slot = "nn_network", constructor = "createNearestNetObj",
+    nn_network = list(slot = "nn_network", constructor = "createNearestNetObj", data_arg = "network",
         setter = "setNearestNetwork", list_fn = "list_nearest_networks")
 )
 
@@ -120,12 +120,15 @@ print.giottoContract <- function(x, ...) {
         no_default <- vapply(fm, function(a) {
             is.symbol(a) && !nzchar(as.character(a))
         }, logical(1))
+        if (!d$data_arg %in% names(fm)) {
+            stop(sprintf("%s has no argument '%s'", d$constructor, d$data_arg), call. = FALSE)
+        }
         listed <- get(d$list_fn, envir = ns)(g)
         list(
             slot = d$slot,
             class = class(tiny[[nm]])[1L],
             constructor = d$constructor,
-            data_arg = names(fm)[1L],
+            data_arg = d$data_arg,
             args = setdiff(names(fm), "..."),
             required_args = setdiff(names(fm)[no_default], "..."),
             setter = d$setter,
