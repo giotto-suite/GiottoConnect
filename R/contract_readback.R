@@ -32,14 +32,14 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
             prov$mapping, prov$version, mapping$mapping$version)), call. = FALSE)
     }
     package_check(mapping$mapping$source$package)
-    profile <- profileObject(x)
+    profile <- adapterProfile(.adapter_for(mapping), x)
     params <- .bind_params(mapping, profile)
     mapping <- .expand_for_each(mapping, profile, params)
     ctx <- .new_ctx(mapping, params, profile)
     prepared <- .prepare_parts(x, mapping, params, ctx)
     losses <- .collect_losses(mapping, ctx, params$values)
 
-    compare <- if (identical(mapping$mapping$target$contract, "seurat")) .RB_COMPARE_SEURAT else .RB_COMPARE
+    compare <- targetComparators(.target_for(mapping))
     rows <- list()
     for (pp in prepared) {
         spec <- pp$spec

@@ -100,6 +100,20 @@
 }
 
 
+# every part carries exactly the target keys its Seurat part needs
+.vm_targets_seurat <- function(mapping, out) {
+    for (p in mapping$parts) {
+        need <- .SEURAT_TARGET[[p$part]]
+        miss <- setdiff(need, names(p$to))
+        unknown <- setdiff(names(p$to), need)
+        lvl <- if (length(miss) || length(unknown)) "FAIL" else "OK"
+        out$add("target", p$id, lvl, if (lvl == "OK") sprintf("%s -> Seurat", p$part) else
+            sprintf("Seurat %s needs keys %s (missing: %s; unknown: %s)", p$part,
+                paste(need, collapse = ", "), paste(miss, collapse = ", "), paste(unknown, collapse = ", ")))
+    }
+}
+
+
 # semantic checks on a Seurat result ####
 
 .vm_semantic_seurat <- function(mapping, profile, s, out) {

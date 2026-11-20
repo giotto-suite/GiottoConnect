@@ -33,7 +33,33 @@
 # prefixed with the YAML path it concerns. Empty when valid.
 .mapping_schema_check <- function(m, schema = .mapping_schema()) {
     probs <- .schema_check(m, schema, "", schema)
-    c(probs, .mapping_ops_check(m))
+    c(probs, .mapping_ops_check(m), .mapping_adapter_check(m))
+}
+
+# the source ecosystem and target must be registered, and every accessor a
+# source node calls must be one its adapter allows
+.mapping_adapter_check <- function(m) {
+    eco <- m$mapping$source$ecosystem
+    con <- m$mapping$target$contract
+    probs <- character()
+    if (is.character(con) && length(con) == 1L && is.null(.TARGETS[[con]])) {
+        probs <- c(probs, sprintf("mapping.target.contract: no target '%s' (available: %s)", con,
+            paste(names(.TARGETS), collapse = ", ")))
+    }
+    if (!is.character(eco) || length(eco) != 1L) return(probs)
+    if (is.null(.ADAPTERS[[eco]])) {
+        return(c(probs, sprintf("mapping.source.ecosystem: no adapter for '%s' (available: %s)", eco,
+            paste(names(.ADAPTERS), collapse = ", "))))
+    }
+    allowed <- adapterAccessors(.adapter_for(eco))
+    for (nm in names(m$source_nodes)) {
+        fn <- m$source_nodes[[nm]]$get$fn
+        if (is.character(fn) && length(fn) == 1L && !fn %in% allowed) {
+            probs <- c(probs, sprintf("source_nodes.%s.get.fn: '%s' is not an accessor of the %s adapter (allowed: %s)",
+                nm, fn, eco, paste(allowed, collapse = ", ")))
+        }
+    }
+    probs
 }
 
 .schema_check <- function(x, s, path, root) {

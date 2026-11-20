@@ -316,24 +316,7 @@
           "properties": {
             "fn": {
               "type": "string",
-              "enum": [
-                "LayerData",
-                "Embeddings",
-                "Loadings",
-                "Stdev",
-                "GetTissueCoordinates",
-                "Misc",
-                "Key",
-                "[[",
-                "path",
-                "getExpression",
-                "getCellMetadata",
-                "getFeatureMetadata",
-                "getSpatialLocations",
-                "getPolygonInfo",
-                "getDimReduction",
-                "getNearestNetwork"
-              ]
+              "description": "an accessor of the mapping's adapter (see adapterRegistry())"
             },
             "on": {
               "type": "string"

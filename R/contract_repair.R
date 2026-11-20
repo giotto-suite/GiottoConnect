@@ -6,8 +6,6 @@
 # The engine never repairs on its own: a repaired mapping is a new version
 # with status patched-unreviewed.
 
-# listing verbs whose values are object names embedded in other names
-.OBJECT_NAME_LISTS <- c("Assays", "Images", "Reductions", "Graphs", "Neighbors")
 
 #' @title Repair a mapping for a drifted object
 #' @name repairMapping
@@ -37,7 +35,7 @@ repairMapping <- function(mapping, x, llm = NULL, old_profile = NULL, file = NUL
     request_file = NULL) {
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
     is_obj <- !inherits(x, "giottoProfile")
-    new <- if (is_obj) profileObject(x) else x
+    new <- if (is_obj) adapterProfile(.adapter_for(mapping), x) else x
     old <- old_profile %null% .mapping_stored_profile(mapping)
 
     m <- mapping
@@ -349,7 +347,8 @@ print.giottoRepair <- function(x, ...) {
 
 .object_params <- function(m, params) {
     if (is.null(params)) return(list())
-    keep <- names(m$params)[vapply(m$params, function(pr) pr$list %in% .OBJECT_NAME_LISTS, logical(1))]
+    obj_lists <- adapterObjectLists(.adapter_for(m))
+    keep <- names(m$params)[vapply(m$params, function(pr) pr$list %in% obj_lists, logical(1))]
     params$values[intersect(keep, names(params$values))]
 }
 
@@ -417,7 +416,7 @@ print.giottoRepair <- function(x, ...) {
             question = sprintf("Part `%s` (%s) used to read `%s`, which is gone. Which node now holds it?",
                 pid, p$part, .pf_bind(node$path, pn$values)))
     }
-    lists <- .LIST_PATHS[[m$mapping$source$ecosystem]]
+    lists <- adapterListPaths(.adapter_for(m))
     for (pd in pending) {
         p <- m$parts[[pd$i]]
         for (prm in pd$unbound) {

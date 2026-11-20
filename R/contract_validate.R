@@ -32,16 +32,12 @@ validateMapping <- function(mapping, profile, params = NULL, result = NULL,
         for (pr in .mapping_schema_check(unclass(mapping))) out$add("schema", NA, "FAIL", pr)
         .vm_params(mapping, params, out)
         .vm_nodes(mapping, profile, params, out)
-        .vm_targets(mapping, out)
+        targetCheckKeys(.target_for(mapping), mapping, out)
         .vm_hooks(mapping, out)
         .vm_unmapped(mapping, profile, params, out)
     }
     if (checks != "structural" && !is.null(result)) {
-        if (identical(mapping$mapping$target$contract, "seurat")) {
-            .vm_semantic_seurat(mapping, profile, result, out)
-        } else {
-            .vm_semantic(mapping, profile, result, out)
-        }
+        targetSemantic(.target_for(mapping), mapping, profile, result, out)
     }
 
     res <- out$table()
@@ -129,19 +125,7 @@ print.giottoValidation <- function(x, ...) {
     }
 }
 
-.vm_targets <- function(mapping, out) {
-    if (identical(mapping$mapping$target$contract, "seurat")) {
-        for (p in mapping$parts) {
-            need <- .SEURAT_TARGET[[p$part]]
-            miss <- setdiff(need, names(p$to))
-            unknown <- setdiff(names(p$to), need)
-            lvl <- if (length(miss) || length(unknown)) "FAIL" else "OK"
-            out$add("target", p$id, lvl, if (lvl == "OK") sprintf("%s -> Seurat", p$part) else
-                sprintf("Seurat %s needs keys %s (missing: %s; unknown: %s)", p$part,
-                    paste(need, collapse = ", "), paste(miss, collapse = ", "), paste(unknown, collapse = ", ")))
-        }
-        return(invisible())
-    }
+.vm_targets_giotto <- function(mapping, out) {
     ct <- giottoContract()
     for (p in mapping$parts) {
         cp <- ct$parts[[p$part]]

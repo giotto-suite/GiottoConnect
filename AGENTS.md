@@ -33,6 +33,7 @@ hand-written converters and move to the engine one adapter at a time.
 ```
 R/
   seurat.R               seuratToGiotto() / giottoToSeurat(): thin wrappers over the mapping engine
+  contract_adapter.R     adapters (seurat, giotto) and targets (giotto, seurat); adapterRegistry()
   contract_profile.R     profileObject(), fingerprint(), diffProfiles()
   contract_schema.R      mapping schema checker (inst/schema/mapping.schema.json)
   contract_giotto.R      giottoContract(): part -> constructor/setter/nesting, generated from GiottoClass
@@ -43,6 +44,7 @@ R/
   contract_readback.R    readbackCheck()
   contract_repair.R      repairMapping(), writeMappingRequest()
   contract_llm.R         llmBackend(), llmPatch() (opt-in, repair only)
+  contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
   anndata.R, spatialdata.R, spatialexperiment.R, bento.R, stereoseq_gef.R, vitessce.R
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology
@@ -84,6 +86,27 @@ inst/
   reading stores back.
 - **Reverse templating (`.pf_template`) only for object names** (assays, reductions,
   images). A layer value like `data` matches `meta.data`.
+
+## Adding an ecosystem
+
+Everything ecosystem-specific sits behind two S4 classes in `R/contract_adapter.R`;
+the engine only dispatches.
+
+- **Source side:** a `giottoConnectAdapter` subclass supplying `adapterProfile()` (how
+  to walk the input; the default is `profileObject()`), `adapterListPaths()` (listing
+  verb → profile path), `adapterAccessors()` (the functions a mapping may call),
+  `adapterObjectLists()` (listings whose values are object names) and, when needed,
+  `adapterRead()`. Register it in `.ADAPTERS` under the mapping's
+  `source.ecosystem`.
+- **Output side (only for X ← Giotto):** a `giottoConnectTarget` subclass supplying
+  `targetBuild()`, `targetCheckKeys()`, `targetSemantic()` and `targetComparators()`.
+  Register it in `.TARGETS` under the mapping's `target.contract`.
+- Then mapping files, hooks if the op list cannot express a step, and a thin
+  `<eco>ToGiotto()` / `giottoTo<Eco>()` wrapper. `readMapping()` rejects accessors the
+  adapter does not list.
+- Prove refactors with `examples/seurat_comparison/engine_snapshot.R`: it records
+  mapping choice, fingerprints, params, content hashes and readback for every fixture
+  and crop, and compares against a saved baseline.
 
 ## Changing mappings or the contract
 

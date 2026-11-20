@@ -25,7 +25,7 @@ NULL
 #' @seealso [seuratToGiotto()], [convertWithMapping()], [readbackCheck()]
 #' @export
 giottoToSeurat <- function(gobject, mapping = NULL, verbose = FALSE) {
-    profile <- profileObject(gobject)
+    profile <- adapterProfile(.adapter_for("giotto"), gobject)
     if (is.null(mapping)) {
         found <- findMapping(profile, ecosystem = "giotto")
         if (found$status == "none") {
@@ -58,7 +58,7 @@ giottoToSeurat <- function(gobject, mapping = NULL, verbose = FALSE) {
 #' @seealso [findMapping()], [convertWithMapping()], [validateMapping()]
 #' @export
 seuratToGiotto <- function(sobject, mapping = NULL, source = NULL, verbose = FALSE) {
-    profile <- profileObject(sobject)
+    profile <- adapterProfile(.adapter_for("seurat"), sobject)
     if (is.null(mapping)) {
         found <- findMapping(profile, ecosystem = "seurat")
         if (found$status == "none") {

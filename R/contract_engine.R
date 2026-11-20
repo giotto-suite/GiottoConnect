@@ -4,24 +4,6 @@
 # backing comes from the giotto object's GiottoDisk source, so the same parts
 # list builds an in-memory or a disk-backed object.
 
-# listing verbs -> profile paths, per source ecosystem
-.LIST_PATHS <- list(
-    seurat = c(
-        Assays = "assays", Layers = "assays/{on}/layers",
-        # Assay5 layers or v3 Assay slots
-        AssayLayers = "assays/{on}/layers|assays/{on}",
-        Reductions = "reductions", Graphs = "graphs", Neighbors = "neighbors",
-        Images = "images", Boundaries = "images/{on}/boundaries",
-        children = "{on}", columns = "{on}"
-    ),
-    giotto = c(
-        SpatUnits = "expression", FeatTypes = "expression/{on}", Expressions = "expression/{on}",
-        SpatLocs = "spatial_locs/{on}", Polygons = "spatial_info",
-        DimMethods = "dimension_reduction/cells/{on}", NNNames = "nn_network/{on}",
-        children = "{on}", columns = "{on}"
-    )
-)
-
 # assembly order: data before the parts that index into it
 .PART_ORDER <- c("expression", "cell_metadata", "feat_metadata", "spatial_locs",
     "spatial_info", "dim_reduction", "nn_network")
@@ -49,9 +31,10 @@
 convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     validate = TRUE, verbose = FALSE) {
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
-    profile <- profile %null% profileObject(x)
-    pkg <- mapping$mapping$source$package
-    package_check(pkg)
+    adapter <- .adapter_for(mapping)
+    target <- .target_for(mapping)
+    package_check(adapter@package)
+    profile <- profile %null% adapterProfile(adapter, x)
 
     params <- .bind_params(mapping, profile)
     # fingerprints describe the mapping as written, not its expansion
@@ -74,16 +57,7 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         targets = lapply(prepared, function(pp) pp$spec$to),
         losses = .collect_losses(mapping, ctx, params$values)
     )
-    if (identical(mapping$mapping$target$contract, "seurat")) {
-        if (!is.null(source)) stop(wrap_txt("`source` applies to Giotto targets only"), call. = FALSE)
-        g <- .record_seurat_conversion(.assemble_seurat(prepared), prov)
-    } else {
-        contract <- giottoContract()
-        parts <- lapply(prepared, function(pp) .build_part(pp$spec, pp$data, contract, mapping))
-        g <- .assemble(parts, source = source)
-        g <- .record_conversion(g, mapping_id = prov$mapping, mapping_version = prov$version,
-            prov = prov)
-    }
+    g <- targetBuild(target, prepared, mapping, prov, source = source)
 
     if (isTRUE(validate)) {
         post <- validateMapping(mapping, profile, params = params, result = g,
@@ -128,7 +102,7 @@ mappingProvenance <- function(gobject) {
 # order) of list(spec, data): spec is the part with its final, bound `to`
 # keys; data is exactly what the constructor receives.
 .prepare_parts <- function(x, mapping, params, ctx, verbose = FALSE) {
-    pkg <- mapping$mapping$source$package
+    adapter <- .adapter_for(mapping)
     ctx$x <- x
     paths <- ctx$profile$nodes$path
     out <- list()
@@ -144,7 +118,7 @@ mappingProvenance <- function(gobject) {
         vmsg(.v = verbose, sprintf("part %s <- %s", p$id, .pf_bind(node$path, params$values)))
         p$to <- lapply(p$to, function(v) if (is.character(v)) .pf_bind(v, params$values) else v)
         ctx$part_spec <- p
-        data <- .read_node(x, node, params$values, pkg)
+        data <- adapterRead(adapter, x, node, params$values)
         if (!is.null(p$hook)) {
             data <- .hook_get(p$hook)(data, params$values, ctx)
             if (inherits(data, "giottoHookResult")) {
@@ -171,7 +145,7 @@ mappingProvenance <- function(gobject) {
     if (!any(vapply(mapping$parts, function(p) !is.null(p$for_each), logical(1)))) {
         return(mapping)
     }
-    lists <- .LIST_PATHS[[mapping$mapping$source$ecosystem]]
+    lists <- adapterListPaths(.adapter_for(mapping))
     nodes <- profile$nodes
     out <- list()
     for (p in mapping$parts) {
@@ -220,9 +194,7 @@ mappingProvenance <- function(gobject) {
 # Bind each param on the profile, in declaration order. Returns list(values,
 # unbound) with values a named list of strings.
 .bind_params <- function(mapping, profile) {
-    eco <- mapping$mapping$source$ecosystem
-    lists <- .LIST_PATHS[[eco]]
-    if (is.null(lists)) stop(wrap_txt(sprintf("No listing paths for ecosystem '%s'", eco)))
+    lists <- adapterListPaths(.adapter_for(mapping))
     nodes <- profile$nodes
     values <- list()
     unbound <- character()
@@ -313,24 +285,6 @@ mappingProvenance <- function(gobject) {
     }
     x
 }
-
-.read_node <- function(x, node, params, pkg) {
-    get <- node$get
-    # "path": the node at `on`, read structurally. Only patches use it; a
-    # verified mapping reads through the source package's accessors.
-    if (identical(get$fn, "path")) return(.resolve_path(x, .pf_bind(get$on, params)))
-    fn <- if (identical(get$fn, "[[")) {
-        base::`[[`
-    } else {
-        getExportedValue(pkg, get$fn)
-    }
-    target <- if (is.null(get$on)) x else .resolve_path(x, .pf_bind(get$on, params))
-    args <- lapply(get$args %null% list(), function(a) {
-        if (is.character(a)) .pf_bind(a, params) else a
-    })
-    do.call(fn, c(list(target), args))
-}
-
 
 # ops ####
 
