@@ -162,8 +162,14 @@ findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
     params <- .bind_params(m, profile)
     for (pr in at$predicates) {
         path <- .pf_bind(pr$path, params$values)
+        if (grepl("{", path, fixed = TRUE)) {
+            miss <- intersect(params$unbound, gsub("[{}]", "", regmatches(path,
+                gregexpr("\\{[^}]+\\}", path))[[1L]]))
+            return(no(sprintf("param '%s' could not be bound (%s)", miss[1L],
+                .param_describe(m$params[[miss[1L]]]))))
+        }
         r <- profile$nodes[profile$nodes$path == path, , drop = FALSE]
-        if (!nrow(r)) return(no(sprintf("no node at %s", pr$path)))
+        if (!nrow(r)) return(no(sprintf("no node at %s", path)))
         if (!is.null(pr$class) && r$class != pr$class) {
             return(no(sprintf("%s is %s, mapping needs %s", path, r$class, pr$class)))
         }
@@ -172,6 +178,19 @@ findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
         }
     }
     list(ok = TRUE, reason = "applies", params = params)
+}
+
+.param_describe <- function(pr) {
+    w <- pr$where
+    cond <- c(
+        if (!is.null(w$class)) sprintf("class %s", w$class),
+        if (!is.null(w$role)) sprintf("role %s", paste(unlist(w$role), collapse = "+")),
+        if (!is.null(w$has_child_role)) sprintf("data that is %s", paste(unlist(w$has_child_role), collapse = "+")),
+        if (!is.null(w$name_matches)) sprintf("name ~ %s", w$name_matches),
+        if (!is.null(pr$class)) sprintf("class %s", pr$class),
+        if (!is.null(pr$value)) sprintf("named %s", pr$value)
+    )
+    sprintf("%s %s%s", pr$list, pr$rule, if (length(cond)) paste0(": ", paste(cond, collapse = ", ")) else "")
 }
 
 # constraints like ">= 5.0.0" or ">= 5.0.0, < 6"

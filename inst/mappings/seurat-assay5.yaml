@@ -81,6 +81,21 @@ parts:
     to: { spat_unit: cell, name: raw }
     lossy:
       - { kind: estimated, field: units, note: "FOV coordinates carry no unit; assumed micron" }
+    alternatives:
+      # coordinates kept as cell metadata columns instead of an FOV
+      - id: locs_from_meta
+        from: cell_meta
+        params:
+          x_col: { list: columns, on: meta.data, rule: first_where, where: { name_matches: "^(x|.*_x)([_.].*)?$|^x$", kind: vector } }
+          y_col: { list: columns, on: meta.data, rule: first_where, where: { name_matches: "^(y|.*_y)([_.].*)?$|^y$", kind: vector } }
+        ops:
+          - { op: select_cols, cols: ["{x_col}", "{y_col}"] }
+          - { op: rownames_to_col, col: cell_ID }
+          - { op: rename, map: { "{x_col}": sdimx, "{y_col}": sdimy } }
+          - { op: scale, factor: -1, cols: [sdimy] }
+        lossy:
+          - { kind: estimated, field: units, note: "metadata coordinates carry no unit; assumed micron" }
+          - { kind: ambiguous, field: orientation, note: "metadata coordinates assumed image-space (y down), like FOV" }
 
   - id: polygons
     part: spatial_info

@@ -113,7 +113,7 @@ mappingProvenance <- function(gobject) {
     out <- list()
     for (p in mapping$parts) {
         node <- mapping$source_nodes[[p$from]]
-        if (!.node_bound(node, params)) {
+        if (!.part_bound(p, node, params)) {
             if (isTRUE(p$optional)) next
             stop(wrap_txt(sprintf("Part '%s': source node '%s' is not bound", p$id, p$from)),
                 call. = FALSE)
@@ -200,8 +200,13 @@ mappingProvenance <- function(gobject) {
     ok
 }
 
-.node_bound <- function(node, params) {
-    !grepl("{", .pf_bind(node$path, params$values), fixed = TRUE)
+# a part is bound when its source path, accessor and op arguments have no
+# unbound placeholders left
+.part_bound <- function(p, node, params) {
+    txt <- c(node$path, node$get$on, unlist(node$get$args), unlist(p$ops),
+        names(unlist(lapply(p$ops, `[[`, "map"))))
+    txt <- txt[is.character(txt)]
+    !any(grepl("{", .pf_bind(txt, params$values), fixed = TRUE))
 }
 
 
@@ -246,6 +251,7 @@ mappingProvenance <- function(gobject) {
 .apply_ops <- function(data, ops, params, part_id) {
     for (o in ops) {
         o <- rapply(o, function(v) .pf_bind(v, params), classes = "character", how = "replace")
+        if (!is.null(o$map)) names(o$map) <- .pf_bind(names(o$map), params)
         data <- tryCatch(.apply_op(data, o), error = function(e) {
             stop(sprintf("Part '%s', op '%s': %s", part_id, o$op, conditionMessage(e)),
                 call. = FALSE)

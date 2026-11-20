@@ -110,3 +110,88 @@ build_seurat_visium_fixture <- function(n_side = 12L, n_feat = 50L, bin_um = 16L
             compute.SNN = TRUE, graph.name = graphs))
     s
 }
+
+# Structural drift variants of the FOV fixture, each with the outcome the
+# mapping machinery should reach (see docs/contract-prototype).
+build_drift_variants <- function() {
+    stopifnot(requireNamespace("SeuratObject", quietly = TRUE))
+    SO <- asNamespace("SeuratObject")
+    base <- build_seurat_fixture()
+    v <- list()
+
+    # D1 assay renamed
+    v$D1 <- build_seurat_fixture(assay = "Spatial")
+
+    # D2 layer counts -> raw_counts
+    s <- base
+    a <- s[["Xenium"]]
+    a$raw_counts <- SO$LayerData(a, layer = "counts")
+    a$counts <- NULL
+    s[["Xenium"]] <- a
+    v$D2 <- s
+
+    # D3 coordinates moved into meta.data, FOV removed
+    s <- base
+    ct <- SO$GetTissueCoordinates(s[["fov"]], which = "centroids")
+    s$x_um <- ct$x[match(colnames(s), ct$cell)]
+    s$y_um <- ct$y[match(colnames(s), ct$cell)]
+    s[["fov"]] <- NULL
+    v$D3 <- s
+
+    # D4 counts stored as a dense matrix
+    s <- base
+    a <- s[["Xenium"]]
+    a$counts <- as.matrix(SO$LayerData(a, layer = "counts"))
+    s[["Xenium"]] <- a
+    v$D4 <- s
+
+    # D5 extra reduction
+    s <- base
+    s[["tsne"]] <- SO$CreateDimReducObject(
+        embeddings = `colnames<-`(SO$Embeddings(s, "umap") * 2, c("tSNE_1", "tSNE_2")),
+        key = "tSNE_", assay = "Xenium")
+    v$D5 <- s
+
+    # D6 coordinates in mm
+    s <- base
+    xy <- SO$GetTissueCoordinates(s[["fov"]], which = "centroids")
+    seg <- SO$GetTissueCoordinates(s[["fov"]][["segmentation"]])
+    xy[, 1:2] <- xy[, 1:2] / 1000
+    seg[, 1:2] <- seg[, 1:2] / 1000
+    s[["fov"]] <- NULL
+    s[["fov"]] <- SO$CreateFOV(
+        list(centroids = SO$CreateCentroids(xy), segmentation = SO$CreateSegmentation(seg)),
+        type = c("centroids", "segmentation"), assay = "Xenium")
+    v$D6 <- s
+
+    # D7 graph renamed
+    s <- base
+    s[["knn_graph"]] <- s[["Xenium_nn"]]
+    s[["Xenium_nn"]] <- NULL
+    v$D7 <- s
+
+    # D8 slot the mapping does not use removed
+    s <- base
+    s[["Xenium_snn"]] <- NULL
+    v$D8 <- s
+
+    # D9 v3 Assay instead of Assay5
+    s <- SO$CreateSeuratObject(SO$CreateAssayObject(counts = SO$LayerData(base, layer = "counts")),
+        assay = "Xenium")
+    s[["fov"]] <- base[["fov"]]
+    v$D9 <- s
+
+    v
+}
+
+DRIFT_EXPECTED <- data.frame(
+    variant = paste0("D", 1:9),
+    change = c("assay renamed Xenium -> Spatial", "layer counts -> raw_counts",
+        "coordinates moved to meta.data x_um/y_um, FOV removed", "counts stored as a dense matrix",
+        "extra reduction tsne", "coordinates in mm", "graph Xenium_nn -> knn_graph",
+        "unused graph Xenium_snn removed", "v3 Assay instead of Assay5"),
+    expected = c("params", "params", "rules (alternative)", "rules (cast)", "params, WARN unmapped",
+        "params, WARN looks like mm", "params", "params (fingerprint unchanged)",
+        "no mapping applies"),
+    stringsAsFactors = FALSE
+)

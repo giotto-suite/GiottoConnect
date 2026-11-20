@@ -1,0 +1,109 @@
+drift <- local({
+    cache <- NULL
+    function() {
+        if (is.null(cache)) {
+            env <- new.env()
+            sys.source(contract_script("build_fixtures.R"), envir = env)
+            cache <<- list(variants = env$build_drift_variants(), expected = env$DRIFT_EXPECTED)
+        }
+        cache
+    }
+})
+
+outcome <- function(x) {
+    f <- findMapping(profileObject(x), ecosystem = "seurat")
+    if (f$status == "none") return(list(find = f, repair = NULL))
+    list(find = f, repair = repairMapping(f$mapping, x))
+}
+
+test_that("params absorb renamed assays, layers and graphs (D1, D2, D7, D8)", {
+    skip_if_not_installed("SeuratObject")
+    v <- drift()$variants
+    for (d in c("D1", "D2", "D7", "D8")) {
+        o <- outcome(v[[d]])
+        expect_equal(o$find$status, "match", label = d)
+        expect_equal(o$repair$status, "not_needed", label = d)
+        expect_true(attr(o$repair$readback, "pass"), label = d)
+    }
+    expect_equal(findMapping(profileObject(v$D2))$params$values$layer_raw, "raw_counts")
+    expect_equal(findMapping(profileObject(v$D7))$params$values$nn_graph, "knn_graph")
+})
+
+test_that("a moved coordinate source is repaired through the declared alternative (D3)", {
+    skip_if_not_installed("SeuratObject")
+    s <- drift()$variants$D3
+    o <- outcome(s)
+    expect_equal(o$find$status, "repair_needed")
+    r <- o$repair
+    expect_equal(r$status, "repaired")
+    expect_equal(r$mapping$mapping$version, "0.1.1")
+    expect_equal(r$mapping$mapping$status, "patched-unreviewed")
+    expect_equal(r$mapping$mapping$history[[1]]$by, "rules")
+    expect_setequal(r$changes$rule, c("alternative", "absent"))
+
+    g <- seuratToGiotto(s, mapping = r$mapping)
+    sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
+    sl <- sl[match(colnames(s), sl$cell_ID), ]
+    expect_equal(sl$sdimx, s$x_um, ignore_attr = TRUE)
+    expect_equal(sl$sdimy, -s$y_um, ignore_attr = TRUE)
+    expect_equal(findMapping(profileObject(s), mappings = list(r$mapping))$status, "match")
+
+    # the original source is kept as an alternative, so the patch repairs back
+    back <- repairMapping(r$mapping, seurat_fixture())
+    expect_equal(back$status, "repaired")
+    expect_true(attr(back$readback, "pass"))
+})
+
+test_that("a storage change gets a cast (D4)", {
+    skip_if_not_installed("SeuratObject")
+    r <- outcome(drift()$variants$D4)$repair
+    expect_equal(r$status, "repaired")
+    expect_equal(r$changes$rule, "cast")
+    expect_equal(r$mapping$parts[[1]]$ops[[1]], list(op = "cast", to = "sparse"))
+    expect_true(attr(r$readback, "pass"))
+})
+
+test_that("new data is reported, not mapped (D5) and mm coordinates warn (D6)", {
+    skip_if_not_installed("SeuratObject")
+    v <- drift()$variants
+    r5 <- outcome(v$D5)$repair
+    expect_equal(r5$status, "not_needed")
+    expect_match(r5$changes$detail[r5$changes$rule == "added"], "reductions/tsne")
+    expect_true(any(r5$validation$check == "unmapped" & grepl("tsne", r5$validation$message)))
+
+    expect_warning(g6 <- seuratToGiotto(v$D6), "looks like mm")
+    v6 <- validateMapping("seurat-assay5", profileObject(v$D6), result = g6, checks = "semantic")
+    expect_equal(v6$level[v6$check == "coord_units"], "WARN")
+})
+
+test_that("objects no mapping applies to are refused, not mis-converted (D9)", {
+    skip_if_not_installed("SeuratObject")
+    s <- drift()$variants$D9
+    f <- findMapping(profileObject(s), ecosystem = "seurat")
+    expect_equal(f$status, "none")
+    expect_match(f$reasons, "param 'assay' could not be bound")
+    expect_error(seuratToGiotto(s), "No bundled mapping applies")
+})
+
+test_that("a required part that cannot be repaired fails with candidates", {
+    skip_if_not_installed("SeuratObject")
+    s <- seurat_fixture()
+    a <- s[["Xenium"]]
+    a$counts <- NULL
+    s[["Xenium"]] <- suppressWarnings(a)
+    s@misc$stash <- SeuratObject::LayerData(seurat_fixture(), layer = "counts")
+    r <- repairMapping("seurat-assay5", s)
+    expect_equal(r$status, "failed")
+    expect_equal(r$mapping$mapping$status, "failed")
+    expect_true("expr_raw" %in% r$unresolved)
+    expect_equal(r$candidates$path[r$candidates$part_id == "expr_raw"][1], "misc/stash")
+})
+
+test_that("repaired mappings are written as readable YAML", {
+    skip_if_not_installed("SeuratObject")
+    f <- tempfile(fileext = ".yaml")
+    r <- repairMapping("seurat-assay5", drift()$variants$D4, file = f)
+    m <- readMapping(f)
+    expect_equal(m$mapping$version, "0.1.1")
+    expect_equal(m$params$layer_raw$on, "{assay}")
+})

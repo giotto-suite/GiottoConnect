@@ -4,62 +4,123 @@
   "title": "Giotto interoperability mapping",
   "description": "How a family of external objects maps onto the Giotto contract. Validated in R by GiottoConnect (supports type, required, enum, properties, items, additionalProperties: false and local $ref).",
   "type": "object",
-  "required": ["mapping", "params", "source_nodes", "parts"],
+  "required": [
+    "mapping",
+    "params",
+    "source_nodes",
+    "parts"
+  ],
   "additionalProperties": false,
   "properties": {
-    "mapping": { "$ref": "#/$defs/header" },
+    "mapping": {
+      "$ref": "#/$defs/header"
+    },
     "params": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/param" }
+      "additionalProperties": {
+        "$ref": "#/$defs/param"
+      }
     },
     "source_nodes": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/source_node" }
+      "additionalProperties": {
+        "$ref": "#/$defs/source_node"
+      }
     },
     "parts": {
       "type": "array",
-      "items": { "$ref": "#/$defs/part" }
+      "items": {
+        "$ref": "#/$defs/part"
+      }
     },
     "lossy": {
       "type": "array",
-      "items": { "$ref": "#/$defs/loss" }
+      "items": {
+        "$ref": "#/$defs/loss"
+      }
     }
   },
   "$defs": {
     "header": {
       "type": "object",
-      "required": ["id", "version", "status", "schema_version", "source", "target"],
+      "required": [
+        "id",
+        "version",
+        "status",
+        "schema_version",
+        "source",
+        "target"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "version": { "type": "string" },
-        "status": { "type": "string", "enum": ["verified", "patched-unreviewed", "failed", "draft"] },
-        "built": { "type": "string" },
-        "schema_version": { "type": "string" },
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "patched-unreviewed",
+            "failed",
+            "draft"
+          ]
+        },
+        "built": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
         "source": {
           "type": "object",
-          "required": ["ecosystem", "class", "package", "applies_to"],
+          "required": [
+            "ecosystem",
+            "class",
+            "package",
+            "applies_to"
+          ],
           "additionalProperties": false,
           "properties": {
-            "ecosystem": { "type": "string" },
-            "class": { "type": "string" },
-            "package": { "type": "string" },
-            "built_with": { "type": "string" },
+            "ecosystem": {
+              "type": "string"
+            },
+            "class": {
+              "type": "string"
+            },
+            "package": {
+              "type": "string"
+            },
+            "built_with": {
+              "type": "string"
+            },
             "applies_to": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "package_version": { "type": "string" },
+                "package_version": {
+                  "type": "string"
+                },
                 "predicates": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": ["path"],
+                    "required": [
+                      "path"
+                    ],
                     "additionalProperties": false,
                     "properties": {
-                      "path": { "type": "string" },
-                      "class": { "type": "string" },
-                      "kind": { "type": "string" }
+                      "path": {
+                        "type": "string"
+                      },
+                      "class": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      }
                     }
                   }
                 }
@@ -69,26 +130,61 @@
         },
         "target": {
           "type": "object",
-          "required": ["contract", "version"],
+          "required": [
+            "contract",
+            "version"
+          ],
           "additionalProperties": false,
           "properties": {
-            "contract": { "type": "string", "enum": ["giotto"] },
-            "version": { "type": "string" }
+            "contract": {
+              "type": "string",
+              "enum": [
+                "giotto"
+              ]
+            },
+            "version": {
+              "type": "string"
+            }
           }
         },
-        "fingerprint": { "type": "string" },
-        "fixtures": { "type": "array", "items": { "type": "string" } },
+        "fingerprint": {
+          "type": "string"
+        },
+        "fixtures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "history": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["date", "change", "by"],
+            "required": [
+              "date",
+              "change",
+              "by"
+            ],
             "additionalProperties": false,
             "properties": {
-              "date": { "type": "string" },
-              "from_version": { "type": "string" },
-              "change": { "type": "string" },
-              "by": { "type": "string", "enum": ["params", "rules", "llm", "human"] }
+              "date": {
+                "type": "string"
+              },
+              "from_version": {
+                "type": "string"
+              },
+              "change": {
+                "type": "string"
+              },
+              "by": {
+                "type": "string",
+                "enum": [
+                  "params",
+                  "rules",
+                  "llm",
+                  "human"
+                ]
+              }
             }
           }
         }
@@ -96,111 +192,328 @@
     },
     "param": {
       "type": "object",
-      "required": ["list", "rule"],
+      "required": [
+        "list",
+        "rule"
+      ],
       "additionalProperties": false,
       "properties": {
-        "list": { "type": "string", "enum": ["Assays", "Layers", "Reductions", "Graphs", "Neighbors", "Images", "Boundaries", "columns"] },
-        "on": { "type": "string" },
-        "rule": { "type": "string", "enum": ["first", "first_where", "name_is", "first_of_class"] },
+        "list": {
+          "type": "string",
+          "enum": [
+            "Assays",
+            "Layers",
+            "Reductions",
+            "Graphs",
+            "Neighbors",
+            "Images",
+            "Boundaries",
+            "columns"
+          ]
+        },
+        "on": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "first",
+            "first_where",
+            "name_is",
+            "first_of_class"
+          ]
+        },
         "where": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "role": { "type": ["string", "array"], "items": { "type": "string" } },
-            "has_child_role": { "type": ["string", "array"], "items": { "type": "string" } },
-            "name_matches": { "type": "string" },
-            "or_role": { "type": ["string", "array"], "items": { "type": "string" } },
-            "class": { "type": "string" },
-            "kind": { "type": "string" }
+            "role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "has_child_role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "name_matches": {
+              "type": "string"
+            },
+            "or_role": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "class": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            }
           }
         },
-        "value": { "type": "string" },
-        "class": { "type": "string" },
-        "optional": { "type": "boolean" }
+        "value": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        }
       }
     },
     "source_node": {
       "type": "object",
-      "required": ["path", "get"],
+      "required": [
+        "path",
+        "get"
+      ],
       "additionalProperties": false,
       "properties": {
-        "path": { "type": "string" },
+        "path": {
+          "type": "string"
+        },
         "get": {
           "type": "object",
-          "required": ["fn"],
+          "required": [
+            "fn"
+          ],
           "additionalProperties": false,
           "properties": {
-            "fn": { "type": "string", "enum": ["LayerData", "Embeddings", "Loadings", "Stdev", "GetTissueCoordinates", "Misc", "Key", "[["] },
-            "on": { "type": "string" },
-            "args": { "type": "object" }
+            "fn": {
+              "type": "string",
+              "enum": [
+                "LayerData",
+                "Embeddings",
+                "Loadings",
+                "Stdev",
+                "GetTissueCoordinates",
+                "Misc",
+                "Key",
+                "[["
+              ]
+            },
+            "on": {
+              "type": "string"
+            },
+            "args": {
+              "type": "object"
+            }
           }
         }
       }
     },
     "op": {
       "type": "object",
-      "required": ["op"],
+      "required": [
+        "op"
+      ],
       "additionalProperties": false,
       "properties": {
-        "op": { "type": "string", "enum": ["select_cols", "exclude_cols", "rename", "transpose", "scale", "cast", "rownames_to_col", "set"] },
-        "cols": { "type": "array", "items": { "type": "string" } },
-        "map": { "type": "object" },
-        "factor": { "type": "number" },
-        "to": { "type": "string", "enum": ["integer", "double", "character", "sparse"] },
-        "col": { "type": "string" },
-        "field": { "type": "string" },
+        "op": {
+          "type": "string",
+          "enum": [
+            "select_cols",
+            "exclude_cols",
+            "rename",
+            "transpose",
+            "scale",
+            "cast",
+            "rownames_to_col",
+            "set"
+          ]
+        },
+        "cols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "map": {
+          "type": "object"
+        },
+        "factor": {
+          "type": "number"
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "integer",
+            "double",
+            "character",
+            "sparse"
+          ]
+        },
+        "col": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
         "value": {}
       }
     },
     "loss": {
       "type": "object",
-      "required": ["kind", "note"],
+      "required": [
+        "kind",
+        "note"
+      ],
       "additionalProperties": false,
       "properties": {
-        "kind": { "type": "string", "enum": ["dropped", "estimated", "ambiguous", "recovered_from_parameters"] },
-        "path": { "type": "string" },
-        "field": { "type": "string" },
-        "note": { "type": "string" }
+        "kind": {
+          "type": "string",
+          "enum": [
+            "dropped",
+            "estimated",
+            "ambiguous",
+            "recovered_from_parameters"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
       }
     },
     "target_keys": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "spat_unit": { "type": "string" },
-        "feat_type": { "type": "string" },
-        "name": { "type": "string" },
-        "method": { "type": "string" },
-        "nn_type": { "type": "string" },
-        "reduction": { "type": "string" }
+        "spat_unit": {
+          "type": "string"
+        },
+        "feat_type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "nn_type": {
+          "type": "string"
+        },
+        "reduction": {
+          "type": "string"
+        }
       }
     },
     "alternative": {
       "type": "object",
-      "required": ["id", "from"],
+      "required": [
+        "id",
+        "from"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "from": { "type": "string" },
-        "hook": { "type": "string" },
-        "ops": { "type": "array", "items": { "$ref": "#/$defs/op" } },
-        "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/param" } }
+        "id": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "hook": {
+          "type": "string"
+        },
+        "ops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/op"
+          }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/param"
+          }
+        },
+        "lossy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/loss"
+          }
+        },
+        "to": {
+          "$ref": "#/$defs/target_keys"
+        }
       }
     },
     "part": {
       "type": "object",
-      "required": ["id", "part", "from", "to"],
+      "required": [
+        "id",
+        "part",
+        "from",
+        "to"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "part": { "type": "string", "enum": ["expression", "cell_metadata", "feat_metadata", "spatial_locs", "spatial_info", "dim_reduction", "nn_network"] },
-        "from": { "type": "string" },
-        "hook": { "type": "string" },
-        "ops": { "type": "array", "items": { "$ref": "#/$defs/op" } },
-        "optional": { "type": "boolean" },
-        "to": { "$ref": "#/$defs/target_keys" },
-        "alternatives": { "type": "array", "items": { "$ref": "#/$defs/alternative" } },
-        "lossy": { "type": "array", "items": { "$ref": "#/$defs/loss" } }
+        "id": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string",
+          "enum": [
+            "expression",
+            "cell_metadata",
+            "feat_metadata",
+            "spatial_locs",
+            "spatial_info",
+            "dim_reduction",
+            "nn_network"
+          ]
+        },
+        "from": {
+          "type": "string"
+        },
+        "hook": {
+          "type": "string"
+        },
+        "ops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/op"
+          }
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "to": {
+          "$ref": "#/$defs/target_keys"
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/alternative"
+          }
+        },
+        "lossy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/loss"
+          }
+        }
       }
     }
   }
