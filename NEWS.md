@@ -1,4 +1,4 @@
-# GiottoConnect (development version)
+# GiottoConnect 0.1.0
 
 ## Converters
 - `seuratToGiotto()` and `anndataToGiotto()` convert with a declarative mapping
