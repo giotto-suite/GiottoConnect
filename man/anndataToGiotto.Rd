@@ -27,6 +27,17 @@ its structure. The file is read directly (hdf5r, no python): it is
 profiled, the matching bundled mapping is selected (or the one given) and
 the conversion runs through \code{\link[=convertWithMapping]{convertWithMapping()}}.
 }
+\examples{
+if (requireNamespace("hdf5r", quietly = TRUE)) {
+    f <- system.file("extdata", "mini_scanpy.h5ad", package = "GiottoConnect")
+    g <- anndataToGiotto(f)
+    g
+    # what was read from where, and what could not be carried over
+    prov <- mappingProvenance(g)
+    prov$params
+    readbackCheck(f, g)
+}
+}
 \seealso{
 \code{\link[=findMapping]{findMapping()}}, \code{\link[=convertWithMapping]{convertWithMapping()}}, \code{\link[=readbackCheck]{readbackCheck()}}
 }

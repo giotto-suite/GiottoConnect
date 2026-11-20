@@ -2,6 +2,23 @@
 
 **GiottoConnect** is an R package that serves as a hub for Giotto interoperability functions and connections to external visualization and analysis tools.
 
+## Converting Seurat and AnnData objects
+
+```r
+library(GiottoConnect)
+
+g <- seuratToGiotto(seurat_object)                 # in memory
+g <- anndataToGiotto("sample.h5ad", source = "my_project/")  # GiottoDisk-backed
+
+mappingProvenance(g)   # mapping used, parameters, losses
+```
+
+Each converter profiles the input, picks the bundled mapping that fits its
+structure and builds the Giotto object from it. `.h5ad` files are read directly
+(hdf5r); no python is needed. See the *Converting Seurat and AnnData* article.
+
+## Vitessce viewer
+
 The first major feature is a **Vitessce viewer pipeline** that converts a Giotto spatial single-cell object into a static, interactive website deployable via GitHub Pages — no server required.
 
 ## Pipeline

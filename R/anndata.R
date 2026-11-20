@@ -23,6 +23,16 @@ NULL
 #' @returns giotto object; see [mappingProvenance()] for what was converted
 #' and which losses apply
 #' @seealso [findMapping()], [convertWithMapping()], [readbackCheck()]
+#' @examples
+#' if (requireNamespace("hdf5r", quietly = TRUE)) {
+#'     f <- system.file("extdata", "mini_scanpy.h5ad", package = "GiottoConnect")
+#'     g <- anndataToGiotto(f)
+#'     g
+#'     # what was read from where, and what could not be carried over
+#'     prov <- mappingProvenance(g)
+#'     prov$params
+#'     readbackCheck(f, g)
+#' }
 #' @export
 anndataToGiotto <- function(anndata_path, mapping = NULL, source = NULL, verbose = FALSE) {
     profile <- adapterProfile(.adapter_for("anndata"), anndata_path)

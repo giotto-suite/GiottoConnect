@@ -72,7 +72,7 @@ setMethod("adapterAccessors", "seuratAdapter", function(adapter) c(
 setMethod("adapterReads", "seuratAdapter", function(adapter, node, params) {
     p <- .pf_bind(node$path, params)
     if (!identical(node$get$fn, "Embeddings") || !grepl("/cell.embeddings$", p)) return(character())
-    sub("cell.embeddings$", c("feature.loadings", "stdev"), p)
+    paste0(sub("cell.embeddings$", "", p), c("feature.loadings", "stdev"))
 })
 setMethod("adapterObjectLists", "seuratAdapter", function(adapter) {
     c("Assays", "Images", "Reductions", "Graphs", "Neighbors")

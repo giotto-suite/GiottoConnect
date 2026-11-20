@@ -340,12 +340,12 @@ build_llm_cases <- function() {
 
 build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
                                legacy = FALSE, raw_extra = 0L, feature_types = FALSE,
-                               seed = 1L) {
+                               dup_gene = TRUE, seed = 1L) {
     stopifnot(requireNamespace("hdf5r", quietly = TRUE))
     set.seed(seed)
     cells <- sprintf("cell_%03d", seq_len(n_cells))
     feats <- sprintf("gene%02d", seq_len(n_feat))
-    feats[n_feat] <- feats[1L]                     # one duplicated gene name
+    if (dup_gene) feats[n_feat] <- feats[1L]       # one duplicated gene name
     counts <- Matrix::rsparsematrix(n_cells, n_feat, density = 0.2,
         rand.x = function(n) as.double(stats::rpois(n, 4) + 1))
     xy <- cbind(stats::runif(n_cells, 0, 2000), stats::runif(n_cells, 0, 2000))

@@ -28,6 +28,21 @@ those bundled with GiottoConnect (or the one given), and the conversion runs
 through \code{\link[=convertWithMapping]{convertWithMapping()}}. Object versions are handled by choosing a
 mapping, not by separate functions.
 }
+\examples{
+if (requireNamespace("SeuratObject", quietly = TRUE)) {
+    set.seed(1)
+    counts <- Matrix::rsparsematrix(20, 30, density = 0.3,
+        rand.x = function(n) stats::rpois(n, 5) + 1)
+    dimnames(counts) <- list(paste0("gene", 1:20), paste0("cell", 1:30))
+    s <- SeuratObject::CreateSeuratObject(counts)
+    # coordinates kept as metadata columns are found as well
+    s$x <- stats::runif(30, 0, 500)
+    s$y <- stats::runif(30, 0, 500)
+    g <- seuratToGiotto(s)
+    g
+    mappingProvenance(g)$losses
+}
+}
 \seealso{
 \code{\link[=findMapping]{findMapping()}}, \code{\link[=convertWithMapping]{convertWithMapping()}}, \code{\link[=validateMapping]{validateMapping()}}
 }

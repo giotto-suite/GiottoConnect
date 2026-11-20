@@ -39,6 +39,7 @@ Suggests:
     S4Vectors,
     magick,
     sf,
+    terra,
     testthat (>= 3.0.0)
 Remotes:
     giotto-suite/GiottoUtils@dev,

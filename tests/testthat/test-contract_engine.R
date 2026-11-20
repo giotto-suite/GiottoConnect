@@ -291,3 +291,11 @@ test_that("Seurat PCA loadings and stdev go to the reduction misc", {
     expect_null(GiottoClass::getDimReduction(g, reduction_method = "umap", name = "umap",
         output = "dimObj")@misc$loadings)
 })
+
+test_that("converting the fixtures raises no warnings", {
+    skip_if_not_installed("SeuratObject")
+    expect_no_warning(seuratToGiotto(seurat_fixture()))
+    skip_if_not_installed("hdf5r")
+    expect_no_warning(anndataToGiotto(system.file("extdata", "mini_scanpy.h5ad",
+        package = "GiottoConnect")))
+})

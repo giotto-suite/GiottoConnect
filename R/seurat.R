@@ -56,6 +56,20 @@ giottoToSeurat <- function(gobject, mapping = NULL, verbose = FALSE) {
 #' @returns giotto object; see [mappingProvenance()] for what was converted
 #' and which losses apply
 #' @seealso [findMapping()], [convertWithMapping()], [validateMapping()]
+#' @examples
+#' if (requireNamespace("SeuratObject", quietly = TRUE)) {
+#'     set.seed(1)
+#'     counts <- Matrix::rsparsematrix(20, 30, density = 0.3,
+#'         rand.x = function(n) stats::rpois(n, 5) + 1)
+#'     dimnames(counts) <- list(paste0("gene", 1:20), paste0("cell", 1:30))
+#'     s <- SeuratObject::CreateSeuratObject(counts)
+#'     # coordinates kept as metadata columns are found as well
+#'     s$x <- stats::runif(30, 0, 500)
+#'     s$y <- stats::runif(30, 0, 500)
+#'     g <- seuratToGiotto(s)
+#'     g
+#'     mappingProvenance(g)$losses
+#' }
 #' @export
 seuratToGiotto <- function(sobject, mapping = NULL, source = NULL, verbose = FALSE) {
     profile <- adapterProfile(.adapter_for("seurat"), sobject)
