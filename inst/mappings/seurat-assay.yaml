@@ -44,6 +44,13 @@ source_nodes:
   reduction:  { path: "reductions/{red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{red}" } } }
   nn:           { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
   spatial_reduction: { path: "reductions/{coord_red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{coord_red}" } } }
+  # assays other than the main one (control probes, protein, ...)
+  extra_counts:       { path: "assays/{extra}/layers/counts", get: { fn: LayerData, args: { assay: "{extra}", layer: counts } } }
+  extra_counts_v3:    { path: "assays/{extra}/counts", get: { fn: LayerData, args: { assay: "{extra}", layer: counts } } }
+  extra_data:         { path: "assays/{extra}/layers/data", get: { fn: LayerData, args: { assay: "{extra}", layer: data } } }
+  extra_data_v3:      { path: "assays/{extra}/data", get: { fn: LayerData, args: { assay: "{extra}", layer: data } } }
+  extra_feat_meta:    { path: "assays/{extra}/meta.data", get: { fn: "[[", on: "assays/{extra}" } }
+  extra_feat_meta_v3: { path: "assays/{extra}/meta.features", get: { fn: "[[", on: "assays/{extra}" } }
 
 parts:
   - id: expr_raw
@@ -139,6 +146,60 @@ parts:
     # the hook sets nn_type (kNN if binary) and names it <type>.<reduction>
     # from Seurat's FindNeighbors record, else keeps the graph name
     to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
+
+  # every other assay is its own feature type; Xenium/Atera controls take
+  # the names Giotto's readers use
+  - id: "expr_{extra_label}"
+    part: expression
+    from: extra_counts
+    for_each: &other_assays
+      list: Assays
+      as: extra
+      exclude: "^{assay}$"
+      where: { class: Assay5 }
+      rename: { ControlProbe: NegControlProbe, ControlCodeword: NegControlCodeword,
+                BlankCodeword: UnassignedCodeword, ADT: protein }
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: raw }
+
+  - id: "expr_norm_{extra_label}"
+    part: expression
+    from: extra_data
+    for_each: *other_assays
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: normalized }
+
+  - id: "feat_meta_{extra_label}"
+    part: feat_metadata
+    from: extra_feat_meta
+    for_each: *other_assays
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: "{extra_label}" }
+
+  - id: "expr_v3_{extra_label}"
+    part: expression
+    from: extra_counts_v3
+    for_each: &other_assays_v3
+      list: Assays
+      as: extra
+      exclude: "^{assay}$"
+      where: { class: Assay }
+      rename: { ControlProbe: NegControlProbe, ControlCodeword: NegControlCodeword,
+                BlankCodeword: UnassignedCodeword, ADT: protein }
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: raw }
+
+  - id: "expr_norm_v3_{extra_label}"
+    part: expression
+    from: extra_data_v3
+    for_each: *other_assays_v3
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: normalized }
+
+  - id: "feat_meta_v3_{extra_label}"
+    part: feat_metadata
+    from: extra_feat_meta_v3
+    for_each: *other_assays_v3
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: "{extra_label}" }
 
 lossy:
   - { kind: dropped, path: "assays/{assay}/scale.data", note: "recomputable from normalized values; no Giotto slot" }

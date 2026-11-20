@@ -517,11 +517,19 @@
           "$ref": "#/$defs/where"
         },
         "exclude": {
-          "type": "string"
+          "type": "string",
+          "description": "regex of names to skip; may use params, e.g. \"^{assay}$\""
         },
         "strip": {
           "type": "string",
           "description": "regex removed from each name to give the placeholder {<as>_label}"
+        },
+        "rename": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "name -> {<as>_label} for listed names (before strip)"
         }
       }
     },

@@ -213,18 +213,21 @@ print.giottoValidation <- function(x, ...) {
                 if (ok_int) "is" else "is NOT", if (ok_pos) "is" else "is NOT", length(v)))
     }
 
-    # every expression matrix should be indexed by the same features
+    # every expression matrix of a feature type should be indexed by the
+    # features of that type
     ex <- GiottoClass::list_expression(g)
-    ex <- ex[ex$spat_unit == "cell" & ex$feat_type == "rna", , drop = FALSE]
-    fm <- tryCatch(GiottoClass::fDataDT(g, spat_unit = "cell", feat_type = "rna")$feat_ID,
-        error = function(e) NULL)
-    ref <- if (length(fm)) fm else feats
-    for (nm in ex$name) {
-        e <- GiottoClass::getExpression(g, values = nm, spat_unit = "cell", feat_type = "rna",
+    ex <- ex[ex$spat_unit == "cell", , drop = FALSE]
+    for (i in seq_len(nrow(ex))) {
+        ft <- ex$feat_type[i]
+        fm <- tryCatch(GiottoClass::fDataDT(g, spat_unit = "cell", feat_type = ft)$feat_ID,
+            error = function(e) NULL)
+        ref <- if (length(fm)) fm else GiottoClass::featIDs(g, feat_type = ft)
+        e <- GiottoClass::getExpression(g, values = ex$name[i], spat_unit = "cell", feat_type = ft,
             output = "exprObj")
         ov <- mean(GiottoClass::featIDs(e) %in% ref)
-        out$add("feat_ids", nm, if (ov >= 0.99) "OK" else "FAIL",
-            sprintf("%.1f%% of %s features are known features", 100 * ov, nm))
+        label <- if (ft == "rna") ex$name[i] else paste(ft, ex$name[i], sep = "/")
+        out$add("feat_ids", label, if (ov >= 0.99) "OK" else "FAIL",
+            sprintf("%.1f%% of %s features are known features", 100 * ov, label))
     }
 
     if (!is.na(profile$n_cells)) {

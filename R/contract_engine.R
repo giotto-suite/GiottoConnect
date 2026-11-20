@@ -204,9 +204,9 @@ mappingProvenance <- function(gobject) {
         keep <- if (is.null(fe$where)) rep(TRUE, nrow(kids)) else
             .param_where(fe$where, kids, name, nodes)
         vals <- name[keep]
-        if (!is.null(fe$exclude)) vals <- vals[!grepl(fe$exclude, vals)]
+        if (!is.null(fe$exclude)) vals <- vals[!grepl(.pf_bind(fe$exclude, params$values), vals)]
         for (v in vals) {
-            label <- if (is.null(fe$strip)) v else sub(fe$strip, "", v)
+            label <- fe$rename[[v]] %null% (if (is.null(fe$strip)) v else sub(fe$strip, "", v))
             sub_v <- function(x) {
                 x <- gsub(sprintf("{%s_label}", fe$as), label, x, fixed = TRUE)
                 gsub(sprintf("{%s}", fe$as), v, x, fixed = TRUE)

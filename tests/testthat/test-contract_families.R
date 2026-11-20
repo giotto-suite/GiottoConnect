@@ -70,3 +70,26 @@ test_that("Atera objects (Seurat 6 LoadAtera) use the FOV mapping", {
     g <- suppressWarnings(seuratToGiotto(x))
     expect_true(attr(readbackCheck(x, g), "pass"))
 })
+
+test_that("every other assay becomes its own feature type", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    cells <- colnames(s)
+    m <- function(prefix, n) {
+        x <- matrix(stats::rpois(n * length(cells), 1), n, length(cells),
+            dimnames = list(sprintf("%s%02d", prefix, seq_len(n)), cells))
+        methods::as(x, "CsparseMatrix")
+    }
+    s[["ControlProbe"]] <- SO$CreateAssay5Object(counts = m("NegProbe", 4))
+    s[["ADT"]] <- SO$CreateAssayObject(counts = m("CD", 3))
+    g <- seuratToGiotto(s)
+    ex <- GiottoClass::list_expression(g)
+    expect_setequal(unique(ex$feat_type), c("rna", "NegControlProbe", "protein"))
+    expect_setequal(ex$name[ex$feat_type == "protein"], c("raw", "normalized"))
+    adt <- GiottoClass::getExpression(g, feat_type = "protein", values = "raw", output = "matrix")
+    want <- SO$LayerData(s, assay = "ADT", layer = "counts")
+    expect_equal(as.matrix(adt), as.matrix(want)[rownames(adt), colnames(adt)])
+    expect_setequal(GiottoClass::fDataDT(g, feat_type = "NegControlProbe")$feat_ID, sprintf("NegProbe%02d", 1:4))
+    expect_true(attr(readbackCheck(s, g), "pass"))
+})

@@ -39,7 +39,10 @@ giotto_content <- function(g) {
     for (i in seq_len(nrow(ex))) {
         e <- GiottoClass::getExpression(g, values = ex$name[i], spat_unit = ex$spat_unit[i],
             feat_type = ex$feat_type[i], output = "exprObj")[]
-        out[[paste("expr", ex$name[i])]] <- h(as.matrix(mat(e)))
+        # rna keeps the key it had before other feature types were mapped
+        key <- if (ex$feat_type[i] == "rna") paste("expr", ex$name[i]) else
+            paste("expr", ex$feat_type[i], ex$name[i])
+        out[[key]] <- h(as.matrix(mat(e)))
     }
     md <- as.data.frame(GiottoClass::pDataDT(g))
     out$cell_meta <- h(md[order(md$cell_ID), sort(names(md))])
