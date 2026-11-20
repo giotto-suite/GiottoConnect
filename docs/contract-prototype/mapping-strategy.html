@@ -1,0 +1,531 @@
+<meta charset="utf-8">
+<title>GiottoConnect Mapping Strategy</title>
+<style>
+/* Layout: one reading column (~72ch) with full-width evidence tables and diagrams;
+   colors borrowed from H&E staining: hematoxylin indigo for structure, eosin for losses/risks. */
+:root {
+  --bg: #f5f5f9;
+  --surface: #ffffff;
+  --fg: #1c1e31;
+  --muted: #5a5e78;
+  --line: #d9dbe7;
+  --accent: #3b388a;
+  --accent-soft: #e7e6f5;
+  --eosin: #b13160;
+  --eosin-soft: #fae7ee;
+  --ok: #2b7655;
+  --ok-soft: #e1f1e8;
+  --warn: #8a5a00;
+  --warn-soft: #f8eed8;
+  --code-bg: #edeff6;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --measure: 72ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11121b; --surface: #191b28; --fg: #e5e6f1; --muted: #a2a5bf; --line: #2c2f44;
+    --accent: #aaa6ff; --accent-soft: #25244a; --eosin: #f17ca2; --eosin-soft: #3a1c29;
+    --ok: #72d1a2; --ok-soft: #173029; --warn: #e8b458; --warn-soft: #33270f; --code-bg: #171926;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11121b; --surface: #191b28; --fg: #e5e6f1; --muted: #a2a5bf; --line: #2c2f44;
+  --accent: #aaa6ff; --accent-soft: #25244a; --eosin: #f17ca2; --eosin-soft: #3a1c29;
+  --ok: #72d1a2; --ok-soft: #173029; --warn: #e8b458; --warn-soft: #33270f; --code-bg: #171926;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-inline: 20px; padding-block: 0 64px;
+}
+main { max-width: 1040px; margin: 0 auto; }
+.prose { max-width: var(--measure); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.9rem); margin: 0 0 12px; letter-spacing: -0.01em; }
+h2 { font-size: 1.65rem; margin: 0 0 14px; padding-top: 12px; }
+h3 { font-size: 1.2rem; margin: 28px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.5; margin: 0 0 16px; }
+pre code { background: none; padding: 0; font-size: 0.84rem; }
+.c { color: var(--muted); }               /* code comment */
+.k { color: var(--accent); }              /* yaml key / R function */
+.s { color: var(--ok); }                  /* string / placeholder */
+.e { color: var(--eosin); }               /* losses */
+
+header.top { padding-block: 48px 28px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.lede { font-size: 1.12rem; color: var(--fg); max-width: var(--measure); }
+.meta { color: var(--muted); font-size: 0.88rem; margin-top: 14px; }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.9rem; margin: 18px 0 0; padding: 0; list-style: none; }
+nav.toc a { text-decoration: none; color: var(--muted); }
+nav.toc a:hover { color: var(--accent); }
+
+section { margin-bottom: 52px; scroll-margin-top: 12px; }
+
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 20px 0 8px; }
+.fig { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.fig b { display: block; font-family: var(--font-display); font-size: 1.7rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.fig span { font-size: 0.86rem; color: var(--muted); }
+
+.tablewrap { overflow-x: auto; margin: 8px 0 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.chip { display: inline-block; font-size: 0.76rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.bad { background: var(--eosin-soft); color: var(--eosin); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 8px 0 18px; }
+.diagram svg { display: block; min-width: 860px; width: 100%; height: auto; }
+.diagram text { font-family: var(--font-body); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.cols > * { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.panel h3 { margin-top: 0; }
+.panel ul { margin: 0; padding-left: 18px; }
+.panel li { margin-bottom: 6px; }
+
+ol.steps { padding-left: 22px; max-width: var(--measure); }
+ol.steps li { margin-bottom: 8px; }
+.note { border-left: 3px solid var(--eosin); background: var(--eosin-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; max-width: var(--measure); margin: 0 0 16px; }
+.note.plain { border-left-color: var(--accent); background: var(--accent-soft); }
+details { margin: 0 0 16px; }
+summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (max-width: 520px) { body { padding-inline: 16px; } .fig b { font-size: 1.45rem; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main>
+<header class="top">
+  <div class="eyebrow">GiottoConnect · interoperability design · 20 November 2026</div>
+  <h1>Converting between Giotto and other ecosystems with mappings, not converters</h1>
+  <p class="lede">GiottoConnect now converts Seurat and Giotto objects with one engine driven by small YAML mapping files. This report explains how it works, why it is easier to extend and maintain than per-version converter functions, how it runs for Seurat today, how AnnData and other ecosystems plug in through an adapter, and which weak points remain.</p>
+  <p class="meta">Branch <code>contract-prototype</code> (off <code>dev_connect</code>, not pushed). GiottoClass 0.7.31 · GiottoDisk 0.0.0.8 · SeuratObject 5.4.0 · Seurat 5.5.0 and 6.0.0. All figures come from <code>examples/seurat_comparison/results/</code>.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#summary">Summary</a><a href="#how">How it works</a><a href="#anatomy">A mapping file</a>
+    <a href="#why">Why this approach</a><a href="#seurat">Seurat today</a><a href="#adapters">Other ecosystems</a>
+    <a href="#weak">Weak points</a><a href="#next">Next</a>
+  </nav>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <div class="prose">
+    <p>The old approach was one hand-written function per ecosystem and per version: <code>seuratToGiottoV4</code>, <code>seuratToGiottoV5</code>, <code>giottoToSeuratV4</code>, <code>giottoToSeuratV5</code>, each copied in both GiottoConnect and GiottoClass. Each function reached into internal slots and called GiottoClass internals, so every upstream change could break it. That happened: the GiottoConnect copy of <code>seuratToGiottoV5</code> stopped running when GiottoClass renamed an internal setter, and <code>giottoToSeuratV5</code> now fails on every object we tested.</p>
+    <p>The new approach separates <em>what goes where</em> from <em>how it is done</em>. A mapping file declares, for one object structure, which source data becomes which Giotto part. One engine reads the object through its package's public accessors, builds each part with the GiottoClass constructors, and checks the result against the source. Seurat-version differences become different mapping files or are absorbed by parameters; other ecosystems add an adapter and their own mapping files to the same engine.</p>
+  </div>
+  <div class="figures">
+    <div class="fig"><b>35 / 35</b><span>mappable parts correct on the fixture and three real crops, in memory and on GiottoDisk (legacy: 20 of 36)</span></div>
+    <div class="fig"><b>0 edits</b><span>needed for Seurat 6.0.0 objects; part results identical to Seurat 5.5</span></div>
+    <div class="fig"><b>9 / 9</b><span>structural drift variants reach the expected outcome; none needs an LLM</span></div>
+    <div class="fig"><b>286 · 2 · 0</b><span>readback checks: MATCH · DECLARED · UNDECLARED across 10 dataset/backend runs</span></div>
+    <div class="fig"><b>154 s → 0.5 s</b><span>CosMx crop (1,752 cells × 20,378 genes): legacy vs mapping</span></div>
+    <div class="fig"><b>6 · 4</b><span>mapping files and hooks cover Seurat ↔ Giotto for Xenium, CosMx, MERSCOPE, Atera, Visium (V1, V2, HD) and Slide-seq</span></div>
+  </div>
+</section>
+
+<section id="how">
+  <h2>How it works</h2>
+  <p class="prose">A conversion is the same sequence for every ecosystem. Only the boxes marked <em>adapter</em> know anything about Seurat; the rest is generic.</p>
+  <div class="diagram" role="img" aria-label="Pipeline: source object, profile, find mapping, bind parameters, expand templates, prepare parts, build target, validate and read back, provenance; with repair branching off find mapping.">
+    <svg viewBox="0 0 980 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" style="fill: var(--muted)"></path>
+        </marker>
+      </defs>
+      <g font-size="13">
+        <!-- row 1 -->
+        <rect x="10" y="20" width="130" height="64" rx="8" style="fill: var(--accent-soft); stroke: var(--accent)"></rect>
+        <text x="75" y="46" text-anchor="middle" style="fill: var(--fg)" font-weight="600">Source object</text>
+        <text x="75" y="66" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">Seurat · giotto · h5ad</text>
+
+        <rect x="170" y="20" width="140" height="64" rx="8" style="fill: var(--surface); stroke: var(--line)"></rect>
+        <text x="240" y="46" text-anchor="middle" style="fill: var(--fg)" font-weight="600">profileObject()</text>
+        <text x="240" y="66" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">structure, no package load</text>
+
+        <rect x="340" y="20" width="150" height="64" rx="8" style="fill: var(--surface); stroke: var(--line)"></rect>
+        <text x="415" y="46" text-anchor="middle" style="fill: var(--fg)" font-weight="600">findMapping()</text>
+        <text x="415" y="66" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">applies_to · fingerprint</text>
+
+        <rect x="520" y="20" width="140" height="64" rx="8" style="fill: var(--surface); stroke: var(--line)"></rect>
+        <text x="590" y="46" text-anchor="middle" style="fill: var(--fg)" font-weight="600">bind params</text>
+        <text x="590" y="66" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">+ for_each expansion</text>
+
+        <rect x="690" y="20" width="140" height="64" rx="8" style="fill: var(--accent-soft); stroke: var(--accent)"></rect>
+        <text x="760" y="46" text-anchor="middle" style="fill: var(--fg)" font-weight="600">prepare parts</text>
+        <text x="760" y="66" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">accessor · ops · hook</text>
+
+        <!-- row 2 -->
+        <rect x="690" y="140" width="140" height="64" rx="8" style="fill: var(--accent-soft); stroke: var(--accent)"></rect>
+        <text x="760" y="166" text-anchor="middle" style="fill: var(--fg)" font-weight="600">build target</text>
+        <text x="760" y="186" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">constructors · setGiotto</text>
+
+        <rect x="500" y="140" width="160" height="64" rx="8" style="fill: var(--surface); stroke: var(--line)"></rect>
+        <text x="580" y="166" text-anchor="middle" style="fill: var(--fg)" font-weight="600">validate · readback</text>
+        <text x="580" y="186" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">MATCH / DECLARED / UNDECLARED</text>
+
+        <rect x="330" y="140" width="140" height="64" rx="8" style="fill: var(--ok-soft); stroke: var(--ok)"></rect>
+        <text x="400" y="166" text-anchor="middle" style="fill: var(--fg)" font-weight="600">result</text>
+        <text x="400" y="186" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">memory or GiottoDisk</text>
+
+        <rect x="160" y="140" width="140" height="64" rx="8" style="fill: var(--surface); stroke: var(--line)"></rect>
+        <text x="230" y="166" text-anchor="middle" style="fill: var(--fg)" font-weight="600">provenance</text>
+        <text x="230" y="186" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">mapping · losses · params</text>
+
+        <!-- repair branch -->
+        <rect x="340" y="236" width="300" height="50" rx="8" style="fill: var(--eosin-soft); stroke: var(--eosin)"></rect>
+        <text x="490" y="258" text-anchor="middle" style="fill: var(--fg)" font-weight="600">repairMapping() when the structure drifted</text>
+        <text x="490" y="276" text-anchor="middle" style="fill: var(--muted)" font-size="11.5">params → rules → alternatives → LLM selector → handoff</text>
+
+        <!-- arrows -->
+        <g style="stroke: var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#arr)">
+          <path d="M140,52 L166,52"></path>
+          <path d="M310,52 L336,52"></path>
+          <path d="M490,52 L516,52"></path>
+          <path d="M660,52 L686,52"></path>
+          <path d="M760,84 L760,136"></path>
+          <path d="M690,172 L664,172"></path>
+          <path d="M500,172 L474,172"></path>
+          <path d="M330,172 L304,172"></path>
+          <path d="M415,84 C415,120 300,210 360,236" stroke-dasharray="4 4"></path>
+        </g>
+        <text x="850" y="45" style="fill: var(--accent)" font-size="11.5" font-weight="600">adapter</text>
+        <text x="850" y="165" style="fill: var(--accent)" font-size="11.5" font-weight="600">target</text>
+        <text x="20" y="110" style="fill: var(--accent)" font-size="11.5" font-weight="600">adapter</text>
+      </g>
+    </svg>
+  </div>
+  <ol class="steps">
+    <li><b>Profile.</b> <code>profileObject()</code> walks the object through <code>attributes()</code> and records every node: path, kind, class, shape and cheap role hints such as <em>integer-valued</em> or <em>rows = number of cells</em>. It never loads the source package.</li>
+    <li><b>Choose a mapping.</b> <code>findMapping()</code> keeps mappings whose <code>applies_to</code> predicates hold (class, version, e.g. "the default assay is an <code>Assay5</code>"), prefers an exact structural fingerprint, then the more specific mapping, then coverage.</li>
+    <li><b>Bind parameters.</b> Names that vary per dataset (assay, layer, FOV, boundary, graph) are found by rule: the default assay, the first integer-valued layer, the boundary of class <code>Segmentation</code>. <code>for_each</code> parts expand into one part per match, e.g. one per reduction.</li>
+    <li><b>Prepare parts.</b> Each part reads its source through a whitelisted public accessor (<code>LayerData</code>, <code>Embeddings</code>, <code>GetTissueCoordinates</code>, GiottoClass getters), then applies declarative ops (rename, flip y, cast) or a registered hook.</li>
+    <li><b>Build.</b> Parts become Giotto subobjects through the GiottoClass constructors and are assembled with one <code>setGiotto()</code> call. With <code>source = dir</code> the same call writes disk-backable parts to a GiottoDisk project. For Giotto → Seurat the target builder uses SeuratObject constructors instead.</li>
+    <li><b>Check.</b> Validation covers the mapping and the result. <code>readbackCheck()</code> reads every part back and compares it with what the mapping prepared; a difference not covered by a declared or recorded loss fails.</li>
+    <li><b>Record.</b> Mapping id, version, fingerprint, bound parameters and losses are stored in the object (Giotto history or Seurat <code>misc</code>) and returned by <code>mappingProvenance()</code>.</li>
+  </ol>
+</section>
+
+<section id="anatomy">
+  <h2>A mapping file</h2>
+  <p class="prose">Excerpt from <code>inst/mappings/seurat-assay5.yaml</code>, the mapping used for Xenium, CosMx, MERSCOPE and Atera objects (125 lines in full). Everything that is specific to Seurat's layout lives here, in data, not in R code.</p>
+<pre><code><span class="k">mapping:</span>
+  <span class="k">id:</span> seurat-assay5
+  <span class="k">status:</span> verified                 <span class="c"># verified | patched-unreviewed | failed | draft</span>
+  <span class="k">source:</span>
+    <span class="k">ecosystem:</span> seurat
+    <span class="k">applies_to:</span>
+      <span class="k">package_version:</span> <span class="s">"&gt;= 5.0.0"</span>
+      <span class="k">predicates:</span>
+        - { path: <span class="s">"assays/{assay}"</span>, class: Assay5 }
+  <span class="k">fingerprint:</span> <span class="s">"5c74ef5fee3e2b12"</span>   <span class="c"># structure it was verified on</span>
+
+<span class="k">params:</span>                              <span class="c"># dataset-specific names, found by rule</span>
+  <span class="k">assay:</span>      { list: Assays, rule: value_of, path: active.assay, where: { class: Assay5 } }
+  <span class="k">layer_raw:</span>  { list: Layers, on: <span class="s">"{assay}"</span>, rule: first_where, where: { role: [integer_valued, nonneg] } }
+  <span class="k">segmentation:</span> { list: Boundaries, on: <span class="s">"{fov}"</span>, rule: first_of_class, class: Segmentation, optional: true }
+
+<span class="k">source_nodes:</span>                        <span class="c"># structural path (for checks) + public accessor (for reading)</span>
+  <span class="k">counts:</span>    { path: <span class="s">"assays/{assay}/layers/{layer_raw}"</span>,
+               get: { fn: LayerData, args: { assay: <span class="s">"{assay}"</span>, layer: <span class="s">"{layer_raw}"</span> } } }
+  <span class="k">centroids:</span> { path: <span class="s">"images/{fov}/boundaries/{centroids}"</span>,
+               get: { fn: GetTissueCoordinates, on: <span class="s">"images/{fov}/boundaries/{centroids}"</span> } }
+  <span class="k">reduction:</span> { path: <span class="s">"reductions/{red}/cell.embeddings"</span>, get: { fn: Embeddings, args: { reduction: <span class="s">"{red}"</span> } } }
+
+<span class="k">parts:</span>
+  - id: expr_raw
+    part: expression
+    from: counts
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+  - id: locs
+    part: spatial_locs
+    from: centroids
+    ops:
+      - { op: rename, map: { x: sdimx, y: sdimy, cell: cell_ID } }
+      - { op: scale, factor: -1, cols: [sdimy] }       <span class="c"># image y-down → Giotto y-up</span>
+    <span class="e">lossy:</span>
+      - { kind: estimated, field: units, note: <span class="s">"FOV coordinates carry no unit; assumed micron"</span> }
+    alternatives:                                      <span class="c"># used by repair if the FOV is gone</span>
+      - id: locs_from_meta          <span class="c"># coordinates kept as meta.data columns</span>
+      - id: locs_from_reduction     <span class="c"># coordinates kept as a "spatial" reduction</span>
+  - id: <span class="s">"dimred_{red}"</span>
+    part: dim_reduction
+    from: reduction
+    for_each: { list: Reductions, as: red, exclude: <span class="s">"^(spatial|coords?|centroids?|xy)$"</span> }
+    to: { spat_unit: cell, feat_type: rna, name: <span class="s">"{red}"</span>, method: <span class="s">"{red}"</span> }
+  - id: nn
+    part: nn_network
+    from: nn
+    hook: seurat_graph_to_nn        <span class="c"># names it kNN.&lt;reduction&gt;, recovers k and distances from FindNeighbors</span>
+
+<span class="e">lossy:</span>
+  - { kind: dropped, path: <span class="s">"assays/{assay}/layers/scale.data"</span>, note: <span class="s">"recomputable; no Giotto slot"</span> }</code></pre>
+  <div class="cols">
+    <div class="panel">
+      <h3>What a mapping can say</h3>
+      <ul>
+        <li><b>applies_to</b>: which objects it is for, by structure.</li>
+        <li><b>params</b>: names found by rule on the profile.</li>
+        <li><b>source_nodes</b>: where data sits and which accessor reads it.</li>
+        <li><b>parts</b>: one per target piece, with ops, a hook, <code>for_each</code> or alternatives.</li>
+        <li><b>lossy</b>: what is dropped, estimated or ambiguous, stated up front.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>What it cannot say</h3>
+      <ul>
+        <li>Arbitrary R code. Ops are a closed list of 10 (select, exclude, rename, transpose, scale, cast, rownames_to_col, set, set_colnames, cast to table).</li>
+        <li>Accessors outside the whitelist (a schema enum).</li>
+        <li>Anything an LLM writes. LLMs only pick among options during repair.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <h2>Why this approach</h2>
+
+  <h3>Maintenance: upstream changes stop breaking conversions</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Change upstream</th><th>Old converters</th><th>Mapping engine</th></tr></thead>
+    <tbody>
+      <tr><td>GiottoClass renames an internal setter</td><td><span class="chip bad">broke</span> GiottoConnect <code>seuratToGiottoV5</code> (<code>set_expression_values</code> removed)</td><td><span class="chip ok">no effect</span> parts are built with exported constructors and <code>setGiotto()</code></td></tr>
+      <tr><td>Seurat 6.0.0 release</td><td>new or patched function per version</td><td><span class="chip ok">0 edits</span> mapping fingerprints unchanged; part results identical to 5.5</td></tr>
+      <tr><td>Seurat v3/v4 <code>Assay</code> objects</td><td>a separate <code>…V4</code> function pair</td><td><span class="chip ok">YAML</span> <code>seurat-assay.yaml</code>, about ten lines different from the v5 mapping</td></tr>
+      <tr><td>Assay, layer or graph renamed</td><td>hard-coded names (<code>"Spatial"</code>, <code>"SCT"</code>, <code>"Xenium"</code>)</td><td><span class="chip ok">params</span> bound by rule on every object (D1, D2, D7)</td></tr>
+      <tr><td>Seurat internals reorganised (e.g. v5 layer names in <code>LogMap</code>s)</td><td>reads raw slots</td><td><span class="chip ok">accessors</span> <code>LayerData</code>, <code>Embeddings</code>, <code>GetTissueCoordinates</code> absorb it</td></tr>
+      <tr><td>Structure changes in a way rules can fix</td><td>silent wrong output or an error</td><td><span class="chip info">detected</span> fingerprint differs; <code>repairMapping()</code> proposes a reviewed patch (D3, D4)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Correctness: every part checked against its source</h3>
+  <p class="prose">Part-by-part comparison against the Seurat source read through its own accessors, on the fixture and the GiottoData Xenium, CosMx and Visium HD crops. Identical under Seurat 5.5 and 6.0.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Part</th><th>Mapping (memory and disk)</th><th>Legacy <code>seuratToGiottoV5</code></th></tr></thead>
+    <tbody>
+      <tr><td>raw and normalized expression, cell metadata, pca, umap</td><td><span class="chip ok">correct</span></td><td><span class="chip ok">correct</span></td></tr>
+      <tr><td>feature metadata</td><td><span class="chip ok">correct</span></td><td><span class="chip bad">wrong</span> holds the cell metadata</td></tr>
+      <tr><td>spatial locations</td><td><span class="chip ok">correct</span> FOV: x, −y · Visium: µm from spot pitch</td><td><span class="chip bad">wrong</span> axes swapped (y, −x)</td></tr>
+      <tr><td>polygons</td><td><span class="chip ok">correct</span> 2 of 1,531 Xenium rings repaired, declared</td><td><span class="chip bad">wrong</span> no cell IDs, cannot be linked</td></tr>
+      <tr><td>nearest-neighbour network</td><td><span class="chip ok">correct</span> kNN, real distances from the FindNeighbors record</td><td><span class="chip bad">wrong</span> typed sNN, self edges, no weights</td></tr>
+      <tr><td><b>Total</b></td><td><b>35 of 35</b></td><td><b>20 of 36</b> (15 wrong)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Two independent checks support this. GiottoDisk's own importers on the same raw folders agree: identical Xenium counts and centroids within 0.55 µm, and identical Visium HD locations on all 386 bins. A Seurat → Giotto → Seurat round trip returns the original counts, metadata, coordinates, polygons, reductions and kNN graph. In the other direction, the legacy <code>giottoToSeuratV5</code> failed on all 7 tested Giotto objects ("Raw count data not found"), including the GiottoData Visium mini; the mapping converted all 7.</p>
+
+  <h3>Transparency: nothing is lost silently</h3>
+  <div class="cols">
+    <div class="panel">
+      <ul>
+        <li><b>Declared losses</b> in the mapping: <span class="e">dropped</span>, <span class="e">estimated</span>, <span class="e">ambiguous</span>, <span class="e">recovered from parameters</span>.</li>
+        <li><b>Recorded losses</b> per conversion, e.g. "<code>Xenium_nn</code> built by <code>FindNeighbors.Xenium.pca</code> on pca; k = 19 neighbours".</li>
+        <li><b>Readback</b> fails on any difference that no loss explains.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <ul>
+        <li><b>Validation</b> flags data the mapping does not read (e.g. Xenium control assays) instead of dropping it quietly.</li>
+        <li><b>Provenance</b> travels with the object: <code>mappingProvenance(g)</code>.</li>
+        <li><b>Readback found real bugs</b>, e.g. kNN networks with NA weights, before any user saw them.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Extensibility: new formats are data, new ecosystems are adapters</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Adding…</th><th>What you write</th><th>Example from this prototype</th></tr></thead>
+    <tbody>
+      <tr><td>a loader that keeps an existing structure</td><td>nothing</td><td>Atera via Seurat 6 <code>LoadAtera</code> → <code>seurat-assay5</code>; standard Visium → <code>seurat-visium</code></td></tr>
+      <tr><td>a new structure in a known ecosystem</td><td>one YAML file, sometimes one hook</td><td><code>seurat-visium-v1</code>, <code>seurat-slideseq</code> (about 80 lines each)</td></tr>
+      <tr><td>a new reduction, layer or extra assay</td><td>nothing (<code>for_each</code>, params)</td><td>an extra <code>tsne</code> or <code>harmony</code> converts automatically</td></tr>
+      <tr><td>the reverse direction</td><td>a target module + one YAML file</td><td><code>giotto-seurat5</code> with a SeuratObject target (196 lines)</td></tr>
+      <tr><td>a new ecosystem</td><td>an adapter + its mapping files</td><td>AnnData next (see <a href="#adapters">Other ecosystems</a>)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Speed and disk</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Dataset</th><th class="num">Mapping, memory (s)</th><th class="num">Mapping, GiottoDisk (s)</th><th class="num">Legacy (s)</th></tr></thead>
+    <tbody>
+      <tr><td>Xenium crop · 1,531 cells × 377 genes</td><td class="num">0.20</td><td class="num">0.35</td><td class="num">7.28</td></tr>
+      <tr><td>CosMx crop · 1,752 cells × 20,378 genes</td><td class="num">0.54</td><td class="num">0.56</td><td class="num">154.20</td></tr>
+      <tr><td>Visium HD crop · 386 bins × 18,132 genes</td><td class="num">0.11</td><td class="num">0.28</td><td class="num">0.37</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">Memory and disk use the same code path: <code>seuratToGiotto(s, source = dir)</code> only attaches a GiottoDisk source, and GiottoClass's backend-aware setters write expression, polygons and networks to disk. Single runs on crops; the full-size and peak-memory benchmark is still to do.</p>
+
+  <h3>The cost</h3>
+  <p class="prose">The engine is larger than any one converter: 2,847 lines of R across profile, schema, mapping choice, engine, validation, readback, repair and the optional LLM step, against about 1,170 lines of legacy Seurat converter code in GiottoConnect's <code>seurat.R</code> (duplicated in GiottoClass). Everything Seurat-specific is now 607 lines of YAML across six mappings, four hooks, a 196-line Seurat target module and two 16-line wrappers. The engine is written once; from the second ecosystem on, each addition is an adapter and YAML rather than another converter of several hundred lines.</p>
+</section>
+
+<section id="seurat">
+  <h2>Seurat today</h2>
+  <div class="cols">
+    <div>
+      <h3>Seurat → Giotto</h3>
+<pre><code><span class="c"># picks the mapping that fits the object, converts, checks</span>
+g  &lt;- <span class="k">seuratToGiotto</span>(s)
+gd &lt;- <span class="k">seuratToGiotto</span>(s, source = <span class="s">"project_dir/"</span>)  <span class="c"># GiottoDisk</span>
+
+<span class="k">mappingProvenance</span>(g)$mapping     <span class="c"># "seurat-assay5"</span>
+<span class="k">mappingProvenance</span>(g)$losses      <span class="c"># declared + recorded</span>
+<span class="k">readbackCheck</span>(s, g)              <span class="c"># PASS: 30 MATCH</span></code></pre>
+    </div>
+    <div>
+      <h3>Giotto → Seurat</h3>
+<pre><code><span class="c"># in-memory or GiottoDisk-backed giotto object</span>
+s2 &lt;- <span class="k">giottoToSeurat</span>(g)
+
+<span class="k">findMapping</span>(<span class="k">profileObject</span>(g))$mapping   <span class="c"># giotto-seurat5</span>
+<span class="k">readbackCheck</span>(g, s2)             <span class="c"># PASS: 27 MATCH</span>
+
+<span class="c"># Seurat -&gt; Giotto -&gt; Seurat returns the original data</span></code></pre>
+    </div>
+  </div>
+  <p class="prose">Both functions are thin wrappers: profile, <code>findMapping()</code>, <code>convertWithMapping()</code>. Version differences are handled by mapping choice, never by function names.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mapping</th><th>Applies to</th><th>Tested on</th></tr></thead>
+    <tbody>
+      <tr><td><code>seurat-assay5</code></td><td>default assay <code>Assay5</code>, FOV image</td><td>Xenium, CosMx crops; Atera (Seurat 6 <code>LoadAtera</code>); fixture; 400,216-cell Xenium object with coordinates in a <code>spatial</code> reduction</td></tr>
+      <tr><td><code>seurat-assay</code></td><td>default assay v3/v4 <code>Assay</code></td><td>v3 fixture; D9</td></tr>
+      <tr><td><code>seurat-visium</code></td><td><code>VisiumV2</code> image (Visium, Visium HD)</td><td>Visium HD crop (µm/px equals Space Ranger's 0.27370); mouse olfactory bulb</td></tr>
+      <tr><td><code>seurat-visium-v1</code></td><td><code>VisiumV1</code> image, v3 or v5 assay</td><td>mouse olfactory bulb loaded as V1; fixtures</td></tr>
+      <tr><td><code>seurat-slideseq</code></td><td><code>SlideSeq</code> image</td><td>fixture built with Seurat's <code>ReadSlideSeq()</code></td></tr>
+      <tr><td><code>giotto-seurat5</code></td><td>giotto object, memory or GiottoDisk</td><td>fixture, crops, GiottoData Visium mini</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>When the object does not match</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Variant</th><th>Change</th><th>Outcome</th><th>Legacy</th></tr></thead>
+    <tbody>
+      <tr><td>D1 · D2 · D7</td><td>assay, layer or graph renamed</td><td><span class="chip ok">params</span> readback PASS</td><td>axes swapped</td></tr>
+      <tr><td>D3</td><td>coordinates moved to <code>meta.data</code>, FOV removed</td><td><span class="chip info">repaired</span> declared alternative; polygons noted absent</td><td><span class="chip bad">error</span></td></tr>
+      <tr><td>D4</td><td>counts stored as a dense matrix</td><td><span class="chip info">repaired</span> cast added</td><td>axes swapped</td></tr>
+      <tr><td>D5</td><td>extra <code>tsne</code> reduction</td><td><span class="chip ok">converted</span> by <code>for_each</code></td><td>axes swapped</td></tr>
+      <tr><td>D6</td><td>coordinates in mm</td><td><span class="chip warn">warns</span> "looks like mm"</td><td>no warning</td></tr>
+      <tr><td>D8</td><td>unused graph removed</td><td><span class="chip ok">no change</span> fingerprint unchanged</td><td>axes swapped</td></tr>
+      <tr><td>D9</td><td>v3 <code>Assay</code> instead of <code>Assay5</code></td><td><span class="chip ok">other mapping</span> <code>seurat-assay</code></td><td>axes swapped</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">A repair produces a new mapping version marked <code>patched-unreviewed</code>; it is accepted only after validation, conversion and a passing readback, and becomes <code>verified</code> only after review.</p>
+
+  <details>
+    <summary>Optional LLM step during repair</summary>
+    <p class="prose">For drift that rules cannot resolve, an LLM may choose among the options the rules found (never write code). Each choice passes the same gate. Measured on five harder cases:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Case</th><th>Baseline (no model)</th><th>qwen3.8:27b (local)</th><th>Claude Haiku 4.5</th></tr></thead>
+      <tbody>
+        <tr><td>L1 counts moved to <code>misc</code></td><td>declines</td><td><span class="chip ok">correct</span></td><td><span class="chip ok">correct</span></td></tr>
+        <tr><td>L2 <code>counts_corrected</code> vs <code>umi_raw</code></td><td>declines</td><td><span class="chip ok">correct</span></td><td><span class="chip ok">correct</span></td></tr>
+        <tr><td>L3 CosMx local vs global coordinates</td><td>declines</td><td><span class="chip bad">wrong, accepted</span></td><td><span class="chip ok">correct</span></td></tr>
+        <tr><td>L4 coordinates in a <code>spatial</code> reduction</td><td colspan="3">solved by a rule (declared alternative)</td></tr>
+        <tr><td>L5 no correct option exists</td><td>refuses</td><td>refuses</td><td>refuses (its pick was rejected by the gate)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="prose">Haiku answers came from Claude Code subagents given the exact prompts and were replayed through the same gate. The L3 result is why patched mappings stay unreviewed until a person accepts them.</p>
+  </details>
+</section>
+
+<section id="adapters">
+  <h2>Other ecosystems through adapters</h2>
+  <p class="prose">The schema, the Giotto contract, parameter binding, ops, validation, readback, repair and provenance do not change per ecosystem. What changes is a small adapter: how to open the input, walk its structure, list names, read a node, and optionally stream large data straight into GiottoDisk.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Adapter supplies</th><th>Seurat <span class="chip ok">done</span></th><th>Giotto <span class="chip ok">done</span></th><th>AnnData <span class="chip info">next</span></th><th>SpatialExperiment</th><th>SpatialData</th></tr></thead>
+    <tbody>
+      <tr><td>open input</td><td>R object</td><td>R object (memory or GiottoDisk)</td><td><code>.h5ad</code> file path (hdf5r, no Python)</td><td>R object</td><td><code>.zarr</code> store</td></tr>
+      <tr><td>profile walker</td><td><code>attributes()</code> walk</td><td><code>attributes()</code> walk</td><td>HDF5 groups and datasets, no data read</td><td><code>attributes()</code> walk; DelayedArray as a leaf</td><td>Zarr groups</td></tr>
+      <tr><td>listing verbs</td><td>Assays, Layers, Images, Boundaries, Graphs</td><td>SpatUnits, FeatTypes, Expressions, DimMethods</td><td>layers, obs/var columns, obsm keys, obsp keys</td><td>assays, colData, reducedDims</td><td>tables, shapes, points</td></tr>
+      <tr><td>accessors (<code>get</code>)</td><td><code>LayerData</code>, <code>Embeddings</code>, <code>GetTissueCoordinates</code></td><td>GiottoClass getters</td><td>h5ad readers (frame, matrix, obsm, obsp)</td><td><code>assay()</code>, <code>colData()</code>, <code>spatialCoords()</code></td><td>zarr readers</td></tr>
+      <tr><td>streaming into GiottoDisk</td><td>in-memory today</td><td>native</td><td><code>GiottoDisk::h5adInput()</code>, <code>h5adEdgeInput()</code></td><td>future matrix input</td><td><code>tenxZarrInput</code>-style</td></tr>
+      <tr><td>target builder (X ← Giotto)</td><td>SeuratObject constructors</td><td>n/a</td><td>h5ad writer</td><td><code>SpatialExperiment()</code></td><td>later</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Sketch: an AnnData mapping</h3>
+  <p class="prose">Illustrative only; names are not final. It shows that the same vocabulary covers a file-based format with a different layout (cells × features, categorical metadata, graphs in <code>obsp</code>).</p>
+<pre><code><span class="k">mapping:</span>
+  <span class="k">id:</span> anndata-spatial
+  <span class="k">source:</span> { ecosystem: anndata, class: h5ad, package: GiottoConnect,
+            applies_to: { predicates: [ { path: <span class="s">"obsm/{coords}"</span>, kind: dense_matrix } ] } }
+
+<span class="k">params:</span>
+  <span class="k">layer_raw:</span> { list: Layers, rule: first_where, where: { role: [integer_valued, nonneg] } }   <span class="c"># X or layers/*</span>
+  <span class="k">coords:</span>    { list: Obsm, rule: first_where, where: { name_matches: <span class="s">"^spatial$"</span> } }
+  <span class="k">graph:</span>     { list: Obsp, rule: name_is, value: distances, optional: true }
+
+<span class="k">source_nodes:</span>
+  <span class="k">counts:</span> { path: <span class="s">"{layer_raw}"</span>,   get: { fn: h5adMatrix } }        <span class="c"># streams via GiottoDisk::h5adInput() on disk</span>
+  <span class="k">obs:</span>    { path: <span class="s">"obs"</span>,           get: { fn: h5adFrame } }         <span class="c"># categoricals decoded, incl. anndata &lt; 0.8</span>
+  <span class="k">locs:</span>   { path: <span class="s">"obsm/{coords}"</span>, get: { fn: h5adObsm } }
+  <span class="k">emb:</span>    { path: <span class="s">"obsm/{red}"</span>,    get: { fn: h5adObsm } }
+  <span class="k">nn:</span>     { path: <span class="s">"obsp/{graph}"</span>,  get: { fn: h5adGraph } }
+
+<span class="k">parts:</span>
+  - { id: expr_raw, part: expression, from: counts,
+      ops: [ { op: transpose } ],                         <span class="c"># cells x genes → genes x cells</span>
+      to: { spat_unit: cell, feat_type: rna, name: raw } }
+  - { id: locs, part: spatial_locs, from: locs,
+      ops: [ { op: cast, to: table }, { op: set_colnames, cols: [sdimx, sdimy] } ],
+      to: { spat_unit: cell, name: raw } }
+  - { id: <span class="s">"dimred_{red}"</span>, part: dim_reduction, from: emb,
+      for_each: { list: Obsm, as: red, where: { name_matches: <span class="s">"^X_"</span> } },
+      to: { spat_unit: cell, feat_type: rna, name: <span class="s">"{red}"</span>, method: <span class="s">"{red}"</span> } }
+  - { id: nn, part: nn_network, from: nn, hook: anndata_graph_to_nn, optional: true,
+      to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: <span class="s">"{graph}"</span> } }</code></pre>
+  <p class="prose">AnnData even improves on Seurat in one place: <code>obsp/distances</code> stores real neighbour distances, so no recovery step is needed. The GiottoDisk h5ad readers merged in PR #97 provide the reading and streaming pieces; the temporary <code>importH5adDisk()</code> layer goes away once <code>anndataToGiotto()</code> runs on the engine.</p>
+</section>
+
+<section id="weak">
+  <h2>Weak points and proposed fixes</h2>
+  <p class="prose">Found while building and testing. The first row should be addressed before AnnData; the rest can follow.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Weak point</th><th>Impact</th><th>Proposal</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Ecosystem knowledge still sits inside the engine: listing paths (<code>.LIST_PATHS</code>), the accessor whitelist (SeuratObject + GiottoClass getters), <code>value_of active.assay</code>, the Seurat target builder</td><td>A third ecosystem would add more special cases to shared code</td><td>Adapter layer as in spec §8: a virtual adapter class with one subclass per ecosystem supplying open, profile, list, get, inputs and target; move Seurat and Giotto onto it first, with readback proving no behaviour change</td><td><span class="chip bad">before AnnData</span></td></tr>
+      <tr><td>Each source has two addresses: a structural <code>path</code> for checks and an accessor <code>get</code> for reading</td><td>They can disagree; the "moved" repair rule only works for path-read nodes; LLM patches fall back to structural reads</td><td>Let the adapter translate a path to an accessor call, so repairs and patches stay accessor-based</td><td><span class="chip warn">with adapters</span></td></tr>
+      <tr><td>Name rules are regular expressions</td><td>Vendor naming (CosMx <code>CenterX_global_px</code>) is missed; the LLM step helps but a local model picked the wrong columns</td><td>Add vendor-specific rules for known conventions; keep human review of patched mappings</td><td><span class="chip warn">soon</span></td></tr>
+      <tr><td>Units and orientation are declared, not checked</td><td>"Assumed micron, y down" is stated, not verified; only a range check catches mm</td><td>Add a <code>units</code> key to spatial parts and compare against vendor metadata (scale factors, pixel size)</td><td><span class="chip warn">soon</span></td></tr>
+      <tr><td><code>for_each</code> iterates one level</td><td>Giotto reductions whose name differs from the method (e.g. <code>pca/custom</code>) are not converted to Seurat</td><td>Allow nested iteration or iteration over full paths</td><td><span class="chip info">later</span></td></tr>
+      <tr><td>Not mapped yet</td><td>Images, transcripts/points, spatial networks, PCA loadings and additional spat_units/feat_types (e.g. Xenium control assays) are reported or declared, not converted</td><td>Add parts per item; <code>for_each</code> over assays for extra feature types</td><td><span class="chip info">later</span></td></tr>
+      <tr><td>Seurat target choices</td><td>The assay is named after the Giotto feat_type; <code>_</code> becomes <code>-</code> in feature names; Giotto sNN weights are not Seurat's Jaccard weights</td><td>Restore the original assay name from provenance when present; keep the others declared</td><td><span class="chip info">later</span></td></tr>
+      <tr><td>Profiler heuristics</td><td>Cell vs feature dimension uses tie-breaks (table depth, then names); placeholder templating uses <code>_</code>/<code>.</code> tokens</td><td>Let adapters state the orientation and object-name params explicitly</td><td><span class="chip warn">with adapters</span></td></tr>
+      <tr><td>Writing large in-memory or BPCells matrices to GiottoDisk</td><td>The current writer builds the full triplet table at once; extra memory grows with matrix size</td><td>Generic chunked matrix inputs in GiottoDisk (in-memory, BPCells, DelayedArray), as a separate GiottoDisk PR</td><td><span class="chip info">later</span></td></tr>
+      <tr><td>Hand-written schema validator</td><td>Supports only the JSON Schema subset in use</td><td>Fine now; revisit if the schema grows much</td><td><span class="chip info">later</span></td></tr>
+      <tr><td>Development-branch pins</td><td>Requires GiottoClass <code>gsource</code> (≥ 0.7.31) and GiottoDisk <code>dev</code></td><td>Drop the pins when those land on the release branches</td><td><span class="chip info">later</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note plain">Outside this design but found on the way, handed off for a separate session: GiottoDisk's Xenium importer drops all-zero genes; its Visium HD importer errors on the crop root; the GiottoData CosMx crop description does not match its files; <code>giottoToSpatialExperiment()</code> calls a removed GiottoClass getter.</div>
+</section>
+
+<section id="next">
+  <h2>Next</h2>
+  <ol class="steps">
+    <li><b>Adapter layer.</b> Move Seurat and Giotto behind the adapter interface without behaviour change; all 322 contract tests and every readback must stay green.</li>
+    <li><b>AnnData adapter and mappings.</b> h5ad profile walker, readers and GiottoDisk streaming; <code>anndataToGiotto()</code> on the engine; test data from the squidpy examples and the 225k-cell seqFISH kidney file.</li>
+    <li><b>SpatialExperiment</b>, then SpatialData, on the same adapter interface.</li>
+    <li><b>Later:</b> generic GiottoDisk matrix inputs for existing R data; removal of the legacy converter duplicates in GiottoClass.</li>
+  </ol>
+</section>
+
+<footer>
+  Sources: <code>docs/contract-prototype/</code> (REPORT.md, phase write-ups, CONTRACT_PROTOTYPE_v2.md), <code>inst/mappings/</code>, <code>R/contract_*.R</code>, and result tables in <code>examples/seurat_comparison/results/</code> (phase2_parts, seurat6_parts, phase2_timing, phase3_readback, phase4_drift, phase5_llm, phase7_reverse).
+</footer>
+</main>
