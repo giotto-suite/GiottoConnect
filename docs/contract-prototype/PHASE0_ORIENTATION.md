@@ -3,20 +3,23 @@
 2026-11-19, branch `contract-prototype` (off `dev_connect`).
 
 **Stack.** Scratch library `rlibs/suite_dev`:
-- GiottoClass 0.7.30 (`gsource` 9122ab7)
-- GiottoDisk 0.0.0.8 (`dev` 99d2c8b)
-- Giotto 4.3.6
+- GiottoUtils 0.2.10 (`dev` aecf998)
+- GiottoClass 0.7.31 (`gsource` 6a86287)
+- Giotto 4.3.6 (`gsource` 611c419)
+- GiottoDisk 0.0.0.8 (`dev` f0f431f)
 - sedonadb 0.5
 
 From the user library: SeuratObject 5.4.0, Seurat 5.5.0, duckdb 1.5.1.
 
 **Probes.** Scripts are in `examples/seurat_comparison/phase0/`.
 
+All branch heads as of 2026-11-19; every probe below was rerun on this stack.
+
 ## 1. Legacy Seurat → Giotto path
 
 | Copy | Function | Lines | Status on GiottoClass 0.7.30 |
 |---|---|---|---|
-| GiottoConnect `R/seurat.R` | `seuratToGiottoV5` | 367 | **Fails**: `could not find function "set_expression_values"` (removed from GiottoClass) |
+| GiottoConnect `R/seurat.R` | `seuratToGiottoV5` | 367 | **Fails**: `could not find function "set_expression_values"` (removed from GiottoClass), on both 0.7.30 and 0.7.31 |
 | GiottoConnect `R/seurat.R` | `giottoToSeuratV5` | 386 | not run |
 | GiottoClass `R/interoperability.R` | `seuratToGiottoV4/V5`, `giottoToSeuratV4/V5`, `.createGiottoPolygonFromSeurat` | (4,359-line file) | V5 runs; it is a different copy from GiottoConnect's |
 
@@ -133,9 +136,9 @@ Results:
 
 ## 7. Environment notes
 
-- GiottoDisk `dev` head (f0f431f) does not install in the scratch library: its
-  `VisiumDiskReader` needs a `VisiumReader` class from a newer Giotto. The installed 99d2c8b
-  covers the Xenium, CosMx and Visium HD importers used here.
+- The scratch library was updated to the branch heads above (installed from `git archive`,
+  with `RemoteSha` recorded). GiottoDisk `dev` needs Giotto `gsource` ≥ 611c419 for
+  `VisiumReader`.
 - A stale `.git/index.lock` (empty, dated Aug 22, no git process running) was removed from
   GiottoConnect to create the branch.
 
