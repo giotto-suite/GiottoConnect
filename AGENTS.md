@@ -23,7 +23,7 @@ next; see `docs/contract-prototype/REEVALUATION_ANNDATA.md`).
 
 | Package | Branch | Required because | Drop the pin when |
 |---|---|---|---|
-| `GiottoClass` | `gsource` | `giotto(source =)` and the backend-aware setters (disk conversion), `objManifest()`, `update_giotto_params(attachments =)`. Floored at `>= 0.7.31`, the version the bundled contract (`inst/contract/`) was generated from. | those are on `dev`. |
+| `GiottoClass` | `gsource` | `giotto(source =)` and the backend-aware setters (disk conversion), `objManifest()`, `update_giotto_params(attachments =)`. Floored at `>= 0.7.31`; `inst/contract/` bundles a contract per supported GiottoClass version (0.7.31, 0.8.0; regenerate with `inst/scripts/regenerate_contract.R`). | those are on `dev`. |
 | `GiottoUtils` | `dev` | Suite convention. | `main` catches up. |
 | `GiottoDisk` (Suggests) | `dev` | `sourceCreate()` / `sourceWrite()` for `seuratToGiotto(source =)`, `h5adInput()` for `anndataToGiotto(source =)`. Needs Giotto `gsource` installed first (`VisiumReader`). | it is released. |
 
