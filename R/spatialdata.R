@@ -385,7 +385,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = "Delaunay_network",
                         method = "delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 } else {
@@ -394,7 +394,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
                         network = network_DT,
                         name = net_name,
                         method = "non-delaunay",
-                        networkDT_before_filter = network_DT,
+                        unfiltered = network_DT,
                         cellShapeObj = cellShapeObj
                     )
                 }
@@ -622,143 +622,4 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
         )
     }
     return(gobject)
-}
-
-
-
-##  Giotto to SpatialData####
-
-#' @title Convert Giotto to SpatialData
-#' @name giottoToSpatialData
-#' @description Converts a Giotto object to SpatialData object
-#'
-#' @param gobject giotto object to be converted
-#' @param spat_unit spatial unit which will be used in conversion
-#' @param feat_type feature type which will be used in conversion
-#' @param spot_radius radius of the spots
-#' @param python_path path to python executable within a conda/miniconda
-#' environment
-#' @param env_name name of environment containing python_path executable
-#' @param save_directory directory in which the SpatialData object will be saved
-#'
-#' @return SpatialData object saved on disk.
-#' @details Function in beta. Converts and saves a Giotto object in SpatialData
-#' format on disk.
-#' @export
-giottoToSpatialData <- function(
-        gobject = NULL,
-        spat_unit = NULL,
-        feat_type = NULL,
-        spot_radius = NULL,
-        python_path = NULL,
-        env_name = NULL,
-        save_directory = NULL) {
-    # Initialize reticulate
-    instrs <- createGiottoInstructions(python_path = python_path)
-
-    if (dir.exists(save_directory)) {
-        stop("save_directory must be a non-existing directory")
-    }
-
-    # Check spatialdata dependencies
-    package_check(
-        pkg_name = "spatialdata",
-        repository = "pip:spatialdata"
-    )
-
-    # Import sd2g, a python module for parsing SpatialData
-    g2sd_path <- system.file("python", "g2sd.py", package = "GiottoConnect")
-    reticulate::source_python(g2sd_path)
-
-    spat_unit <- spat_unit %null% spatUnit(gobject)
-    feat_type <- feat_type %null% featType(gobject)
-
-    for (su in spat_unit) {
-        wrap_msg("Spatial unit(s)", su, "will be used in conversion.")
-    }
-    for (ft in feat_type) {
-        wrap_msg("Feature type(s)", ft, "will be used in conversion.")
-    }
-
-    # Create a temporary folder to hold anndata
-    temp <- "temp_conversion_files/"
-    # Delete temporary files and folders when done
-    on.exit(
-        {
-            if (dir.exists(temp)) unlink(temp, recursive = TRUE)
-        },
-        add = TRUE
-    )
-
-
-    # First, convert Giotto object to AnnData using an existing function
-    giottoToAnnData(
-        gobject = gobject,
-        spat_unit = spat_unit,
-        feat_type = feat_type,
-        python_path = python_path,
-        env_name = env_name,
-        save_directory = temp
-    )
-
-    # Extract GiottoImage only if an image exists
-    images_exist <- NULL
-    if (length(slot(gobject, "images")) > 0) {
-        images_exist <- TRUE
-        gimg_list <- slot(gobject, "images")
-        for (i in seq_along(gimg_list)) {
-            img_name <- slot(gimg_list[[i]], "name")
-            writeGiottoLargeImage(
-                giottoLargeImage = gimg_list[[i]],
-                gobject = gobject,
-                largeImage_name = img_name,
-                filename = paste0(temp, img_name, ".png"),
-                dataType = NULL,
-                max_intensity = NULL,
-                overwrite = TRUE,
-                verbose = TRUE
-            )
-        }
-    }
-
-    # Extract polygons
-    if (!is.null(list_spatial_info(gobject))) {
-        dir.create(paste0(temp, "shapes"))
-        for (su in spat_unit) {
-            gpoly <- getPolygonInfo(gobject, polygon_name = su)
-            gpoly_sf <- as.sf(gpoly)
-            sf::st_write(gpoly_sf, paste0(temp, "shapes/", su, ".geojson"),
-                delete_dsn = TRUE
-            )
-        }
-    }
-
-    # Extract points
-    if (!is.null(list_feature_info(gobject))) {
-        dir.create(paste0(temp, "points"))
-        for (ft in feat_type) {
-            gpoint <- getFeatureInfo(gobject, feat_type = ft)
-            gpoint_dt <- as.data.table(gpoint, geom = "XY")
-            fwrite(gpoint_dt, paste0(temp, "points/", ft, ".csv"),
-                sep = ",", row.names = FALSE
-            )
-        }
-    }
-
-    # Create SpatialData object
-    createSpatialData(temp, save_directory, images_exist)
-
-    # copy over giotto metadata
-    dir.create(file.path(save_directory, "giotto_meta"))
-    file.copy(
-        from = file.path(temp, "giotto_meta"),
-        to = save_directory,
-        recursive = TRUE
-    )
-
-    # Successful Conversion
-    cat(
-        "Giotto object has been converted and saved to SpatialData object at: ",
-        save_directory, "\n"
-    )
 }

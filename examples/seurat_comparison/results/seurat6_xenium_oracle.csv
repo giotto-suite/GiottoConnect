@@ -1,0 +1,7 @@
+"check","giottodisk_import","seuratToGiotto","agreement"
+"cells","1531","1531","1531 shared"
+"features","376","377","376 shared; only import: ; only Seurat: TCL1A"
+"raw counts on shared cells x genes","","","identical"
+"locs max |dx|","","","0.283"
+"locs max |dy|","","","0.554"
+"polygons","1531","1531",""

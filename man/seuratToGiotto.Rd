@@ -2,31 +2,47 @@
 % Please edit documentation in R/seurat.R
 \name{seuratToGiotto}
 \alias{seuratToGiotto}
-\title{Deprecated}
+\title{Convert a Seurat object to a Giotto object}
 \usage{
-seuratToGiotto(
-  sobject,
-  spatial_assay = "Spatial",
-  dim_reduction = c("pca", "umap"),
-  subcellular_assay = "Vizgen"
-)
+seuratToGiotto(sobject, mapping = NULL, source = NULL, verbose = FALSE)
 }
 \arguments{
-\item{sobject}{Input Seurat object to convert to Giotto object}
+\item{sobject}{Seurat object}
 
-\item{spatial_assay}{Specify name of the spatial assay slot in Seurat.
-Default is \code{"Spatial"}.}
+\item{mapping}{optional \code{giottoMapping}, mapping file or bundled mapping id.
+By default the bundled mapping that applies to \code{sobject} is used.}
 
-\item{dim_reduction}{Specify which dimensional reduction computations to
-fetch from}
+\item{source}{\code{NULL} for an in-memory giotto object, or a directory for a
+GiottoDisk-backed object}
 
-\item{subcellular_assay}{Specify name of the subcellular assay in input
-object. Default is \code{"Vizgen"}.}
+\item{verbose}{logical}
 }
 \value{
-giotto object
+giotto object; see \code{\link[=mappingProvenance]{mappingProvenance()}} for what was converted
+and which losses apply
 }
 \description{
-Deprecated. Please use either \link{seuratToGiottoV4} or
-\link{seuratToGiottoV5}
+Convert a Seurat object with the mapping that fits its
+structure. The object is profiled, the matching mapping is selected from
+those bundled with GiottoConnect (or the one given), and the conversion runs
+through \code{\link[=convertWithMapping]{convertWithMapping()}}. Object versions are handled by choosing a
+mapping, not by separate functions.
+}
+\examples{
+if (requireNamespace("SeuratObject", quietly = TRUE)) {
+    set.seed(1)
+    counts <- Matrix::rsparsematrix(20, 30, density = 0.3,
+        rand.x = function(n) stats::rpois(n, 5) + 1)
+    dimnames(counts) <- list(paste0("gene", 1:20), paste0("cell", 1:30))
+    s <- SeuratObject::CreateSeuratObject(counts)
+    # coordinates kept as metadata columns are found as well
+    s$x <- stats::runif(30, 0, 500)
+    s$y <- stats::runif(30, 0, 500)
+    g <- seuratToGiotto(s)
+    g
+    mappingProvenance(g)$losses
+}
+}
+\seealso{
+\code{\link[=findMapping]{findMapping()}}, \code{\link[=convertWithMapping]{convertWithMapping()}}, \code{\link[=validateMapping]{validateMapping()}}
 }

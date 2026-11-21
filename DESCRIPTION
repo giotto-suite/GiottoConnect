@@ -4,39 +4,40 @@ Title: Giotto Interoperability and External Tool Connections
 Version: 0.1.0
 Authors@R: person("Giotto Suite Team", role = c("aut", "cre"),
     email = "giottosuite@gmail.com")
-Description: A hub for Giotto interoperability functions and connections to
-    external single-cell, spatial, and visualization frameworks. Bundles
-    conversions between Giotto and Seurat, SingleCellExperiment,
-    SpatialExperiment, AnnData, SpatialData, Bento, and Stereo-seq GEF, plus
-    a Vitessce viewer pipeline that converts a Giotto spatial single-cell
-    object into a static Vitessce-powered website deployable via GitHub Pages.
+Description: Interoperability between Giotto and other single-cell and
+    spatial ecosystems. Seurat objects and AnnData (.h5ad) files are converted
+    to Giotto through declarative mappings chosen by the object's structure,
+    in memory or onto a GiottoDisk project; further conversions cover
+    SpatialData, Bento and Stereo-seq GEF.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
-    GiottoClass (>= 0.3.0),
-    GiottoUtils (>= 0.2.5),
+    GiottoClass (>= 0.7.31),
+    GiottoUtils (>= 0.2.10),
     reticulate (>= 1.35.0),
     data.table (>= 1.14.0),
     Matrix,
     methods,
     igraph,
     jsonlite (>= 1.8.0),
-    checkmate (>= 2.3.0)
+    checkmate (>= 2.3.0),
+    digest,
+    yaml
 Suggests:
     GiottoData,
+    GiottoDisk,
+    hdf5r,
+    httr2,
     rhdf5,
     Seurat,
     SeuratObject,
-    SingleCellExperiment,
-    SpatialExperiment,
-    SummarizedExperiment,
-    S4Vectors,
-    magick,
     sf,
+    terra,
     testthat (>= 3.0.0)
 Remotes:
-    drieslab/GiottoClass,
-    drieslab/GiottoUtils
+    giotto-suite/GiottoUtils@dev,
+    giotto-suite/GiottoClass@gsource,
+    giotto-suite/GiottoDisk@dev
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

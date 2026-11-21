@@ -1,0 +1,60 @@
+<giottoMapping> seurat-assay5 v0.1.0 [verified]
+  source: seurat Seurat (SeuratObject), built with 5.4.0
+  target: giotto contract 0.7.31
+  params: assay, layer_raw, layer_norm, fov, centroids, segmentation, nn_graph
+  parts : expr_raw (expression), expr_normalized (expression), cell_meta (cell_metadata), feat_meta (feat_metadata), locs (spatial_locs), polygons (spatial_info), pca (dim_reduction), umap (dim_reduction), nn (nn_network)
+  declared losses: 7
+
+Parts:
+ id              part          from         via                optional to                                                   
+ expr_raw        expression    counts                          FALSE    spat_unit=cell feat_type=rna name=raw                
+ expr_normalized expression    normalized                       TRUE    spat_unit=cell feat_type=rna name=normalized         
+ cell_meta       cell_metadata cell_meta    rownames_to_col    FALSE    spat_unit=cell feat_type=rna                         
+ feat_meta       feat_metadata feat_meta    rownames_to_col    FALSE    spat_unit=cell feat_type=rna                         
+ locs            spatial_locs  centroids    rename,scale        TRUE    spat_unit=cell name=raw                              
+ polygons        spatial_info  segmentation rename,scale        TRUE    name=cell                                            
+ pca             dim_reduction pca                              TRUE    spat_unit=cell feat_type=rna name=pca method=pca     
+ umap            dim_reduction umap                             TRUE    spat_unit=cell feat_type=rna name=umap method=umap   
+ nn              nn_network    nn           seurat_graph_to_nn  TRUE    spat_unit=cell feat_type=rna nn_type=kNN name=kNN.pca
+
+Declared losses:
+ part_id   kind      what                             note                                                                        
+ locs      estimated units                            FOV coordinates carry no unit; assumed micron                               
+ polygons  estimated geometry                         invalid source rings are repaired (make_valid); their vertices can move     
+ nn        dropped   distance                         Seurat graphs store adjacency only; edge distances are NA                   
+ nn        ambiguous name                             the reduction the graph was built on is not recorded; assumed pca           
+ (mapping) dropped   assays/{assay}/layers/scale.data recomputable from normalized values; no Giotto slot                         
+ (mapping) dropped   reductions/pca/feature.loadings  loadings and stdev are not carried over yet                                 
+ (mapping) dropped   graphs/{assay}_snn               only the kNN graph is mapped; sNN can be rebuilt with createNearestNetwork()
+
+                hook packages available                                                                 description
+1 seurat_graph_to_nn   Matrix      TRUE Seurat Graph (sparse adjacency) -> nearest-neighbour edge table; recovers k
+
+Xenium crop: findMapping -> match 
+<giottoValidation> 7 OK, 6 WARN, 0 FAIL
+ level check    part_id message                                                                               
+ OK    param            assay = 'Xenium'                                                                      
+ OK    param            layer_raw = 'counts'                                                                  
+ OK    param            layer_norm = 'data'                                                                   
+ OK    param            fov = 'fov'                                                                           
+ OK    param            centroids = 'centroids'                                                               
+ OK    param            segmentation = 'segmentations'                                                        
+ OK    param            nn_graph = 'Xenium_nn'                                                                
+ WARN  unmapped         assays/BlankCodeword/counts (dgCMatrix 103x1531) is neither mapped nor declared lossy 
+ WARN  unmapped         assays/BlankCodeword/data (dgCMatrix 103x1531) is neither mapped nor declared lossy   
+ WARN  unmapped         assays/ControlCodeword/counts (dgCMatrix 41x1531) is neither mapped nor declared lossy
+ WARN  unmapped         assays/ControlCodeword/data (dgCMatrix 41x1531) is neither mapped nor declared lossy  
+ WARN  unmapped         assays/ControlProbe/counts (dgCMatrix 20x1531) is neither mapped nor declared lossy   
+ WARN  unmapped         assays/ControlProbe/data (dgCMatrix 20x1531) is neither mapped nor declared lossy     
+<giottoValidation> 10 OK, 0 WARN, 0 FAIL
+ level check         part_id      message                                                                
+ OK    raw_counts                 raw expression is integer-valued, is non-negative (sampled 3986 values)
+ OK    dims                       1531 cells in giotto, 1531 in source                                   
+ OK    dims                       377 features in giotto, 377 in source                                  
+ OK    cell_ids      metadata     100.0% of expression cells found in metadata                           
+ OK    cell_ids      spatial_locs 100.0% of expression cells found in spatial_locs                       
+ OK    cell_ids      polygons     100.0% of expression cells found in polygons                           
+ OK    coord_units   locs         coordinate range 424: plausible for micron                             
+ OK    dim_reduction pca          1531 rows for 1531 cells                                               
+ OK    dim_reduction umap         1531 rows for 1531 cells                                               
+ OK    nn_network    kNN.pca      29089 edges over 1531 nodes, all cells: TRUE                           

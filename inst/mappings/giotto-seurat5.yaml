@@ -1,0 +1,127 @@
+# Giotto (in memory or GiottoDisk-backed) -> Seurat v5 (Assay5 + FOV).
+# Reads the active spat_unit / feat_type through GiottoClass getters.
+# Coordinates go back to Seurat's image orientation: x = sdimx, y = -sdimy.
+mapping:
+  id: giotto-seurat5
+  version: 0.1.0
+  status: verified
+  built: "2026-11-20"
+  schema_version: 0.1.0
+  source:
+    ecosystem: giotto
+    class: giotto
+    package: GiottoClass
+    built_with: "0.7.31"
+    applies_to:
+      package_version: ">= 0.7.0"
+      predicates:
+        - { path: "expression/{spat_unit}/{feat_type}/{expr_raw}", class: exprObj }
+  target: { contract: seurat, version: "5.4.0" }
+  fingerprint: "9213d18abbc4d6bd"
+  fixtures: [giotto_fixture_small]
+  history: []
+
+params:
+  spat_unit: { list: SpatUnits, rule: value_of, path: instructions/active_spat_unit }
+  feat_type: { list: FeatTypes, on: "{spat_unit}", rule: value_of, path: instructions/active_feat_type }
+  expr_raw:  { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: raw }
+  expr_norm: { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: normalized, optional: true }
+  locs:      { list: SpatLocs, on: "{spat_unit}", rule: first, optional: true }
+  poly:      { list: Polygons, rule: name_is, value: "{spat_unit}", optional: true }
+  knn:       { list: NNNames, on: "{spat_unit}/{feat_type}/kNN", rule: first, optional: true }
+  snn:       { list: NNNames, on: "{spat_unit}/{feat_type}/sNN", rule: first, optional: true }
+
+source_nodes:
+  counts:     { path: "expression/{spat_unit}/{feat_type}/{expr_raw}",
+                get: { fn: getExpression, args: { values: "{expr_raw}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
+  normalized: { path: "expression/{spat_unit}/{feat_type}/{expr_norm}",
+                get: { fn: getExpression, args: { values: "{expr_norm}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
+  cell_meta:  { path: "cell_metadata/{spat_unit}/{feat_type}",
+                get: { fn: getCellMetadata, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: data.table } } }
+  feat_meta:  { path: "feat_metadata/{spat_unit}/{feat_type}",
+                get: { fn: getFeatureMetadata, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: data.table } } }
+  centroids:  { path: "spatial_locs/{spat_unit}/{locs}",
+                get: { fn: getSpatialLocations, args: { spat_unit: "{spat_unit}", name: "{locs}", output: data.table } } }
+  polygons:   { path: "spatial_info/{poly}",
+                get: { fn: getPolygonInfo, args: { name: "{poly}", return_giottoPolygon: true } } }
+  reduction:  { path: "dimension_reduction/cells/{spat_unit}/{feat_type}/{red}/{red}",
+                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red}", name: "{red}", output: matrix } } }
+  knn_net:    { path: "nn_network/{spat_unit}/{feat_type}/kNN/{knn}",
+                get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: kNN, name: "{knn}", output: data.table } } }
+  snn_net:    { path: "nn_network/{spat_unit}/{feat_type}/sNN/{snn}",
+                get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: sNN, name: "{snn}", output: data.table } } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    ops:
+      - { op: cast, to: sparse }
+    to: { assay: "{feat_type}", layer: counts }
+    lossy:
+      - { kind: estimated, field: assay, note: "Seurat assay is named after the Giotto feat_type" }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    ops:
+      - { op: cast, to: sparse }
+    to: { assay: "{feat_type}", layer: data }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    to: {}
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    to: { assay: "{feat_type}" }
+
+  - id: locs
+    part: spatial_locs
+    from: centroids
+    optional: true
+    ops:
+      - { op: rename, map: { sdimx: x, sdimy: y, cell_ID: cell } }
+      - { op: scale, factor: -1, cols: [y] }
+    to: { fov: fov, boundary: centroids }
+
+  - id: polygons
+    part: spatial_info
+    from: polygons
+    hook: giotto_polygons_to_vertices
+    optional: true
+    ops:
+      - { op: scale, factor: -1, cols: [y] }
+    to: { fov: fov, boundary: segmentation }
+    lossy:
+      - { kind: dropped, field: geometry, note: "only the outer ring of the first part of each polygon is kept (Seurat segmentations have no holes)" }
+
+  - id: "dimred_{red}"
+    part: dim_reduction
+    from: reduction
+    for_each: { list: DimMethods, on: "{spat_unit}/{feat_type}", as: red }
+    to: { reduction: "{red}", key: "{red}_" }
+    lossy:
+      - { kind: dropped, path: "dimension_reduction/cells/{spat_unit}/{feat_type}/{red}/{red}/misc", note: "loadings and eigenvalues are not carried over yet" }
+
+  - id: knn
+    part: nn_network
+    from: knn_net
+    hook: giotto_nn_to_graph
+    optional: true
+    to: { graph: "{feat_type}_nn" }
+
+  - id: snn
+    part: nn_network
+    from: snn_net
+    hook: giotto_nn_to_graph
+    optional: true
+    to: { graph: "{feat_type}_snn" }
+
+lossy:
+  - { kind: dropped, path: "images", note: "images are not carried over yet" }
+  - { kind: dropped, path: "spatial_network", note: "spatial networks have no Seurat slot" }
+  - { kind: dropped, path: "feat_info", note: "transcript points are not carried over yet" }

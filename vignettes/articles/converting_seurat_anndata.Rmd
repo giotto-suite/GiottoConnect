@@ -1,0 +1,183 @@
+---
+title: "Converting Seurat and AnnData objects to Giotto"
+output:
+    html_document:
+        toc: true
+        toc_depth: 2
+        number_sections: false
+vignette: >
+    %\VignetteIndexEntry{Converting Seurat and AnnData objects to Giotto}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE)
+options(giotto.has_conda = FALSE, giotto.use_conda = FALSE, giotto.no_python_warn = TRUE)
+```
+
+GiottoConnect converts Seurat objects and AnnData (`.h5ad`) files into Giotto
+objects with two functions:
+
+- `seuratToGiotto(sobject)`
+- `anndataToGiotto("file.h5ad")`
+
+Both work the same way. They look at the structure of the input, pick the
+bundled *mapping* that fits it (for example "Seurat v5 with an FOV image" or
+"scanpy/squidpy AnnData") and build the Giotto object from that mapping. Add
+`source = "<directory>"` to get a Giotto object backed by a GiottoDisk project
+instead of an in-memory one.
+
+```{r}
+library(GiottoConnect)
+```
+
+## Seurat to Giotto
+
+As an example we load the small Xenium lung crop from GiottoData with Seurat's
+own Xenium loader, and run the usual Seurat steps.
+
+```{r seurat-load, results = "hide", warning = FALSE}
+library(Seurat)
+
+xenium_dir <- GiottoData::getSpatialDataset("xenium_mini_lung_ffpe")
+s <- LoadXenium(xenium_dir, fov = "fov", segmentations = "cell")
+s <- NormalizeData(s) |>
+    FindVariableFeatures() |>
+    ScaleData() |>
+    RunPCA(npcs = 20) |>
+    FindNeighbors(dims = 1:20) |>
+    RunUMAP(dims = 1:20)
+```
+
+Convert it:
+
+```{r seurat-convert}
+g <- seuratToGiotto(s)
+g
+```
+
+The Giotto object holds:
+
+- the counts and normalized values;
+- the control assays as their own feature types, named as Giotto's Xenium reader
+  names them (`NegControlProbe`, `NegControlCodeword`, `UnassignedCodeword`);
+- cell and feature metadata;
+- cell centroids and segmentation polygons;
+- the transcripts;
+- PCA (with loadings) and UMAP;
+- the kNN network `FindNeighbors()` built (as `kNN.pca`).
+
+```{r seurat-parts}
+GiottoClass::list_feature_info(g)
+```
+
+### On disk
+
+With `source`, the same conversion writes expression, polygons, transcripts and
+networks into a GiottoDisk project:
+
+```{r seurat-disk}
+project <- file.path(tempdir(), "xenium_from_seurat")
+g_disk <- seuratToGiotto(s, source = project)
+```
+
+## AnnData to Giotto
+
+`.h5ad` files are read directly from disk (with hdf5r); no python is needed.
+GiottoConnect ships a small scanpy-style file to try:
+
+```{r anndata-convert}
+h5ad <- system.file("extdata", "mini_scanpy.h5ad", package = "GiottoConnect")
+g2 <- anndataToGiotto(h5ad)
+g2
+```
+
+From a typical scanpy/squidpy file the conversion takes:
+
+| AnnData | Giotto |
+|---|---|
+| first integer matrix in `X`, `layers/*` or `raw/X` | raw expression |
+| `X`, when it is not integer counts | normalized expression |
+| `obs` / `var` (or `raw/var` for `raw/X` counts) | cell / feature metadata |
+| `obsm/spatial` (or `X_spatial`, or `obs` x/y columns) | spatial locations |
+| `obsm/X_*` | dimension reductions (`X_pca` with its loadings) |
+| `obsp/distances` + `uns/neighbors` | kNN network (named from the space it was built in) |
+| `obsp/spatial_connectivities` (squidpy) | spatial network |
+| `var/feature_types` categories | one feature type per category |
+
+For a large file, convert onto disk; the expression matrices are then streamed
+from the file instead of being loaded into memory:
+
+```{r anndata-disk}
+g2_disk <- anndataToGiotto(h5ad, source = file.path(tempdir(), "from_h5ad"))
+```
+
+## Checking a conversion
+
+Every converted object records what was done. `mappingProvenance()` shows the
+mapping used, what each parameter was bound to, and what could not be carried
+over, or was only estimated:
+
+```{r provenance}
+prov <- mappingProvenance(g)
+prov$mapping
+prov$losses[, c("part_id", "kind", "field", "note")]
+```
+
+`readbackCheck()` reads the source again and compares it with the Giotto object,
+part by part. `MATCH` means identical, `DECLARED` a difference the mapping
+announces (for example a unit that had to be assumed). `UNDECLARED` would mean a
+real problem:
+
+```{r readback}
+rb <- readbackCheck(s, g)
+table(rb$status)
+rb[rb$status != "MATCH", ]
+```
+
+<details>
+<summary>How a mapping is chosen</summary>
+
+`findMapping()` profiles the object and lists every bundled mapping with its
+status:
+
+```{r find}
+f <- findMapping(profileObject(s), ecosystem = "seurat")
+f$candidates
+```
+
+Mappings are chosen by structure (an Assay5 with an FOV image, a Visium image,
+a scanpy file), not by package version. When a part is stored somewhere else
+than usual (for example coordinates in `meta.data` instead of an FOV), the
+mapping's declared fallback is used, and `mappingProvenance()$alternatives`
+says so. A mapping can also be passed explicitly: `seuratToGiotto(s, mapping =
+"seurat-visium")`.
+
+</details>
+
+<details>
+<summary>Coordinates and units</summary>
+
+Giotto uses `sdimx = x` and `sdimy = -y` for image-space coordinates (y pointing
+down), so converted locations, polygons and transcripts are flipped in y.
+
+- **Visium:** spot positions are converted from pixels to microns with the
+  100 µm spot pitch (Visium HD: the bin size).
+- **Others:** coordinates are taken as stored. Their unit is recorded as
+  *estimated*, and the conversion warns when the coordinate range does not look
+  like microns, for example scaled to [0, 1].
+
+</details>
+
+<details>
+<summary>What is not converted yet</summary>
+
+- Several samples or FOVs in one object: only the first FOV/image is used.
+- Images and Visium scale factors.
+- Seurat SCT assays.
+
+Data that is present but not converted is reported as a warning when the
+conversion runs, and declared losses are listed in `mappingProvenance()`.
+
+</details>

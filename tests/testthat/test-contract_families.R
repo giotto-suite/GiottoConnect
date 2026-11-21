@@ -1,0 +1,117 @@
+fixtures_env <- local({
+    cache <- NULL
+    function() {
+        if (is.null(cache)) {
+            cache <<- new.env()
+            sys.source(contract_script("build_fixtures.R"), envir = cache)
+        }
+        cache
+    }
+})
+
+convert_and_check <- function(x, expect_id) {
+    f <- findMapping(profileObject(x), ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, expect_id)
+    expect_equal(f$status, "match")
+    g <- seuratToGiotto(x)
+    expect_true(attr(readbackCheck(x, g), "pass"))
+    g
+}
+
+test_that("VisiumV1 objects convert, with v3 and v5 assays", {
+    skip_if_not_installed("Seurat")
+    env <- fixtures_env()
+    for (cls in c("Assay", "Assay5")) {
+        x <- env$build_seurat_visium_v1_fixture(assay_class = cls, um_per_px = 0.885)
+        g <- convert_and_check(x, "seurat-visium-v1")
+        sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
+        # neighbouring spots within a row are one 100 um pitch apart
+        row1 <- sl[abs(sl$sdimy - max(sl$sdimy)) < 1e-6, ]
+        expect_equal(unique(round(diff(sort(row1$sdimx)), 6)), 100)
+        l <- mappingProvenance(g)$losses
+        expect_match(l$note[l$part_id == "locs" & l$field == "units"], "100 um spot pitch")
+    }
+})
+
+test_that("Slide-seq objects convert", {
+    skip_if_not_installed("Seurat")
+    x <- fixtures_env()$build_seurat_slideseq_fixture()
+    g <- convert_and_check(x, "seurat-slideseq")
+    sl <- GiottoClass::getSpatialLocations(g, output = "data.table")
+    ct <- SeuratObject::GetTissueCoordinates(x[["puck"]])
+    sl <- sl[match(ct$cells, sl$cell_ID), ]
+    expect_equal(sl$sdimx, ct$x)
+    expect_equal(sl$sdimy, -ct$y)
+    expect_setequal(names(sl), c("sdimx", "sdimy", "cell_ID"))
+})
+
+test_that("the family mapping wins over the generic one", {
+    skip_if_not_installed("Seurat")
+    x <- fixtures_env()$build_seurat_visium_v1_fixture()
+    x@reductions <- list()
+    x@graphs <- list()
+    f <- findMapping(profileObject(x), ecosystem = "seurat")
+    expect_equal(f$mapping$mapping$id, "seurat-visium-v1")
+    # the generic mapping applies too, but reads less of the object
+    cand <- f$candidates
+    expect_true("seurat-assay" %in% cand$id[cand$status != "none"])
+    expect_lt(cand$coverage[cand$id == "seurat-assay"], cand$coverage[cand$id == "seurat-visium-v1"])
+    g <- seuratToGiotto(x)
+    expect_true("nn" %in% mappingProvenance(g)$absent)
+})
+
+test_that("Atera objects (Seurat 6 LoadAtera) use the FOV mapping", {
+    f <- path.expand("~/Documents/Datasets/giottoconnect_cache/seurat6/seurat_atera_tiny.rds")
+    skip_if_not(file.exists(f), "tiny Atera Seurat object not cached")
+    skip_if_not_installed("SeuratObject")
+    x <- readRDS(f)
+    m <- findMapping(profileObject(x), ecosystem = "seurat")$mapping
+    expect_equal(m$mapping$id, "seurat-assay5")
+    g <- suppressWarnings(seuratToGiotto(x))
+    expect_true(attr(readbackCheck(x, g), "pass"))
+})
+
+test_that("every other assay becomes its own feature type", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    cells <- colnames(s)
+    m <- function(prefix, n) {
+        x <- matrix(stats::rpois(n * length(cells), 1), n, length(cells),
+            dimnames = list(sprintf("%s%02d", prefix, seq_len(n)), cells))
+        methods::as(x, "CsparseMatrix")
+    }
+    s[["ControlProbe"]] <- SO$CreateAssay5Object(counts = m("NegProbe", 4))
+    s[["ADT"]] <- SO$CreateAssayObject(counts = m("CD", 3))
+    g <- seuratToGiotto(s)
+    ex <- GiottoClass::list_expression(g)
+    expect_setequal(unique(ex$feat_type), c("rna", "NegControlProbe", "protein"))
+    expect_setequal(ex$name[ex$feat_type == "protein"], c("raw", "normalized"))
+    adt <- GiottoClass::getExpression(g, feat_type = "protein", values = "raw", output = "matrix")
+    want <- SO$LayerData(s, assay = "ADT", layer = "counts")
+    expect_equal(as.matrix(adt), as.matrix(want)[rownames(adt), colnames(adt)])
+    expect_setequal(GiottoClass::fDataDT(g, feat_type = "NegControlProbe")$feat_ID, sprintf("NegProbe%02d", 1:4))
+    expect_true(attr(readbackCheck(s, g), "pass"))
+})
+
+test_that("FOV molecules become points, controls split by feature type", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    set.seed(3)
+    genes <- c(rownames(s)[1:5], "NegControlProbe_00001")
+    mol <- data.frame(x = stats::runif(60, 0, 2000), y = stats::runif(60, 0, 2000),
+        gene = rep(genes, each = 10))
+    fov <- s[["fov"]]
+    fov@molecules <- list(molecules = SO$CreateMolecules(mol))
+    s[["fov"]] <- fov
+    g <- seuratToGiotto(s)
+    expect_setequal(GiottoClass::list_feature_info(g)$feat_info, c("rna", "NegControlProbe"))
+    np <- GiottoClass::getFeatureInfo(g, feat_type = "NegControlProbe", return_giottoPoints = TRUE)
+    expect_equal(np[]$feat_ID, rep("NegControlProbe-00001", 10))
+    rp <- GiottoClass::getFeatureInfo(g, feat_type = "rna", return_giottoPoints = TRUE)
+    xy <- terra::crds(rp[])
+    want <- mol[mol$gene != "NegControlProbe_00001", ]
+    expect_equal(sort(xy[, 2]), sort(-want$y))
+    expect_true(attr(readbackCheck(s, g), "pass"))
+})

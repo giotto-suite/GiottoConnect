@@ -1,2 +1,7 @@
 ^\.claude$
 ^CLAUDE\.md$
+^docs$
+^examples$
+^AGENTS\.md$
+^LICENSE\.md$
+^vignettes/articles$
