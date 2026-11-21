@@ -23,6 +23,9 @@
   `giottoToSeuratV5()` (use `seuratToGiotto()` / `giottoToSeurat()`).
 - `giottoToAnnData()` and `giottoToSpatialData()`; `anndataToGiotto()` no longer
   needs python.
+- `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` (GiottoClass
+  exports working versions; an engine-based SpatialExperiment converter is
+  planned).
 - The Vitessce site pipeline (`export_giotto_to_zarr()`, `create_vitessce_config()`,
   `scaffold_vitessce_site()`, `giotto_to_vitessce_site()`,
   `setup_giotto_connect_env()`).

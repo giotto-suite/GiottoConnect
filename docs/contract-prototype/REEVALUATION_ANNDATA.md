@@ -139,3 +139,23 @@ the baseline on 17/17 objects**. Tests: 416 run. All contract tests pass. The
   of GiottoDisk's removed loader. slideseqv2: 125,307 edges.
 - Seurat has no standard spatial network.
 
+## Next: SpatialExperiment (design note, not built)
+- **Bioconductor has one stable `SpatialExperiment` class** (Bioc 3.12 onward, 1.22.0
+  in 2025), with no v3/v5-style versions.
+  - Changes so far: the `spatialData`/`spatialCoordsNames` slots were dropped (2021),
+    and `read10xVisium()` was deprecated for VisiumIO (2024).
+  - Extensions: `SpatialFeatureExperiment` (an SPE subclass with sf `colGeometries`,
+    `annotGeometries`, `spatialGraphs` and rasters) and `MoleculeExperiment`
+    (transcripts and boundaries, convertible to SPE).
+  - The OSTA book (Bioconductor, 2025) builds on SPE, with SFE for geometry.
+- **What varies is the layout each reader produces:**
+  - SpatialExperimentIO (Xenium, CosMx, MERSCOPE → SPE/SCE);
+  - VisiumIO / TENxIO (Visium);
+  - SFE's `readXenium()` etc.
+- **Design:** one SPE adapter (SummarizedExperiment/SPE accessors: `assay()`,
+  `colData()`, `rowData()`, `spatialCoords()`, `reducedDims()`, `colPairs()`,
+  `imgData()`; SFE adds `colGeometries()` / `spatialGraphs()`), plus one mapping
+  per reader layout, as for Seurat.
+- **Delayed matrices:** DelayedArray/HDF5Array assays need the deferred GiottoDisk
+  chunked input before disk targets can stream them.
+

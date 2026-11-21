@@ -119,5 +119,7 @@ data.table::fread(file.path(C, "S0_fov_positions_file.csv.gz"))   # 1 row
 snake_case getters. Before the Seurat tests were ported this was hidden, because the
 interop test file failed earlier on `giottoToSeuratV5`.
 
-**Decide.** Port it to `getSpatialLocations()`, or move SpatialExperiment onto the
-mapping engine (the next adapter after AnnData).
+**Decided (2026-11-20).** The GiottoConnect copies of `giottoToSpatialExperiment()` /
+`spatialExperimentToGiotto()` are removed; GiottoClass exports working versions.
+SpatialExperiment moves onto the mapping engine later (see
+`REEVALUATION_ANNDATA.md`).

@@ -42,7 +42,3 @@ test_that("Feature names are transferred correctly", {
     )
 })
 
-test_that("Giotto to SpatialExperiment Conversion Works", {
-    spe_obj <- giottoToSpatialExperiment(giotto_obj)
-    expect_s4_class(spe_obj[[1]], "SpatialExperiment")
-})

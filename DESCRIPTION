@@ -8,7 +8,7 @@ Description: Interoperability between Giotto and other single-cell and
     spatial ecosystems. Seurat objects and AnnData (.h5ad) files are converted
     to Giotto through declarative mappings chosen by the object's structure,
     in memory or onto a GiottoDisk project; further conversions cover
-    SingleCellExperiment, SpatialData, Bento and Stereo-seq GEF.
+    SpatialData, Bento and Stereo-seq GEF.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -32,11 +32,6 @@ Suggests:
     rhdf5,
     Seurat,
     SeuratObject,
-    SingleCellExperiment,
-    SpatialExperiment,
-    SummarizedExperiment,
-    S4Vectors,
-    magick,
     sf,
     terra,
     testthat (>= 3.0.0)
