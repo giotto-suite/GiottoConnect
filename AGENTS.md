@@ -25,7 +25,7 @@ next; see `docs/contract-prototype/REEVALUATION_ANNDATA.md`).
 |---|---|---|---|
 | `GiottoClass` | `gsource` | `giotto(source =)` and the backend-aware setters (disk conversion), `objManifest()`, `update_giotto_params(attachments =)`. Floored at `>= 0.7.31`, the version the bundled contract (`inst/contract/`) was generated from. | those are on `dev`. |
 | `GiottoUtils` | `dev` | Suite convention. | `main` catches up. |
-| `GiottoDisk` (Suggests) | `dev` | `sourceCreate()` / `sourceWrite()` for `seuratToGiotto(source =)`. Needs Giotto `gsource` installed first (`VisiumReader`). | it is released. |
+| `GiottoDisk` (Suggests) | `dev` | `sourceCreate()` / `sourceWrite()` for `seuratToGiotto(source =)`, `h5adInput()` for `anndataToGiotto(source =)`. Needs Giotto `gsource` installed first (`VisiumReader`). | it is released. |
 
 ## Package structure
 
@@ -124,11 +124,9 @@ adapter whose input is a file (.h5ad, read with hdf5r) rather than an R object.
 
 - **Library:** develop against the scratch library
   `R_LIBS=~/Documents/Software/rlibs/suite_dev` (suite packages at their pinned branches).
-- **Tests:** `testthat::test_local(filter = "contract")`. The live LLM test is skipped
-  unless `GIOTTO_LLM_PROVIDER` is set. Known legacy failures:
-  `giottoToSpatialExperiment()` calls the removed GiottoClass `get_spatial_locations`,
-  and `test-spatial_converters.R` fails (terra/sf conversions, `stars` not installed),
-  both as on `dev_connect`.
+- **Tests:** `testthat::test_local()`. The live LLM test is skipped unless
+  `GIOTTO_LLM_PROVIDER` is set. `R CMD check` WARNINGs about loading come from
+  GiottoClass's `.onLoad` (`getClass()` without `methods::`), not from this package.
 - **Docs:** roxygen2 8.0.0 (suite pin).
 - **Branches:** feature branches off `dev_connect`; PRs target `dev_connect`.
 - **Results:** comparison results go in `examples/seurat_comparison/results/`, with time

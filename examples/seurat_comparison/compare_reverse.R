@@ -1,3 +1,5 @@
+# The legacy giottoToSeuratV5 has been removed; run this at commit 83c26c8
+# (results: results/phase7_reverse.csv).
 # Giotto -> Seurat: mapping (giottoToSeurat) vs legacy giottoToSeuratV5, on
 # giotto objects made from the fixture and the crops (in memory and on disk)
 # and on the GiottoData Visium mini. Each result is checked against the
