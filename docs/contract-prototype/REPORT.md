@@ -246,7 +246,6 @@ The serialized RSS benchmark and the full Xenium lung run (162k cells) are still
    yet).
 7. **Housekeeping:**
    - DESCRIPTION `Remotes` still point to `drieslab/`;
-   - `GiottoConnect/CLAUDE.md` still describes the old vitessce project;
    - the legacy test files fail on `dev_connect` as well;
    - `profileObject()` could later move into GiottoClass next to the manifest walker.
 8. **Remaining phases:** Phase 7 (Giotto → Seurat as a mapping) and Phase 8 (the full

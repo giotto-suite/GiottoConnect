@@ -2,7 +2,7 @@
 
 Interoperability hub of the Giotto Suite: conversions between Giotto and other
 ecosystems (Seurat, SingleCellExperiment, SpatialExperiment, AnnData,
-SpatialData, Bento, Stereo-seq GEF), plus a Vitessce static-site pipeline.
+SpatialData, Bento, Stereo-seq GEF).
 
 Seurat ↔ Giotto runs on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
@@ -16,7 +16,6 @@ hand-written converters and move to the engine one adapter at a time.
 | `docs/contract-prototype/CONTRACT_PROTOTYPE_v2.md` | Mapping engine spec: schema, engine, validation, repair, LLM step, ecosystem adapters (§8). |
 | `docs/contract-prototype/REPORT.md` | Prototype results, open decisions. Phase write-ups sit next to it. |
 | `docs/contract-prototype/FOLLOWUPS_OTHER_PACKAGES.md` | Findings in GiottoDisk / GiottoData still to assess. |
-| `docs/vitessce-viewer-plan.md` | Original design brief of the Vitessce pipeline (`R/vitessce.R`). |
 | `examples/seurat_comparison/` | Comparison and benchmark scripts with their result tables (Rbuildignored). |
 | `DESCRIPTION` `Remotes:` | Authoritative upstream branch pins (see below). |
 
@@ -45,7 +44,7 @@ R/
   contract_repair.R      repairMapping(), writeMappingRequest()
   contract_llm.R         llmBackend(), llmPatch() (opt-in, repair only)
   contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
-  anndata.R, spatialdata.R, spatialexperiment.R, bento.R, stereoseq_gef.R, vitessce.R
+  anndata.R, spatialdata.R, spatialexperiment.R, bento.R, stereoseq_gef.R
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology
   contract/giotto-contract-<GiottoClass version>.json
