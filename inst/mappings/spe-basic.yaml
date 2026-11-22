@@ -1,0 +1,108 @@
+# SpatialExperiment (Bioconductor) -> Giotto: the layout SpatialExperimentIO's
+# readXeniumSXE() / readCosmxSXE() / readMerscopeSXE() give, plus the usual
+# scuttle/scater steps. Control probes kept as altExps become their own
+# feature types, named as Giotto's readers name them.
+# Coordinates follow the Giotto convention: sdimx = x, sdimy = -y.
+mapping:
+  id: spe-basic
+  version: 0.1.0
+  status: verified
+  built: "2026-11-21"
+  schema_version: 0.1.0
+  source:
+    ecosystem: spatialexperiment
+    class: SpatialExperiment
+    package: SpatialExperiment
+    applies_to:
+      predicates:
+        - { path: "assays/data/listData/{counts}" }
+        - { path: "int_colData/listData/spatialCoords", kind: dense_matrix }
+  target: { contract: giotto, version: "0.7.31" }
+  fingerprint: "dc23e80a0d50d7d5"
+  fixtures: [spe_fixture]
+  history: []
+
+params:
+  counts:     { list: Assays, rule: first_where, where: { name_matches: "^counts$", or_role: integer_valued } }
+  normalized: { list: Assays, rule: name_is, value: logcounts, optional: true }
+
+source_nodes:
+  counts:      { path: "assays/data/listData/{counts}", get: { fn: speAssay, args: { i: "{counts}" } } }
+  normalized:  { path: "assays/data/listData/{normalized}", get: { fn: speAssay, args: { i: "{normalized}" } } }
+  cell_meta:   { path: colData, get: { fn: speColData } }
+  feat_meta:   { path: rowRanges, get: { fn: speRowData } }
+  coords:      { path: "int_colData/listData/spatialCoords", get: { fn: speSpatialCoords } }
+  reduction:   { path: "int_colData/listData/reducedDims/listData/{red}", get: { fn: speReducedDim, args: { type: "{red}" } } }
+  alt_counts:  { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpAssay, args: { e: "{extra}", i: counts } } }
+  alt_meta:    { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpRowData, args: { e: "{extra}" } } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    to: { spat_unit: cell, feat_type: rna, name: normalized }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    ops:
+      - { op: rownames_to_col, col: cell_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: locs
+    part: spatial_locs
+    from: coords
+    ops:
+      - { op: cast, to: table }
+      - { op: set_colnames, cols: [sdimx, sdimy] }
+      - { op: rownames_to_col, col: cell_ID }
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: { spat_unit: cell, name: raw }
+    lossy:
+      - { kind: estimated, field: units, note: "spatialCoords carry no unit; kept as stored (Xenium: microns, CosMx: pixels)" }
+      - { kind: ambiguous, field: orientation, note: "spatialCoords assumed image-space (y down)" }
+
+  # one dim_reduction per reducedDim; scater's PCA loadings and variances go
+  # to the misc
+  - id: "dimred_{red}"
+    part: dim_reduction
+    from: reduction
+    for_each: { list: Reductions, as: red, strip: "^X_", rename: { PCA: pca, UMAP: umap, TSNE: tsne } }
+    hook: spe_reduction_misc
+    to: { spat_unit: cell, feat_type: rna, name: "{red_label}", method: "{red_label}" }
+
+  # every altExp (control probes) is its own feature type
+  - id: "expr_{extra_label}"
+    part: expression
+    from: alt_counts
+    for_each: &alt_exps
+      list: AltExps
+      as: extra
+      rename: { Negative: negprobes, ControlProbe: NegControlProbe, ControlCodeword: NegControlCodeword,
+                BlankCodeword: UnassignedCodeword }
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: raw }
+
+  - id: "feat_meta_{extra_label}"
+    part: feat_metadata
+    from: alt_meta
+    for_each: *alt_exps
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: "{extra_label}" }
+
+lossy:
+  - { kind: dropped, path: metadata, note: "metadata (e.g. paths to transcripts and boundary files) is not mapped" }
+  - { kind: dropped, path: "int_metadata/imgData", note: "images are not carried over yet" }

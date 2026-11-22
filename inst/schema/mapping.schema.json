@@ -292,7 +292,8 @@
             "rownames_to_col",
             "set",
             "set_colnames",
-            "replace"
+            "replace",
+            "select_rows"
           ]
         },
         "cols": {
@@ -326,10 +327,14 @@
         "value": {},
         "pattern": {
           "type": "string",
-          "description": "replace: fixed string to replace"
+          "description": "replace: fixed string; select_rows: regex on row names"
         },
         "replacement": {
           "type": "string"
+        },
+        "invert": {
+          "type": "boolean",
+          "description": "select_rows: keep the rows that do not match"
         }
       }
     },

@@ -1,6 +1,13 @@
 # GiottoConnect 0.1.0
 
 ## Converters
+- `spatialExperimentToGiotto()` converts SpatialExperiment and
+  SpatialFeatureExperiment objects through the same mapping engine: the layouts
+  of SpatialExperimentIO (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD;
+  pixels converted to microns) and SpatialFeatureExperiment (cell and nucleus
+  segmentations, transcripts, spatial graphs). Control probes, as altExps or
+  inside the main matrix, become their own feature types; scater PCA loadings
+  and variances are kept.
 - `seuratToGiotto()` and `anndataToGiotto()` convert with a declarative mapping
   chosen for the object's structure, not per object version. Bundled mappings
   cover Seurat v3/v4 and v5 assays with FOV, Visium (V1, V2, HD) or Slide-seq
