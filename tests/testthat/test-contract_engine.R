@@ -21,7 +21,7 @@ test_that("hookRegistry lists the hooks and their packages", {
     expect_setequal(h$hook, c("seurat_graph_to_nn", "seurat_visium_to_um",
         "anndata_distances_to_nn", "seurat_reduction_misc", "anndata_pca_misc",
         "anndata_spatial_network", "spe_reduction_misc", "spe_visium_to_um", "sf_to_vertices",
-        "listw_to_network", "giotto_polygons_to_vertices", "giotto_nn_to_graph"))
+        "listw_to_network", "giotto_polygons_to_vertices", "giotto_nn_to_graph", "giotto_points_to_molecules"))
     expect_match(h$packages[h$hook == "seurat_visium_to_um"], "Seurat")
 })
 

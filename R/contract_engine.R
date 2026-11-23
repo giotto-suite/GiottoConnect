@@ -218,7 +218,11 @@ mappingProvenance <- function(gobject) {
         name <- sub(".*/", "", kids$path)
         keep <- if (is.null(fe$where)) rep(TRUE, nrow(kids)) else
             .param_where(fe$where, kids, name, nodes)
-        if (!is.null(fe$exclude)) keep <- keep & !grepl(.pf_bind(fe$exclude, params$values), name)
+        if (!is.null(fe$exclude)) {
+            # placeholders of params that did not bind match nothing
+            ex <- gsub("\\{[A-Za-z0-9_]+\\}", "\001", .pf_bind(fe$exclude, params$values))
+            keep <- keep & !grepl(ex, name)
+        }
         for (j in which(keep)) {
             v <- name[j]
             kid <- kids$path[j]

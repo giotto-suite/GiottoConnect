@@ -8,8 +8,9 @@
   `varm/PCs`), nn and spatial networks in `obsp` with a `uns` record.
   `anndataToGiotto()` reads them back under their Giotto names, and also reads
   every scanpy/squidpy network and extra layer of other files.
-- `giottoToSeurat()` exports reductions whose name differs from their method,
-  and takes `spat_unit` / `feat_type`.
+- `giottoToSeurat()` takes `spat_unit` / `feat_type` and exports every
+  reduction (with PCA loadings and stdev), every nearest-neighbour network as a
+  Graph, and transcripts as FOV molecules.
 - `spatialExperimentToGiotto()` converts SpatialExperiment and
   SpatialFeatureExperiment objects through the same mapping engine: the layouts
   of SpatialExperimentIO (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD;

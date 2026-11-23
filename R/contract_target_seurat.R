@@ -6,8 +6,10 @@
 #   feat_metadata  assay                 (table with a feat_ID column)
 #   spatial_locs   fov, boundary         (x, y, cell; centroids)
 #   spatial_info   fov, boundary         (x, y, cell vertices; segmentation)
-#   dim_reduction  reduction, key        (cells x dims matrix)
-#   nn_network     graph                 (cells x cells sparse adjacency)
+#   dim_reduction  reduction, key        (cells x dims matrix, or a dimObj with
+#                                          loadings / eigenvalues in misc)
+#   nn_network     graph [, nn_type]     (cells x cells sparse adjacency)
+#   feature_info   fov                   (x, y, gene; FOV molecules)
 
 .SEURAT_TARGET <- list(
     expression = c("assay", "layer"),
@@ -16,8 +18,11 @@
     spatial_locs = c("fov", "boundary"),
     spatial_info = c("fov", "boundary"),
     dim_reduction = c("reduction", "key"),
-    nn_network = c("graph")
+    nn_network = c("graph"),
+    feature_info = c("fov")
 )
+# keys a part may carry besides the required ones
+.SEURAT_TARGET_OPTIONAL <- list(nn_network = "nn_type")
 
 .assemble_seurat <- function(prepared) {
     package_check("SeuratObject")
@@ -58,10 +63,14 @@
         }
     }
 
-    # one FOV per fov name, from its centroids and/or segmentation parts
+    # one FOV per fov name, from its centroids and/or segmentation parts and
+    # transcripts (molecules)
     geo <- c(by_part("spatial_locs"), by_part("spatial_info"))
-    for (fov in unique(vapply(geo, function(pp) pp$spec$to$fov, character(1)))) {
+    mols <- by_part("feature_info")
+    for (fov in unique(vapply(c(geo, mols), function(pp) pp$spec$to$fov, character(1)))) {
         bnd <- list()
+        mol <- Filter(function(pp) pp$spec$to$fov == fov, mols)
+        mol <- if (length(mol)) as.data.frame(mol[[1L]]$data)[, c("x", "y", "gene")]
         for (pp in Filter(function(pp) pp$spec$to$fov == fov, geo)) {
             df <- as.data.frame(pp$data)[, c("x", "y", "cell")]
             df <- df[df$cell %in% colnames(s), , drop = FALSE]
@@ -73,16 +82,27 @@
         }
         type <- vapply(bnd, function(b) if (methods::is(b, "Centroids")) "centroids" else "segmentation",
             character(1))
-        s[[fov]] <- SO$CreateFOV(bnd, type = unname(type), assay = SO$DefaultAssay(s),
+        s[[fov]] <- SO$CreateFOV(bnd, type = unname(type), molecules = mol, assay = SO$DefaultAssay(s),
             key = paste0(gsub("[^A-Za-z0-9]", "", fov), "fov_"))
     }
 
     for (pp in by_part("dim_reduction")) {
-        m <- as.matrix(pp$data)
+        d <- pp$data
+        m <- if (methods::is(d, "dimObj")) d[] else as.matrix(d)
+        misc <- if (methods::is(d, "dimObj")) d@misc else NULL
         # Seurat keys are alphanumeric followed by "_"
         key <- paste0(gsub("[^A-Za-z0-9]", "", sub("_$", "", pp$spec$to$key)), "_")
         colnames(m) <- paste0(key, seq_len(ncol(m)))
+        load <- misc$loadings
+        if (length(load)) {
+            load <- as.matrix(load)[, seq_len(min(ncol(load), ncol(m))), drop = FALSE]
+            rownames(load) <- .seurat_feat(rownames(load))
+            colnames(load) <- colnames(m)[seq_len(ncol(load))]
+        }
+        ev <- misc$eigenvalues
         s[[pp$spec$to$reduction]] <- SO$CreateDimReducObject(embeddings = m[colnames(s), , drop = FALSE],
+            loadings = if (length(load)) load else new("matrix"),
+            stdev = if (length(ev)) sqrt(as.numeric(ev))[seq_len(ncol(m))] else numeric(),
             key = key, assay = SO$DefaultAssay(s))
     }
     for (pp in by_part("nn_network")) {
@@ -106,7 +126,7 @@
     for (p in mapping$parts) {
         need <- .SEURAT_TARGET[[p$part]]
         miss <- setdiff(need, names(p$to))
-        unknown <- setdiff(names(p$to), need)
+        unknown <- setdiff(names(p$to), c(need, .SEURAT_TARGET_OPTIONAL[[p$part]]))
         lvl <- if (length(miss) || length(unknown)) "FAIL" else "OK"
         out$add("target", p$id, lvl, if (lvl == "OK") sprintf("%s -> Seurat", p$part) else
             sprintf("Seurat %s needs keys %s (missing: %s; unknown: %s)", p$part,
@@ -216,11 +236,32 @@
         )
     },
     dim_reduction = function(spec, data, s, n_cells) {
-        e <- asNamespace("SeuratObject")$Embeddings(s, reduction = spec$to$reduction)
+        SO <- asNamespace("SeuratObject")
+        e <- SO$Embeddings(s, reduction = spec$to$reduction)
+        misc <- if (methods::is(data, "dimObj")) data@misc else NULL
+        data <- if (methods::is(data, "dimObj")) data[] else as.matrix(data)
         list(
             .rb_row("placement", TRUE, spec$to$reduction),
             .rb_row("ids", setequal(rownames(e), rownames(data)), sprintf("%d cells", nrow(e))),
-            .rb_row("values", .rb_same(as.numeric(e[rownames(data), ]), as.numeric(as.matrix(data))), "")
+            .rb_row("values", .rb_same(as.numeric(e[rownames(data), ]), as.numeric(data)), ""),
+            if (length(misc$loadings)) {
+                l <- SO$Loadings(s, reduction = spec$to$reduction)
+                ld <- as.matrix(misc$loadings)
+                .rb_row("loadings", .rb_same(as.numeric(l[.seurat_feat(rownames(ld)), seq_len(ncol(l))]),
+                    as.numeric(ld[, seq_len(ncol(l))])), sprintf("%d features", nrow(ld)))
+            }
+        )
+    },
+    feature_info = function(spec, data, s, n_cells) {
+        SO <- asNamespace("SeuratObject")
+        fov <- s[[spec$to$fov]]
+        got <- SO$GetTissueCoordinates(fov[[names(methods::slot(fov, "molecules"))[1L]]])
+        a <- table(data$gene)
+        b <- table(got$molecule)
+        list(
+            .rb_row("placement", TRUE, paste0(spec$to$fov, "/molecules")),
+            .rb_row("ids", identical(sort(names(a)), sort(names(b))) && all(a == b[names(a)]),
+                sprintf("%d transcripts of %d features", nrow(data), length(a)))
         )
     },
     nn_network = function(spec, data, s, n_cells) {
