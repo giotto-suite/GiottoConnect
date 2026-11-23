@@ -1,6 +1,15 @@
 # GiottoConnect 0.1.0
 
 ## Converters
+- `giottoToAnnData()` writes one spatial unit and feature type of a giotto
+  object (in memory or GiottoDisk-backed) as an `.h5ad` in scanpy's layout,
+  without python (anndataR): normalized values in `X`, counts in
+  `layers/counts`, other values as layers, reductions in `obsm` (PCA loadings in
+  `varm/PCs`), nn and spatial networks in `obsp` with a `uns` record.
+  `anndataToGiotto()` reads them back under their Giotto names, and also reads
+  every scanpy/squidpy network and extra layer of other files.
+- `giottoToSeurat()` exports reductions whose name differs from their method,
+  and takes `spat_unit` / `feat_type`.
 - `spatialExperimentToGiotto()` converts SpatialExperiment and
   SpatialFeatureExperiment objects through the same mapping engine: the layouts
   of SpatialExperimentIO (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD;
@@ -28,8 +37,8 @@
 ## Removed
 - `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
   `giottoToSeuratV5()` (use `seuratToGiotto()` / `giottoToSeurat()`).
-- `giottoToAnnData()` and `giottoToSpatialData()`; `anndataToGiotto()` no longer
-  needs python.
+- `giottoToSpatialData()`, and the reticulate-based `giottoToAnnData()`
+  (replaced by the one above); `anndataToGiotto()` no longer needs python.
 - `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` (GiottoClass
   exports working versions; an engine-based SpatialExperiment converter is
   planned).

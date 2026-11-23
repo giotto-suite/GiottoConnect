@@ -11,6 +11,9 @@ g <- seuratToGiotto(seurat_object)                 # in memory
 g <- anndataToGiotto("sample.h5ad", source = "my_project/")  # GiottoDisk-backed
 g <- spatialExperimentToGiotto(spe)                # SpatialExperiment / SFE
 
+giottoToAnnData(g, "sample.h5ad")                   # and back: AnnData
+s <- giottoToSeurat(g)                              #           Seurat
+
 mappingProvenance(g)   # mapping used, parameters, losses
 ```
 

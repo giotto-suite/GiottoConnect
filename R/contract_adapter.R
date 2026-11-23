@@ -85,6 +85,8 @@ setMethod("adapterListPaths", "giottoAdapter", function(adapter) c(
     # every cells-side reduction, whatever its method (name and method may differ)
     DimNames = "dimension_reduction/cells/{on}/*",
     SpatNets = "spatial_network/{on}", FeatInfo = "feat_info",
+    # every nn network by name; its type (kNN, sNN) is the parent
+    NNAll = "nn_network/{on}/*",
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "giottoAdapter", function(adapter) c(
@@ -164,7 +166,7 @@ setMethod("targetComparators", "seuratTarget", function(target) .RB_COMPARE_SEUR
 
 .ADAPTERS <- list(seurat = "seuratAdapter", giotto = "giottoAdapter", anndata = "anndataAdapter",
     spatialexperiment = "speAdapter")
-.TARGETS <- list(giotto = "giottoTarget", seurat = "seuratTarget")
+.TARGETS <- list(giotto = "giottoTarget", seurat = "seuratTarget", anndata = "anndataTarget")
 
 .adapter_for <- function(x) {
     eco <- if (is.list(x)) x$mapping$source$ecosystem else x

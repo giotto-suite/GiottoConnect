@@ -279,10 +279,21 @@ hookRegistry <- function() {
     tr <- tr[tr$i != tr$j, , drop = FALSE]
     edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
         weight = 1 / (1 + tr$x), distance = tr$x)
-    key <- params$nn_dist
+    key <- params$nn_dist %null% ctx$part_spec$to$name
     h5 <- .h5ad_open(.h5ad_path(ctx$x))
     on.exit(h5$close_all())
     rec <- .h5ad_neighbors_record(h5, key)
+    if (!is.null(rec$giotto)) {
+        # written by giottoToAnnData(): name, type and weights as in Giotto
+        if (!is.null(rec$connectivities_key) && .h5ad_exists(h5, paste0("obsp/", rec$connectivities_key))) {
+            w <- .h5ad_obsp(h5, paste0("obsp/", rec$connectivities_key))
+            edges$weight <- w[cbind(tr$i, tr$j)]
+        }
+        ctx$add_loss("recovered_from_parameters", "name", sprintf("%s %s from the uns/%s record",
+            rec$giotto$type, rec$giotto$name, rec$key))
+        return(.hook_result(edges, to = list(nn_type = as.character(rec$giotto$type),
+            name = as.character(rec$giotto$name))))
+    }
     k <- stats::median(tabulate(tr$i, nbins = nrow(m)))
     if (is.null(rec)) {
         name <- paste0("kNN.", key)
@@ -315,7 +326,12 @@ hookRegistry <- function() {
         dk <- paste("uns", k, field, sep = "/")
         if (!.h5ad_exists(h5, dk) || !identical(as.character(.h5ad_value(h5, dk)), key)) next
         pp <- paste("uns", k, "params", sep = "/")
-        return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list()))
+        gp <- paste("uns", k, "giotto", sep = "/")
+        ck <- paste("uns", k, "connectivities_key", sep = "/")
+        return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list(),
+            # written by giottoToAnnData(): the Giotto name and type
+            giotto = if (.h5ad_exists(h5, gp)) .h5ad_value(h5, gp),
+            connectivities_key = if (.h5ad_exists(h5, ck)) as.character(.h5ad_value(h5, ck))))
     }
     NULL
 }
@@ -367,7 +383,7 @@ hookRegistry <- function() {
     tr <- tr[tr$i != tr$j & (!sym | tr$i < tr$j), , drop = FALSE]
     h5 <- .h5ad_open(.h5ad_path(ctx$x))
     on.exit(h5$close_all())
-    key <- params$spatial_net
+    key <- params$spatial_net %null% ctx$part_spec$to$name
     rec <- .h5ad_graph_record(h5, key, "connectivities_key")
     dkey <- if (!is.null(rec) && .h5ad_exists(h5, paste0("uns/", rec$key, "/distances_key"))) {
         as.character(.h5ad_value(h5, paste0("uns/", rec$key, "/distances_key")))
@@ -381,9 +397,15 @@ hookRegistry <- function() {
     } else {
         rep(NA_real_, nrow(tr))
     }
-    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j], distance = d, weight = 1 / d)
+    w <- if (!is.null(rec$giotto)) tr$x else 1 / d
+    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j], distance = d, weight = w)
     # every cell is a node, also cells without a neighbour
     attr(edges, "nodes") <- ids
+    if (!is.null(rec$giotto)) {
+        ctx$add_loss("recovered_from_parameters", "name", sprintf("spatial network %s from the uns/%s record",
+            rec$giotto$name, rec$key))
+        return(.hook_result(edges, to = list(name = as.character(rec$giotto$name))))
+    }
     name <- if (is.null(rec)) key else .squidpy_network_name(h5, rec$key)
     ctx$add_loss("recovered_from_parameters", "name", sprintf("%s from %s%s", name,
         if (is.null(rec)) paste0("obsp/", key) else paste0("uns/", rec$key),

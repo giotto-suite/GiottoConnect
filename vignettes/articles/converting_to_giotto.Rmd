@@ -145,6 +145,24 @@ The bundled mappings cover:
 | VisiumIO (`TENxVisium()`, `TENxVisiumHD()`) | `spe-visium` | spot/bin positions converted from pixels to microns |
 | SpatialFeatureExperiment (e.g. `readCosMX()`) | `sfe` | cell / nucleus segmentations, transcripts (`txSpots`), spatial graphs; control probes in the main matrix as feature types |
 
+## Giotto to AnnData and back
+
+`giottoToAnnData()` writes a spatial unit and feature type of a Giotto object
+(the active ones by default) as an `.h5ad` file in scanpy's layout, without
+python: normalized values in `X`, raw counts in `layers/counts`, reductions in
+`obsm`, and nearest-neighbour and spatial networks in `obsp`. Networks keep
+their Giotto names, so reading the file back gives the same object parts.
+
+```{r anndata-export}
+out <- file.path(tempdir(), "xenium.h5ad")
+giottoToAnnData(g, out)
+
+g_back <- anndataToGiotto(out)
+GiottoClass::list_nearest_networks(g_back)
+```
+
+In scanpy, use a network by its name: `sc.tl.leiden(adata, neighbors_key = "kNN.pca")`.
+
 ## Checking a conversion
 
 Every converted object records what was done. `mappingProvenance()` shows the

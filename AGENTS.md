@@ -103,6 +103,11 @@ adapter whose input is a file (.h5ad, read with hdf5r) rather than an R object.
 - Then mapping files, hooks if the op list cannot express a step, and a thin
   `<eco>ToGiotto()` / `giottoTo<Eco>()` wrapper. `readMapping()` rejects listing verbs
   and accessors the adapter does not supply.
+- File targets (AnnData) take `convertWithMapping(output =)`, keep their conversion record
+  in the file (`uns/giottoConnect`) and are read back with the source adapter's readers.
+- A giotto-source mapping converts one spatial unit and feature type (`params =` pins
+  them); `out_of_scope` declares the data it leaves out by design, so it is not reported
+  as unmapped.
 - Add a fixture builder to `inst/scripts/build_fixtures.R` and stamp the mapping with
   `Rscript inst/scripts/verify_mapping.R <id>`.
 - Prove refactors with `examples/seurat_comparison/engine_snapshot.R`: it records

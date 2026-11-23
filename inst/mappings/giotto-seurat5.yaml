@@ -127,3 +127,10 @@ lossy:
   - { kind: dropped, path: "spatial_network", note: "spatial networks have no Seurat slot" }
   - { kind: dropped, path: "feat_info", note: "transcript points are not carried over yet" }
   - { kind: dropped, path: "spatial_enrichment", note: "enrichment results have no Seurat slot" }
+
+# one spatial unit and feature type per conversion (spat_unit / feat_type)
+out_of_scope:
+  - { pattern: "^(expression|cell_metadata|feat_metadata|nn_network|dimension_reduction/cells|spatial_enrichment)/(?!{spat_unit}/{feat_type}(/|$))",
+      note: "other spatial units and feature types are converted separately (spat_unit / feat_type)" }
+  - { pattern: "^(spatial_locs|spatial_network)/(?!{spat_unit}(/|$))",
+      note: "other spatial units and feature types are converted separately (spat_unit / feat_type)" }

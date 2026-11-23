@@ -66,7 +66,7 @@ test_that("a scanpy file converts through the bundled mapping", {
     expect_equal(nn$weight, 1 / (1 + nn$distance))
 
     l <- mappingProvenance(g)$losses
-    expect_match(l$note[l$part_id %in% "nn" & l$field == "name"], "X_pca, 10 PCs")
+    expect_match(l$note[startsWith(l$part_id, "nn") & l$field == "name"], "X_pca, 10 PCs")
     expect_true(attr(readbackCheck(fx$path, g), "pass"))
 })
 
