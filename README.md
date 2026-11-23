@@ -13,6 +13,7 @@ g <- spatialExperimentToGiotto(spe)                # SpatialExperiment / SFE
 
 giottoToAnnData(g, "sample.h5ad")                   # and back: AnnData
 s <- giottoToSeurat(g)                              #           Seurat
+spe <- giottoToSpatialExperiment(g)                 #           SpatialExperiment / SFE
 
 mappingProvenance(g)   # mapping used, parameters, losses
 ```

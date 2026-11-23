@@ -68,6 +68,8 @@ setMethod("adapterRead", "speAdapter", function(adapter, x, node, params) {
         rownames(m) <- colnames(x)
         m
     },
+    # SelfHits between columns (cell graphs), with their mcols and metadata
+    speColPair = function(x, type) .spe_ns("SingleCellExperiment")$colPair(x, type),
     speAltExpAssay = function(x, e, i = "counts") {
         ae <- .spe_ns("SingleCellExperiment")$altExp(x, e)
         .spe_matrix(.spe_ns("SummarizedExperiment")$assay(ae, i))

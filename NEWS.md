@@ -11,6 +11,12 @@
 - `giottoToSeurat()` takes `spat_unit` / `feat_type` and exports every
   reduction (with PCA loadings and stdev), every nearest-neighbour network as a
   Graph, and transcripts as FOV molecules.
+- `giottoToSpatialExperiment()` converts one spatial unit and feature type to
+  a SpatialExperiment, or a SpatialFeatureExperiment when there are polygons,
+  transcripts or spatial networks: `counts` / `logcounts` and other assays,
+  scater-named reductions with PCA loadings, networks as colPairs (and SFE
+  spatialGraphs), polygons as `cellSeg`, transcripts as `txSpots`.
+  `spatialExperimentToGiotto()` reads them back under their Giotto names.
 - `spatialExperimentToGiotto()` converts SpatialExperiment and
   SpatialFeatureExperiment objects through the same mapping engine: the layouts
   of SpatialExperimentIO (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD;
@@ -40,9 +46,6 @@
   `giottoToSeuratV5()` (use `seuratToGiotto()` / `giottoToSeurat()`).
 - `giottoToSpatialData()`, and the reticulate-based `giottoToAnnData()`
   (replaced by the one above); `anndataToGiotto()` no longer needs python.
-- `giottoToSpatialExperiment()` and `spatialExperimentToGiotto()` (GiottoClass
-  exports working versions; an engine-based SpatialExperiment converter is
-  planned).
 - The Vitessce site pipeline (`export_giotto_to_zarr()`, `create_vitessce_config()`,
   `scaffold_vitessce_site()`, `giotto_to_vitessce_site()`,
   `setup_giotto_connect_env()`).

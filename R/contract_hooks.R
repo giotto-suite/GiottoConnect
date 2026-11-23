@@ -69,6 +69,21 @@
         fn = function(node, params, ctx) .hook_nn_to_graph(node, params, ctx),
         packages = c("GiottoClass", "Matrix"),
         description = "Giotto nearest-neighbour edges -> cells x cells adjacency for a Seurat Graph"
+    ),
+    giotto_polygons_to_sf = list(
+        fn = function(node, params, ctx) .hook_polygons_to_sf(node),
+        packages = c("GiottoClass", "terra", "sf"),
+        description = "giottoPolygon (in memory or GiottoDisk) -> sf polygons named by cell, image space (y down)"
+    ),
+    giotto_points_to_table = list(
+        fn = function(node, params, ctx) .points_table(node),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoPoints (in memory or GiottoDisk) -> transcript table x, y, feat_ID"
+    ),
+    spe_colpair_to_network = list(
+        fn = function(node, params, ctx) .hook_colpair_to_network(node, params, ctx),
+        packages = "SingleCellExperiment",
+        description = "colPair SelfHits -> network edges; Giotto name and type from metadata when present"
     )
 )
 
@@ -457,7 +472,10 @@ hookRegistry <- function() {
 
 # sf POLYGON / MULTIPOLYGON -> outer-ring vertices with the row names as poly_ID
 .hook_sf_to_vertices <- function(node, params, ctx) {
-    xy <- sf::st_coordinates(sf::st_geometry(node))
+    geo <- sf::st_geometry(node)
+    # mixed POLYGON / MULTIPOLYGON columns
+    if (inherits(geo, "sfc_GEOMETRY")) geo <- sf::st_cast(geo, "MULTIPOLYGON")
+    xy <- sf::st_coordinates(geo)
     lcols <- grep("^L[0-9]$", colnames(xy), value = TRUE)
     feat <- xy[, lcols[length(lcols)]]
     holes <- xy[, "L1"] > 1
@@ -486,8 +504,14 @@ hookRegistry <- function() {
     b <- b[!dup]
     xy <- asNamespace("SpatialExperiment")$spatialCoords(ctx$x)
     d <- sqrt(rowSums((xy[a, 1:2, drop = FALSE] - xy[b, 1:2, drop = FALSE])^2))
-    edges <- data.table::data.table(from = ids[a], to = ids[b], distance = d, weight = 1 / d)
+    giotto <- attr(node, "giotto")
+    w <- if (is.null(giotto)) 1 / d else {
+        # weights of a Giotto network written by giottoToSpatialExperiment()
+        mapply(function(k, l) node$weights[[k]][match(l, nb[[k]])], a, b)
+    }
+    edges <- data.table::data.table(from = ids[a], to = ids[b], distance = d, weight = w)
     attr(edges, "nodes") <- ids
+    if (!is.null(giotto)) return(.hook_result(edges, to = list(name = as.character(giotto$name))))
     ctx$add_loss("recovered_from_parameters", "distance",
         "distances recomputed in spatialCoords; weight = 1 / distance (spdep weights not kept)")
     edges
@@ -495,8 +519,56 @@ hookRegistry <- function() {
 
 # transcripts -> x, y, gene (Seurat's feature names: "_" becomes "-")
 .hook_points_to_molecules <- function(node) {
+    d <- .points_table(node)
+    data.frame(x = d$x, y = d$y, gene = .seurat_feat(d$feat_ID), stringsAsFactors = FALSE)
+}
+
+# transcripts -> x, y, feat_ID
+.points_table <- function(node) {
     sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
     xy <- terra::crds(sv)
-    data.frame(x = xy[, 1], y = xy[, 2], gene = .seurat_feat(sv$feat_ID), stringsAsFactors = FALSE)
+    data.frame(x = xy[, 1], y = xy[, 2], feat_ID = sv$feat_ID, stringsAsFactors = FALSE)
+}
+
+# polygons -> sf named by poly_ID, flipped to image space (y down) as
+# spatialCoords
+.hook_polygons_to_sf <- function(node) {
+    sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
+    g <- sf::st_as_sf(sv)
+    geo <- sf::st_geometry(g) * matrix(c(1, 0, 0, -1), 2L)
+    # one geometry type per column (multi-part cells make all MULTIPOLYGON)
+    if (length(unique(sf::st_geometry_type(geo))) > 1L) geo <- sf::st_cast(geo, "MULTIPOLYGON")
+    out <- sf::st_sf(geometry = geo)
+    rownames(out) <- sv$poly_ID
+    out
+}
+
+# colPair SelfHits -> edges; distance and weight from the hits' columns when
+# present (else distances in spatialCoords and weight = 1 / distance), the
+# Giotto name and nn type from metadata(<hits>)$giotto
+.hook_colpair_to_network <- function(node, params, ctx) {
+    ids <- colnames(ctx$x)
+    i <- S4Vectors::from(node)
+    j <- S4Vectors::to(node)
+    mc <- S4Vectors::mcols(node)
+    d <- if ("distance" %in% names(mc)) as.numeric(mc$distance) else {
+        xy <- asNamespace("SpatialExperiment")$spatialCoords(ctx$x)
+        sqrt(rowSums((xy[i, 1:2, drop = FALSE] - xy[j, 1:2, drop = FALSE])^2))
+    }
+    w <- if ("weight" %in% names(mc)) as.numeric(mc$weight) else if ("value" %in% names(mc)) {
+        as.numeric(mc$value)
+    } else {
+        1 / d
+    }
+    edges <- data.table::data.table(from = ids[i], to = ids[j], distance = d, weight = w)
+    attr(edges, "nodes") <- ids
+    giotto <- S4Vectors::metadata(node)$giotto
+    if (is.null(giotto)) {
+        ctx$add_loss("recovered_from_parameters", "weight", "colPair without a Giotto record: weights from the hits, distances in spatialCoords when absent")
+        return(edges)
+    }
+    to <- list(name = as.character(giotto$name))
+    if (ctx$part_spec$part == "nn_network" && length(giotto$type)) to$nn_type <- as.character(giotto$type)
+    .hook_result(edges, to = to)
 }
 

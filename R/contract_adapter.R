@@ -166,7 +166,8 @@ setMethod("targetComparators", "seuratTarget", function(target) .RB_COMPARE_SEUR
 
 .ADAPTERS <- list(seurat = "seuratAdapter", giotto = "giottoAdapter", anndata = "anndataAdapter",
     spatialexperiment = "speAdapter")
-.TARGETS <- list(giotto = "giottoTarget", seurat = "seuratTarget", anndata = "anndataTarget")
+.TARGETS <- list(giotto = "giottoTarget", seurat = "seuratTarget", anndata = "anndataTarget",
+    spatialexperiment = "speTarget")
 
 .adapter_for <- function(x) {
     eco <- if (is.list(x)) x$mapping$source$ecosystem else x

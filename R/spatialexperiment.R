@@ -48,3 +48,53 @@ spatialExperimentToGiotto <- function(x, mapping = NULL, source = NULL, verbose 
     }
     convertWithMapping(x, mapping, profile = profile, source = source, verbose = verbose)
 }
+
+#' @title Convert a Giotto object to a SpatialExperiment
+#' @name giottoToSpatialExperiment
+#' @description Convert one spatial unit and feature type of a giotto object
+#' (in memory or GiottoDisk-backed) to a SpatialExperiment, or to a
+#' SpatialFeatureExperiment that also holds the polygons, transcripts and
+#' spatial networks. Raw counts become the `counts` assay, normalized values
+#' `logcounts`; reductions use scater's names (`PCA`, `UMAP`, `TSNE`) with
+#' PCA loadings and variances as attributes; nearest-neighbour networks
+#' become colPairs that keep their Giotto name and type, so
+#' [spatialExperimentToGiotto()] brings them back. Coordinates are in image
+#' space (y down).
+#' @param gobject giotto object
+#' @param spat_unit,feat_type spatial unit and feature type to convert
+#' (default: the active ones)
+#' @param sfe `"auto"` builds a SpatialFeatureExperiment when the spatial unit
+#' has polygons, the feature type has transcripts or the spatial unit has
+#' spatial networks (and SpatialFeatureExperiment is installed); `"yes"` or
+#' `"no"` decide it
+#' @param mapping optional `giottoMapping`, mapping file or bundled mapping id
+#' (overrides `sfe`)
+#' @param verbose logical
+#' @returns SpatialExperiment or SpatialFeatureExperiment; see
+#' [mappingProvenance()] for what was converted
+#' @seealso [spatialExperimentToGiotto()], [readbackCheck()]
+#' @export
+giottoToSpatialExperiment <- function(gobject, spat_unit = NULL, feat_type = NULL,
+    sfe = c("auto", "yes", "no"), mapping = NULL, verbose = FALSE) {
+    sfe <- match.arg(sfe)
+    profile <- adapterProfile(.adapter_for("giotto"), gobject)
+    if (is.null(mapping)) {
+        if (sfe == "auto") {
+            sfe <- if (requireNamespace("SpatialFeatureExperiment", quietly = TRUE) &&
+                .has_sfe_parts(gobject, spat_unit, feat_type)) "yes" else "no"
+        }
+        mapping <- if (sfe == "yes") "giotto-sfe" else "giotto-spe"
+    }
+    convertWithMapping(gobject, mapping, profile = profile, verbose = verbose,
+        params = .pinned_pair(spat_unit, feat_type))
+}
+
+# polygons, transcripts or spatial networks for the pair being converted
+.has_sfe_parts <- function(gobject, spat_unit = NULL, feat_type = NULL) {
+    spat_unit <- spat_unit %null% GiottoClass::activeSpatUnit(gobject)
+    feat_type <- feat_type %null% GiottoClass::activeFeatType(gobject)
+    poly <- spat_unit %in% names(methods::slot(gobject, "spatial_info"))
+    pts <- feat_type %in% names(methods::slot(gobject, "feat_info"))
+    nets <- length(methods::slot(gobject, "spatial_network")[[spat_unit]]) > 0L
+    poly || pts || nets
+}

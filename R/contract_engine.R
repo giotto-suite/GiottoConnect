@@ -52,6 +52,7 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     mapping <- res$mapping
     params <- res$params
     mapping <- .expand_for_each(mapping, profile, params)
+    profile <- .scope_counts(adapter, x, profile, params$values)
     if (isTRUE(validate)) {
         pre <- validateMapping(mapping, profile, params = params, checks = "structural")
         .stop_on_fail(pre, "structural validation")
@@ -83,17 +84,33 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     g
 }
 
+# a giotto source converts one spatial unit / feature type: semantic checks
+# count its cells and features there
+.scope_counts <- function(adapter, x, profile, values) {
+    if (!methods::is(adapter, "giottoAdapter") || is.null(values$spat_unit)) return(profile)
+    n <- tryCatch(list(
+        c = length(GiottoClass::spatIDs(x, spat_unit = values$spat_unit)),
+        f = if (!is.null(values$feat_type)) {
+            length(GiottoClass::featIDs(x, feat_type = values$feat_type))
+        }
+    ), error = function(e) NULL)
+    if (length(n$c)) profile$n_cells <- n$c
+    if (length(n$f)) profile$n_feat <- n$f
+    profile
+}
+
 #' @title Conversion record of a mapped giotto object
 #' @name mappingProvenance
 #' @description Retrieve what [convertWithMapping()] recorded in the giotto
 #' object history: mapping id, version, status, fingerprint, bound params,
 #' converted parts and losses.
-#' @param gobject giotto object, a Seurat object produced by a mapping, or the
-#' path of an `.h5ad` file written by [giottoToAnnData()]
+#' @param gobject giotto object, a Seurat object or SpatialExperiment produced
+#' by a mapping, or the path of an `.h5ad` file written by [giottoToAnnData()]
 #' @returns list, or `NULL` if the object was not produced by a mapping
 #' @export
 mappingProvenance <- function(gobject) {
     if (.is_h5ad_path(gobject)) return(.anndata_provenance(gobject))
+    if (methods::is(gobject, "Annotated")) return(S4Vectors::metadata(gobject)$giottoConnect)
     if (!inherits(gobject, "giotto")) {
         misc <- tryCatch(methods::slot(gobject, "misc"), error = function(e) NULL)
         return(misc$giottoConnect)

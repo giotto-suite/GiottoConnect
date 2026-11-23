@@ -1,0 +1,123 @@
+# Giotto -> SpatialExperiment. One spatial unit and feature type per object
+# (the active ones, or those given to giottoToSpatialExperiment()).
+# raw -> counts, normalized -> logcounts, other expression values an assay
+# each; reductions follow scater's names (PCA, UMAP, TSNE) with PCA loadings
+# and variances as the "rotation" / "varExplained" attributes. Networks are
+# colPairs that keep their Giotto name and type; spatial networks are
+# prefixed "spatial_".
+# Coordinates go back to image space: y = -sdimy.
+mapping:
+  id: giotto-spe
+  version: 0.1.0
+  status: verified
+  built: "2026-11-23"
+  schema_version: 0.1.0
+  source:
+    ecosystem: giotto
+    class: giotto
+    package: GiottoClass
+    applies_to:
+      predicates:
+        - { path: "expression/{spat_unit}/{feat_type}/{expr_raw}", class: exprObj }
+  target: { contract: spatialexperiment, version: "1.20", class: SpatialExperiment }
+  fingerprint: "9213d18abbc4d6bd"
+  fixtures: [giotto_fixture_small]
+  history: []
+
+params:
+  spat_unit: { list: SpatUnits, rule: value_of, path: instructions/active_spat_unit }
+  feat_type: { list: FeatTypes, on: "{spat_unit}", rule: value_of, path: instructions/active_feat_type }
+  expr_raw:  { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: raw }
+  expr_norm: { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: normalized, optional: true }
+  locs:      { list: SpatLocs, on: "{spat_unit}", rule: first, optional: true }
+
+source_nodes: &nodes
+  counts:     { path: "expression/{spat_unit}/{feat_type}/{expr_raw}",
+                get: { fn: getExpression, args: { values: "{expr_raw}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
+  normalized: { path: "expression/{spat_unit}/{feat_type}/{expr_norm}",
+                get: { fn: getExpression, args: { values: "{expr_norm}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
+  other_expr: { path: "expression/{spat_unit}/{feat_type}/{ex}",
+                get: { fn: getExpression, args: { values: "{ex}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
+  cell_meta:  { path: "cell_metadata/{spat_unit}/{feat_type}",
+                get: { fn: getCellMetadata, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: data.table } } }
+  feat_meta:  { path: "feat_metadata/{spat_unit}/{feat_type}",
+                get: { fn: getFeatureMetadata, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: data.table } } }
+  centroids:  { path: "spatial_locs/{spat_unit}/{locs}",
+                get: { fn: getSpatialLocations, args: { spat_unit: "{spat_unit}", name: "{locs}", output: data.table } } }
+  reduction:  { path: "{red_path}",
+                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red_parent}", name: "{red}", output: dimObj } } }
+  nn_net:     { path: "{nn_path}",
+                get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: "{nn_parent}", name: "{nn}", output: data.table } } }
+  spat_net:   { path: "spatial_network/{spat_unit}/{sn}",
+                get: { fn: getSpatialNetwork, args: { spat_unit: "{spat_unit}", name: "{sn}", output: networkDT } } }
+
+parts:
+  - id: expr_raw
+    part: expression
+    from: counts
+    to: { assay: counts }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    to: { assay: logcounts }
+    lossy:
+      - { kind: estimated, field: assay, note: "Giotto normalized values stored as logcounts" }
+
+  # every other expression value (e.g. scaled) is an assay of its own name
+  - id: "expr_{ex}"
+    part: expression
+    from: other_expr
+    for_each: { list: Expressions, on: "{spat_unit}/{feat_type}", as: ex, exclude: "^(raw|normalized)$" }
+    to: { assay: "{ex}" }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    to: {}
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    to: {}
+
+  - id: locs
+    part: spatial_locs
+    from: centroids
+    optional: true
+    ops:
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: {}
+
+  # every reduction by name, scater's names for the standard ones
+  - id: "dimred_{red}"
+    part: dim_reduction
+    from: reduction
+    for_each: { list: DimNames, on: "{spat_unit}/{feat_type}", as: red, rename: { pca: PCA, umap: UMAP, tsne: TSNE } }
+    to: { reducedDim: "{red_label}" }
+
+  - id: "nn_{nn}"
+    part: nn_network
+    from: nn_net
+    for_each: { list: NNAll, on: "{spat_unit}/{feat_type}", as: nn }
+    to: { colPair: "{nn}", nn_type: "{nn_parent}", name: "{nn}" }
+
+  - id: "spatial_network_{sn}"
+    part: spatial_network
+    from: spat_net
+    for_each: { list: SpatNets, on: "{spat_unit}", as: sn }
+    to: { colPair: "spatial_{sn}", name: "{sn}" }
+
+lossy:
+  - { kind: dropped, path: "spatial_info", note: "polygons need a SpatialFeatureExperiment (sfe = 'yes')" }
+  - { kind: dropped, path: "feat_info", note: "transcript points need a SpatialFeatureExperiment (sfe = 'yes')" }
+  - { kind: dropped, path: "images", note: "images are not carried over yet" }
+  - { kind: dropped, path: "spatial_enrichment", note: "enrichment results are not carried over yet" }
+
+# one spatial unit and feature type per conversion (spat_unit / feat_type)
+out_of_scope:
+  - { pattern: "^(expression|cell_metadata|feat_metadata|nn_network|dimension_reduction/cells|spatial_enrichment)/(?!{spat_unit}/{feat_type}(/|$))",
+      note: "other spatial units and feature types are converted separately (spat_unit / feat_type)" }
+  - { pattern: "^(spatial_locs|spatial_network)/(?!{spat_unit}(/|$))",
+      note: "other spatial units and feature types are converted separately (spat_unit / feat_type)" }

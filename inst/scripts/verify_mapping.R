@@ -15,6 +15,7 @@ builders <- list(
     seurat5_visium_fixture = env$build_seurat_visium_fixture,
     seurat_v3_fixture = env$build_seurat_v3_fixture,
     giotto_fixture_small = env$build_giotto_fixture,
+    giotto_sfe_fixture = env$build_giotto_sfe_fixture,
     seurat_visium_v1_fixture = env$build_seurat_visium_v1_fixture,
     seurat_slideseq_fixture = env$build_seurat_slideseq_fixture,
     anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path,
