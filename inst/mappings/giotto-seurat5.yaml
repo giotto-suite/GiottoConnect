@@ -5,7 +5,7 @@ mapping:
   id: giotto-seurat5
   version: 0.1.0
   status: verified
-  built: "2026-11-20"
+  built: "2026-11-23"
   schema_version: 0.1.0
   source:
     ecosystem: giotto
@@ -44,8 +44,8 @@ source_nodes:
                 get: { fn: getSpatialLocations, args: { spat_unit: "{spat_unit}", name: "{locs}", output: data.table } } }
   polygons:   { path: "spatial_info/{poly}",
                 get: { fn: getPolygonInfo, args: { name: "{poly}", return_giottoPolygon: true } } }
-  reduction:  { path: "dimension_reduction/cells/{spat_unit}/{feat_type}/{red}/{red}",
-                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red}", name: "{red}", output: matrix } } }
+  reduction:  { path: "{red_path}",
+                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red_parent}", name: "{red}", output: matrix } } }
   knn_net:    { path: "nn_network/{spat_unit}/{feat_type}/kNN/{knn}",
                 get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: kNN, name: "{knn}", output: data.table } } }
   snn_net:    { path: "nn_network/{spat_unit}/{feat_type}/sNN/{snn}",
@@ -102,10 +102,11 @@ parts:
   - id: "dimred_{red}"
     part: dim_reduction
     from: reduction
-    for_each: { list: DimMethods, on: "{spat_unit}/{feat_type}", as: red }
+    # every reduction by name; its method is the parent ({red_parent})
+    for_each: { list: DimNames, on: "{spat_unit}/{feat_type}", as: red }
     to: { reduction: "{red}", key: "{red}_" }
     lossy:
-      - { kind: dropped, path: "dimension_reduction/cells/{spat_unit}/{feat_type}/{red}/{red}/misc", note: "loadings and eigenvalues are not carried over yet" }
+      - { kind: dropped, path: "{red_path}/misc", note: "loadings and eigenvalues are not carried over yet" }
 
   - id: knn
     part: nn_network
@@ -125,3 +126,4 @@ lossy:
   - { kind: dropped, path: "images", note: "images are not carried over yet" }
   - { kind: dropped, path: "spatial_network", note: "spatial networks have no Seurat slot" }
   - { kind: dropped, path: "feat_info", note: "transcript points are not carried over yet" }
+  - { kind: dropped, path: "spatial_enrichment", note: "enrichment results have no Seurat slot" }

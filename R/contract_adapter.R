@@ -82,11 +82,15 @@ setMethod("adapterListPaths", "giottoAdapter", function(adapter) c(
     SpatUnits = "expression", FeatTypes = "expression/{on}", Expressions = "expression/{on}",
     SpatLocs = "spatial_locs/{on}", Polygons = "spatial_info",
     DimMethods = "dimension_reduction/cells/{on}", NNNames = "nn_network/{on}",
+    # every cells-side reduction, whatever its method (name and method may differ)
+    DimNames = "dimension_reduction/cells/{on}/*",
+    SpatNets = "spatial_network/{on}", FeatInfo = "feat_info",
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "giottoAdapter", function(adapter) c(
     "getExpression", "getCellMetadata", "getFeatureMetadata", "getSpatialLocations",
-    "getPolygonInfo", "getDimReduction", "getNearestNetwork", "[[", "path"
+    "getPolygonInfo", "getDimReduction", "getNearestNetwork", "getSpatialNetwork",
+    "getFeatureInfo", "[[", "path"
 ))
 setMethod("adapterObjectLists", "giottoAdapter", function(adapter) {
     c("SpatUnits", "FeatTypes", "Polygons", "DimMethods", "NNNames")
@@ -105,7 +109,9 @@ setClass("giottoConnectTarget", representation("VIRTUAL", contract = "character"
 setClass("giottoTarget", contains = "giottoConnectTarget", prototype = list(contract = "giotto"))
 setClass("seuratTarget", contains = "giottoConnectTarget", prototype = list(contract = "seurat"))
 
-setGeneric("targetBuild", function(target, prepared, mapping, prov, source = NULL) {
+# `source`: GiottoDisk project of a giotto result; `output`: file a file
+# target (e.g. .h5ad) writes
+setGeneric("targetBuild", function(target, prepared, mapping, prov, source = NULL, output = NULL) {
     standardGeneric("targetBuild")
 })
 setGeneric("targetCheckKeys", function(target, mapping, out) standardGeneric("targetCheckKeys"))
@@ -114,7 +120,8 @@ setGeneric("targetSemantic", function(target, mapping, profile, result, out) {
 })
 setGeneric("targetComparators", function(target) standardGeneric("targetComparators"))
 
-setMethod("targetBuild", "giottoTarget", function(target, prepared, mapping, prov, source = NULL) {
+setMethod("targetBuild", "giottoTarget", function(target, prepared, mapping, prov, source = NULL,
+    output = NULL) {
     contract <- giottoContract()
     src <- if (is.null(source)) NULL else {
         package_check("GiottoDisk")
@@ -139,7 +146,8 @@ setMethod("targetSemantic", "giottoTarget", function(target, mapping, profile, r
 })
 setMethod("targetComparators", "giottoTarget", function(target) .RB_COMPARE)
 
-setMethod("targetBuild", "seuratTarget", function(target, prepared, mapping, prov, source = NULL) {
+setMethod("targetBuild", "seuratTarget", function(target, prepared, mapping, prov, source = NULL,
+    output = NULL) {
     if (!is.null(source)) stop(wrap_txt("`source` applies to Giotto targets only"), call. = FALSE)
     .record_seurat_conversion(.assemble_seurat(prepared), prov)
 })

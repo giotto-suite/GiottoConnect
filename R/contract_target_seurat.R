@@ -79,7 +79,8 @@
 
     for (pp in by_part("dim_reduction")) {
         m <- as.matrix(pp$data)
-        key <- pp$spec$to$key
+        # Seurat keys are alphanumeric followed by "_"
+        key <- paste0(gsub("[^A-Za-z0-9]", "", sub("_$", "", pp$spec$to$key)), "_")
         colnames(m) <- paste0(key, seq_len(ncol(m)))
         s[[pp$spec$to$reduction]] <- SO$CreateDimReducObject(embeddings = m[colnames(s), , drop = FALSE],
             key = key, assay = SO$DefaultAssay(s))

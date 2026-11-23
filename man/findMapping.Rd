@@ -4,7 +4,7 @@
 \alias{findMapping}
 \title{Find the mapping for an object}
 \usage{
-findMapping(profile, mappings = NULL, ecosystem = NULL)
+findMapping(profile, mappings = NULL, ecosystem = NULL, target = NULL)
 }
 \arguments{
 \item{profile}{\code{giottoProfile} of the object}
@@ -13,6 +13,9 @@ findMapping(profile, mappings = NULL, ecosystem = NULL)
 to all bundled mappings.}
 
 \item{ecosystem}{optional ecosystem filter, e.g. \code{"seurat"}}
+
+\item{target}{optional target filter (\code{mapping.target.contract}), e.g.
+\code{"seurat"} for mappings from giotto objects to Seurat}
 }
 \value{
 list with \code{status} (\code{"match"}, \code{"repair_needed"} or \code{"none"}),
