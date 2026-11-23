@@ -45,6 +45,9 @@ R/
   contract_llm.R         llmBackend(), llmPatch() (opt-in, repair only)
   contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
   anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
+  tool-utils.R           shared helpers for external tool connections (py_require CLI path, run + log)
+  tool-<name>.R          one external tool per file (adr/0008 in GiottoClass): <name>Param, analyzeData
+                         method, run<Tool>(); the tool is checked or installed only when it runs
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology
   contract/giotto-contract-<GiottoClass version>.json
