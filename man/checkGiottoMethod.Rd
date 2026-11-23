@@ -11,7 +11,8 @@ checkGiottoMethod(
   slots,
   param_class = NULL,
   fn = NULL,
-  package = NULL
+  package = NULL,
+  result = NULL
 )
 
 expect_giotto_method(...)
@@ -20,13 +21,16 @@ expect_giotto_method(...)
 \item{before, after}{giotto objects before and after the run}
 
 \item{slots}{slots the method may change, e.g.
-\code{c("cell_metadata", "spatial_enrichment")}}
+\code{c("cell_metadata", "spatial_enrichment")}, or \code{"none"} for methods that
+return their results}
 
 \item{param_class}{class of the param expected in the history; \code{NULL}
 accepts any param}
 
 \item{fn, package}{name of the \verb{run*()} function and its package, for the
 documentation check; skipped when \code{NULL}}
+
+\item{result}{the returned result, with `slots = "none"}
 
 \item{...}{arguments of \code{checkGiottoMethod()}}
 }
@@ -46,6 +50,11 @@ their spatial unit, and new cell metadata columns are not all \code{NA};
 (\code{update_giotto_params(attachments = list(param = param))});
 \item the help page of \code{fn} has references and asks users to cite them.
 }
+
+Methods whose results fit no slot (e.g. an interaction table) return them
+instead: pass \code{slots = "none"} and the returned object as \code{result}. Then
+the object must be unchanged and \code{attr(result, "param")} must hold the
+param.
 }
 \details{
 \code{expect_giotto_method()} is the \pkg{testthat} expectation: it

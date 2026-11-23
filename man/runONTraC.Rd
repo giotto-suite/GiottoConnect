@@ -60,6 +60,12 @@ g <- runONTraC(g, cell_type = "leiden_clus", spat_unit = "aggregate",
     param = ontracParam(n_neighbors = 30, n_local = 10))
 }
 }
+\references{
+Wang W, Zheng S, Shin SC, Chávez-Fuentes JC, Yuan GC. ONTraC
+characterizes spatially continuous variations of tissue microenvironment
+through niche trajectory analysis. \emph{Genome Biology} 26, 117 (2025).
+\doi{10.1186/s13059-025-03588-5}
+}
 \seealso{
 \code{\link[=ontracParam]{ontracParam()}}
 }

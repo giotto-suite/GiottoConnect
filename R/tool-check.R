@@ -14,9 +14,16 @@
 #' * the last history entry carries the method's param
 #'   (`update_giotto_params(attachments = list(param = param))`);
 #' * the help page of `fn` has references and asks users to cite them.
+#'
+#' Methods whose results fit no slot (e.g. an interaction table) return them
+#' instead: pass `slots = "none"` and the returned object as `result`. Then
+#' the object must be unchanged and `attr(result, "param")` must hold the
+#' param.
 #' @param before,after giotto objects before and after the run
 #' @param slots slots the method may change, e.g.
-#'   `c("cell_metadata", "spatial_enrichment")`
+#'   `c("cell_metadata", "spatial_enrichment")`, or `"none"` for methods that
+#'   return their results
+#' @param result the returned result, with `slots = "none"
 #' @param param_class class of the param expected in the history; `NULL`
 #'   accepts any param
 #' @param fn,package name of the `run*()` function and its package, for the
@@ -34,7 +41,7 @@
 #' @md
 #' @export
 checkGiottoMethod <- function(before, after, slots, param_class = NULL,
-    fn = NULL, package = NULL) {
+    fn = NULL, package = NULL, result = NULL) {
     checkmate::assert_class(before, "giotto")
     checkmate::assert_class(after, "giotto")
     checkmate::assert_character(slots, min.len = 1L)
@@ -48,8 +55,14 @@ checkGiottoMethod <- function(before, after, slots, param_class = NULL,
     changed <- c(names(d$added), names(d$modified), d$removed)
     families <- unique(sub("\\..*$", "", changed))
 
-    add("something stored", length(c(names(d$added), names(d$modified))) > 0L,
-        "no slot changed: the run*() wrapper must write its results with the setters")
+    returns <- identical(slots, "none")
+    if (returns) {
+        add("object unchanged", !length(changed),
+            paste0("slots = \"none\" but changed: ", paste(changed, collapse = ", ")))
+    } else {
+        add("something stored", length(c(names(d$added), names(d$modified))) > 0L,
+            "no slot changed: the run*() wrapper must write its results with the setters")
+    }
     extra <- setdiff(families, c(slots, "parameters"))
     add("only declared slots changed", !length(extra),
         paste0("undeclared slot(s) changed: ", paste(extra, collapse = ", "),
@@ -78,20 +91,23 @@ checkGiottoMethod <- function(before, after, slots, param_class = NULL,
 
     # provenance
     h <- after@parameters
-    p <- if (length(h)) attr(h[[length(h)]], "attachments")$param else NULL
+    p <- if (returns) attr(result, "param") else if (length(h)) {
+        attr(h[[length(h)]], "attachments")$param
+    }
     is_param <- !is.null(p) && (if (is.null(param_class)) {
         any(vapply(c("analyzeParam", "processParam", "reduceParam",
             "filterParam"), function(cl) methods::is(p, cl), logical(1)))
     } else methods::is(p, param_class))
-    add("param in history", is_param, paste0(
-        "end the wrapper with update_giotto_params(gobject, description = ",
-        "\"_<name>\", attachments = list(param = param))",
+    add(if (returns) "param on the result" else "param in history", is_param,
+        paste0(if (returns) "set attr(result, \"param\") <- param before returning" else
+            paste0("end the wrapper with update_giotto_params(gobject, description = ",
+                "\"_<name>\", attachments = list(param = param))"),
         if (!is.null(param_class)) paste0(" with a ", param_class) else ""))
 
     # credit
     if (!is.null(fn) && !is.null(package)) {
         rd <- .check_rd_text(fn, package)
-        add("help page has references", grepl("\\\\references", rd$raw),
+        add("help page has references", rd$has_refs,
             "add @references with the original paper (and \\doi{})")
         add("help page asks to cite", grepl("cite", rd$text, ignore.case = TRUE),
             "say in @description: 'If you use it, please cite the original paper'")
@@ -158,8 +174,9 @@ expect_giotto_method <- function(...) {
         fn %in% unlist(lapply(rd, function(x)
             if (identical(attr(x, "Rd_tag"), "\\alias")) as.character(x)))
     }, db)
-    if (!length(hit)) return(list(raw = "", text = ""))
+    if (!length(hit)) return(list(has_refs = FALSE, text = ""))
     rd <- hit[[1]]
-    list(raw = paste(as.character(rd), collapse = ""),
+    tags <- vapply(rd, function(x) attr(x, "Rd_tag") %null% "", character(1))
+    list(has_refs = "\\references" %in% tags,
         text = paste(utils::capture.output(tools::Rd2txt(rd)), collapse = " "))
 }

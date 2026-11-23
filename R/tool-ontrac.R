@@ -191,6 +191,7 @@ setMethod("analyzeData", signature(x = "data.frame", param = "ontracParam"),
 #' @param name prefix of the results
 #' @param verbose be verbose
 #' @returns The giotto object with the results.
+#' @inherit ontracParam references
 #' @seealso [ontracParam()]
 #' @examples
 #' \dontrun{
