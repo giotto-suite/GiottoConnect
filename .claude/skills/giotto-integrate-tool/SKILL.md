@@ -29,7 +29,9 @@ For R packages print the bodies of the main functions; for Python, `--help`.
    `clusterData` (labels), `processData` (same-shape values).
 2. `setMethod("<verb>", signature(x = <data class>, param = "<name>Param"))`
    that **returns** the result (never a giotto object). Multi-output tools:
-   one per-cell table, extra outputs as attributes.
+   one per-cell table, extra outputs as attributes. Several inputs (matrix +
+   labels + coordinates): dispatch on the main one (`x = "allMatrix"`,
+   features x cells) and take the others as named arguments of the method.
 3. `run<Tool>(gobject, ...)`: defaults via `set_default_spat_unit()` /
    `set_default_feat_type()`, inputs via accessors, call the verb, write via
    setters, end with
@@ -43,7 +45,8 @@ For R packages print the bodies of the main functions; for Python, `--help`.
 | cells x dims | `createDimObj(coordinates, name, spat_unit, feat_type, method, reduction = "cells")` + `setDimReduction(g, x, spat_unit, feat_type, reduction = "cells", reduction_method, name)` |
 | cells x categories | `createSpatEnrObj(enrichment_data = dt_with_cell_ID, name, spat_unit, feat_type, method, misc)` + `setSpatialEnrichment(g, x, spat_unit, feat_type, name)` |
 | features x cells | `createExprObj()` + `setExpression()` |
-| anything else | return it / keep in the stored object's `misc`; never invent a spat_unit or feat_type to park it |
+| describes a stored object (e.g. per-cluster scores of an enrichment) | that object's `misc` |
+| anything else (interaction tables, tool objects) | **return it** from `run<Tool>()`, leave the giotto object unchanged, set `attr(res, "param") <- param`; never invent a spat_unit or feat_type to park it |
 
 ### Inputs
 `getExpression(g, spat_unit, feat_type, values = "normalized", output = "matrix")`
@@ -53,23 +56,32 @@ For R packages print the bodies of the main functions; for Python, `--help`.
 `createNetwork(locs, kNNNetworkParam(k, include_weight = FALSE, output = "data.table"))`
 (directed kNN, `from, to, distance`), `reduceData(x, pcaParam("irlba", ncp, center = TRUE, scale = FALSE))`.
 
+### R tools
+`package_check("<pkg>", repository = "CRAN" | "Bioc" | "github:owner/repo")`
+at the top of the method. CRAN/Bioc tools go in `Suggests`; GitHub-only
+tools are not listed anywhere (install hint only) and are called with
+`getExportedValue("<pkg>", "<fun>")`. Tests: `skip_if_not_installed("<pkg>")`.
+Load a tool's lazy data with `utils::data(list = "<name>", package = "<pkg>")`.
+
 ### Python tools
 `exe <- .tool_python_cli("<pkg>[extras]==<ver>", module = "<module>", cli = "<cli>", python_version = ">=3.10,<3.13")`,
 then `.tool_run(exe, args, log_file)`. Write inputs to `tempfile()`; read
 outputs with `data.table::fread()`. Pin the version in the param.
 
 ## 4. Credit (required)
-Help page of the param and the wrapper: name the original method and paper,
-`@references` with `\doi{}`, and the sentence "If you use it, please cite the
-original paper". Native: state differences from the original and the parity
-result.
+Help page of the param **and** the wrapper (the check reads each page):
+name the original method and paper, `@references` with `\doi{}` (on the
+wrapper: `@inherit <name>Param references`), and the sentence "If you use
+it, please cite the original paper". Native: state differences from the
+original and the parity result.
 
 ## 5. Test and check
 - `tests/testthat/test-tool-<name>.R`: offline tests (argument building, output
   parsing with tiny fake files) always; the real run behind
   `skip_if(Sys.getenv("GIOTTOCONNECT_TOOL_TESTS") == "")` + `skip_if_not_installed()`.
 - Run on a mini and check conformance:
-  `checkGiottoMethod(before, after, slots = c(...), param_class = "<name>Param", fn = "run<Tool>", package = "<pkg>")`.
+  `checkGiottoMethod(before, after, slots = c(...), param_class = "<name>Param", fn = "run<Tool>", package = "<pkg>")`;
+  for methods that return: `checkGiottoMethod(g, g, slots = "none", result = res, ...)`.
   Fix every FAIL using its message.
 - Parity: same input through the original tool directly; compare values
   (max abs diff) or labels (`aricode::ARI`). Scripts go in
@@ -84,7 +96,19 @@ result.
 - Document: `roxygen2::roxygenise()` (8.0.0); then `git checkout --` any
   unrelated `man/*.Rd` or Collate reordering it produced. Install:
   `R CMD INSTALL --no-multiarch .` with the library above.
+- GiottoConnect does not import data.table: always subset with a comma
+  (`dt[i, ]`, `dt[, cols, with = FALSE]`) or use `data.table::` functions;
+  `dt[match(...)]` falls through to `[.data.frame` and fails.
+- A wrapper that calls another `run*()` wrapper: run the inner one inside
+  `gwith_options(list(giotto.update_param = FALSE), ...)` and record one
+  history entry yourself (nested `update_giotto_params()` fails on `...`).
 - Work on a branch in a worktree; do not push.
+
+## Worked examples
+`GiottoConnect/R/tool-ontrac.R` (Python CLI, results to metadata + enrichment),
+`GiottoConnect/R/tool-cellchat.R` (R package, returns its table),
+`Giotto/R/neighborhood-pca.R` (native `reduceData`), `Giotto/R/hmrf.R`
+(native `clusterData`, plus the `findSpatialDomains()` composition).
 
 ## Done means
 Conformance all ok, parity reported, docs credit the authors, tests pass,

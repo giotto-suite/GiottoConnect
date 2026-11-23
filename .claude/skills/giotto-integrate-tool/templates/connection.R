@@ -48,7 +48,9 @@ setMethod("analyzeData", signature(x = "<data.frame|allMatrix|...>", param = "<n
 #' @param spat_unit,feat_type spatial unit and feature type
 #' @param param a [<name>Param()]; its defaults when `NULL`
 #' @param name prefix of the results
-#' @returns The giotto object with the results.
+#' @returns The giotto object with the results (or, when the results fit no
+#'   slot, the result with `attr(, "param")`).
+#' @inherit <name>Param references
 #' @md
 #' @export
 run<Tool> <- function(gobject, spat_unit = NULL, feat_type = NULL, param = NULL,
