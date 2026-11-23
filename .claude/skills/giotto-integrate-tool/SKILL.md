@@ -19,6 +19,10 @@ need is below; do not explore the suite to rediscover it.
   the tool's), parity against the original.
 
 ## 2. Read the tool, briefly
+Also check determinism first: run the tool twice on a few features without a
+seed. If results differ (nnSVG, BayesSpace, CellChat's kNN), add `seed` to the
+param, set it inside the method and restore the caller's RNG state
+(`withr`-free: save `.Random.seed` and put it back).
 Find: inputs (expression? coordinates? labels?), outputs, the main call or
 CLI, its defaults, the paper (title, journal, DOI), licence, version.
 For R packages print the bodies of the main functions; for Python, `--help`.
@@ -26,7 +30,10 @@ For R packages print the bodies of the main functions; for Python, `--help`.
 ## 3. Write three pieces (copy `templates/connection.R` or `templates/native.R`)
 1. `<name>Param()` + `setClass("<name>Param", contains = "<verb>Param")`.
    Verb by output: `analyzeData` (tables), `reduceData` (embedding),
-   `clusterData` (labels), `processData` (same-shape values).
+   `clusterData` (labels), `processData` (same-shape values). GiottoClass has
+   no virtual clustering param: in GiottoConnect subclass `analyzeParam` and
+   register the method on `clusterData` (avoids a bluster dependency); in
+   Giotto, `BlusterParam` with a `param` list slot as `hmrfParam` does.
 2. `setMethod("<verb>", signature(x = <data class>, param = "<name>Param"))`
    that **returns** the result (never a giotto object). Multi-output tools:
    one per-cell table, extra outputs as attributes. Several inputs (matrix +
@@ -82,6 +89,9 @@ original and the parity result.
 - Run on a mini and check conformance:
   `checkGiottoMethod(before, after, slots = c(...), param_class = "<name>Param", fn = "run<Tool>", package = "<pkg>")`;
   for methods that return: `checkGiottoMethod(g, g, slots = "none", result = res, ...)`.
+  `package` is the package that holds the `run<Tool>()` help page (e.g.
+  `"GiottoConnect"`), not the tool's package; the help checks need the
+  installed package, not `load_all()`.
   Fix every FAIL using its message.
 - Parity: same input through the original tool directly; compare values
   (max abs diff) or labels (`aricode::ARI`). Scripts go in
@@ -98,7 +108,11 @@ original and the parity result.
   `R CMD INSTALL --no-multiarch .` with the library above.
 - GiottoConnect does not import data.table: always subset with a comma
   (`dt[i, ]`, `dt[, cols, with = FALSE]`) or use `data.table::` functions;
-  `dt[match(...)]` falls through to `[.data.frame` and fails.
+  `dt[match(...)]` falls through to `[.data.frame` and fails; `with = FALSE`
+  is ignored (a character `j` works); filters by column name (`dt[col == x]`)
+  fail in tests, use `dt[dt$col == x, ]`.
+- Numeric-looking labels (Leiden clusters) are numbers: convert to factor
+  before using them as categories or model covariates.
 - A wrapper that calls another `run*()` wrapper: run the inner one inside
   `gwith_options(list(giotto.update_param = FALSE), ...)` and record one
   history entry yourself (nested `update_giotto_params()` fails on `...`).
