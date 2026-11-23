@@ -101,6 +101,29 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
     out
 }
 
+# list(image, scale) -> a SpatialExperiment image placed by its scale factor,
+# or for a SpatialFeatureExperiment a SpatRasterImage placed by its extent in
+# spatialCoords units (y down: the raster's first row is the image's bottom
+# row, as terra reads a PNG)
+.spe_image <- function(img, sfe = FALSE) {
+    if (!sfe) return(SpatialExperiment::SpatialImage(grDevices::as.raster(img$image)))
+    a <- img$image
+    r <- terra::rast(a[rev(seq_len(dim(a)[1L])), , , drop = FALSE] * 255)
+    terra::ext(r) <- c(0, dim(a)[2L] / img$scale, 0, dim(a)[1L] / img$scale)
+    SpatialFeatureExperiment::SpatRasterImage(r)
+}
+
+# an imgData image back as an H x W x 3 array of 0..1 values (top row first)
+.spe_image_array <- function(im) {
+    if (methods::is(im, "SpatRasterImage")) {
+        a <- terra::as.array(methods::as(im, "SpatRaster"))
+        return(a[rev(seq_len(dim(a)[1L])), , seq_len(min(3L, dim(a)[3L])), drop = FALSE] / 255)
+    }
+    m <- as.matrix(SpatialExperiment::imgRaster(im))
+    rgb <- grDevices::col2rgb(m) / 255
+    array(t(rgb), c(nrow(m), ncol(m), 3L))
+}
+
 .assemble_spe <- function(prepared, sfe = FALSE) {
     package_check("SpatialExperiment", repository = "Bioc:SpatialExperiment")
     if (sfe) package_check("SpatialFeatureExperiment", repository = "Bioc:SpatialFeatureExperiment")
@@ -183,9 +206,7 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
         SpatialExperiment::imgData(x) <- S4Vectors::DataFrame(
             sample_id = rep(x$sample_id[1L], length(imgs)),
             image_id = unname(vapply(imgs, function(pp) pp$spec$to$imgData, character(1))),
-            data = I(unname(lapply(imgs, function(pp) {
-                SpatialExperiment::SpatialImage(grDevices::as.raster(pp$data$image))
-            }))),
+            data = I(unname(lapply(imgs, function(pp) .spe_image(pp$data, sfe)))),
             scaleFactor = unname(vapply(imgs, function(pp) pp$data$scale, numeric(1))))
     }
     for (pp in by_part("feature_info")) {
@@ -351,11 +372,11 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
     images = function(spec, data, x, n_cells) {
         d <- SpatialExperiment::imgData(x)
         i <- match(spec$to$imgData, d$image_id)
-        ras <- if (!is.na(i)) SpatialExperiment::imgRaster(x, sample_id = d$sample_id[i], image_id = d$image_id[i])
+        got <- if (!is.na(i)) .spe_image_array(d$data[[i]])
         list(
             .rb_row("placement", !is.na(i), paste0("imgData ", spec$to$imgData)),
-            .rb_row("values", !is.na(i) && identical(as.vector(as.matrix(ras)),
-                as.vector(as.matrix(grDevices::as.raster(data$image)))),
+            # an R raster holds 8-bit colours
+            .rb_row("values", !is.na(i) && .rb_same(got, data$image, tol = 1 / 255),
                 sprintf("%s px", paste(dim(data$image)[2:1], collapse = " x "))),
             .rb_row("scale", !is.na(i) && .rb_same(d$scaleFactor[i], data$scale), sprintf("scaleFactor %.4g", data$scale))
         )

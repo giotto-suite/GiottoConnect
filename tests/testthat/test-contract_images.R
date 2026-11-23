@@ -94,3 +94,16 @@ test_that("Seurat Visium images are placed in the units of the spots", {
     # um per full-resolution pixel)
     expect_equal(unname(terra::ext(im@raster_object)[2]), 8 / sf$lowres * 0.885, tolerance = 1e-3)
 })
+
+test_that("a SpatialFeatureExperiment holds the image as a SpatRasterImage", {
+    skip_if_not_installed("SpatialFeatureExperiment")
+    g <- giotto_with_image()
+    x <- giottoToSpatialExperiment(g, sfe = "yes")
+    im <- SpatialExperiment::imgData(x)$data[[1L]]
+    expect_s4_class(im, "SpatRasterImage")
+    expect_true(attr(readbackCheck(g, x), "pass"))
+    # SFE subsetting crops the image
+    expect_no_error(x[, 1:20])
+    g2 <- spatialExperimentToGiotto(x)
+    expect_lt(mean(abs(spot_colours(g2, "image") - spot_colours(g, "image"))), 0.02)
+})

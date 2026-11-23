@@ -90,9 +90,22 @@
     d <- SPE$imgData(ctx$x)
     i <- match("hires", d$image_id)
     if (is.na(i)) i <- 1L
-    ras <- SPE$imgRaster(ctx$x, sample_id = d$sample_id[i], image_id = d$image_id[i])
     unit <- if (to_um) .spe_um_per_px(ctx$x, SPE$spatialCoords(ctx$x))$um else 1
-    .hook_result(.rgb_to_giotto_raster(ras, d$scaleFactor[i], unit), to = list(name = d$image_id[i]))
+    im <- d$data[[i]]
+    r <- if (methods::is(im, "SpatRasterImage")) {
+        # SpatialFeatureExperiment: placed by its extent in spatialCoords
+        # units, y down; Giotto: y up
+        g <- methods::as(im, "SpatRaster")
+        e <- as.vector(terra::ext(g))
+        g <- terra::flip(g, direction = "vertical")
+        g <- g[[seq_len(min(3L, terra::nlyr(g)))]]
+        terra::ext(g) <- c(e[["xmin"]], e[["xmax"]], -e[["ymax"]], -e[["ymin"]]) * unit
+        g
+    } else {
+        .rgb_to_giotto_raster(SPE$imgRaster(ctx$x, sample_id = d$sample_id[i], image_id = d$image_id[i]),
+            d$scaleFactor[i], unit)
+    }
+    .hook_result(r, to = list(name = d$image_id[i]))
 }
 
 # scanpy uns/spatial/<library>: hires (else lowres) image and its scale factor
