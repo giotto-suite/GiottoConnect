@@ -111,3 +111,30 @@ test_that("reductions whose name differs from their method are exported", {
     expect_true(all(c("custom_pca", "custom_umap") %in% SeuratObject::Reductions(s)))
     expect_true(attr(readbackCheck(g, s), "pass"))
 })
+
+test_that("transcripts, PCA loadings and every network go to Seurat", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    mol <- data.frame(x = stats::runif(40, 0, 2000), y = stats::runif(40, 0, 2000),
+        gene = rep(rownames(s)[1:4], each = 10))
+    fov <- s[["fov"]]
+    fov@molecules <- list(molecules = SO$CreateMolecules(mol))
+    s[["fov"]] <- fov
+    g <- seuratToGiotto(s)
+    g <- GiottoClass::setGiotto(g, GiottoClass::createNearestNetObj(name = "extra_knn", nn_type = "kNN",
+        network = GiottoClass::getNearestNetwork(g, nn_type = "kNN", output = "data.table"),
+        spat_unit = "cell", feat_type = "rna"), verbose = FALSE)
+
+    out <- giottoToSeurat(g)
+    m <- SO$GetTissueCoordinates(out[["fov"]][["molecules"]])
+    expect_equal(nrow(m), 40L)
+    expect_equal(sort(m$y), sort(mol$y))
+    expect_equal(unname(SO$Loadings(out, "pca")), unname(SO$Loadings(s, "pca")), tolerance = 1e-8)
+    expect_equal(SO$Stdev(out, "pca"), SO$Stdev(s, "pca"), tolerance = 1e-8)
+    expect_true("extra_knn" %in% SO$Graphs(out))
+    # the export merges with a native Seurat object
+    mm <- merge(out, s, add.cell.ids = c("g", "s"))
+    expect_equal(ncol(mm), 2L * ncol(s))
+    expect_true(attr(readbackCheck(g, out), "pass"))
+})

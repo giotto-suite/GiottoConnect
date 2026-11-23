@@ -45,7 +45,11 @@ source_nodes:
   polygons:   { path: "spatial_info/{poly}",
                 get: { fn: getPolygonInfo, args: { name: "{poly}", return_giottoPolygon: true } } }
   reduction:  { path: "{red_path}",
-                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red_parent}", name: "{red}", output: matrix } } }
+                get: { fn: getDimReduction, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", reduction: cells, reduction_method: "{red_parent}", name: "{red}", output: dimObj } } }
+  points:     { path: "feat_info/{feat_type}",
+                get: { fn: getFeatureInfo, args: { feat_type: "{feat_type}", return_giottoPoints: true } } }
+  other_nn:   { path: "{nn_path}",
+                get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: "{nn_parent}", name: "{nn}", output: data.table } } }
   knn_net:    { path: "nn_network/{spat_unit}/{feat_type}/kNN/{knn}",
                 get: { fn: getNearestNetwork, args: { spat_unit: "{spat_unit}", feat_type: "{feat_type}", nn_type: kNN, name: "{knn}", output: data.table } } }
   snn_net:    { path: "nn_network/{spat_unit}/{feat_type}/sNN/{snn}",
@@ -104,9 +108,8 @@ parts:
     from: reduction
     # every reduction by name; its method is the parent ({red_parent})
     for_each: { list: DimNames, on: "{spat_unit}/{feat_type}", as: red }
+    # PCA loadings and eigenvalues (as stdev) go with the DimReduc
     to: { reduction: "{red}", key: "{red}_" }
-    lossy:
-      - { kind: dropped, path: "{red_path}/misc", note: "loadings and eigenvalues are not carried over yet" }
 
   - id: knn
     part: nn_network
@@ -122,10 +125,27 @@ parts:
     optional: true
     to: { graph: "{feat_type}_snn" }
 
+  # every other nn network, as a Graph of its Giotto name
+  - id: "nn_{nn}"
+    part: nn_network
+    from: other_nn
+    hook: giotto_nn_to_graph
+    for_each: { list: NNAll, on: "{spat_unit}/{feat_type}", as: nn, exclude: "^({knn}|{snn})$" }
+    to: { graph: "{nn}", nn_type: "{nn_parent}" }
+
+  # transcripts of the feature type -> FOV molecules (image space: y down)
+  - id: points
+    part: feature_info
+    from: points
+    hook: giotto_points_to_molecules
+    optional: true
+    ops:
+      - { op: scale, factor: -1, cols: [y] }
+    to: { fov: fov }
+
 lossy:
   - { kind: dropped, path: "images", note: "images are not carried over yet" }
   - { kind: dropped, path: "spatial_network", note: "spatial networks have no Seurat slot" }
-  - { kind: dropped, path: "feat_info", note: "transcript points are not carried over yet" }
   - { kind: dropped, path: "spatial_enrichment", note: "enrichment results have no Seurat slot" }
 
 # one spatial unit and feature type per conversion (spat_unit / feat_type)

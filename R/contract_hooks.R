@@ -60,6 +60,11 @@
         packages = c("GiottoClass", "terra"),
         description = "giottoPolygon (in memory or GiottoDisk) -> vertex table x, y, cell"
     ),
+    giotto_points_to_molecules = list(
+        fn = function(node, params, ctx) .hook_points_to_molecules(node),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoPoints (in memory or GiottoDisk) -> molecule table x, y, gene for a Seurat FOV"
+    ),
     giotto_nn_to_graph = list(
         fn = function(node, params, ctx) .hook_nn_to_graph(node, params, ctx),
         packages = c("GiottoClass", "Matrix"),
@@ -250,7 +255,8 @@ hookRegistry <- function() {
     e <- as.data.frame(node)
     i <- match(e$from, cells)
     j <- match(e$to, cells)
-    knn <- grepl("_nn$", ctx$part_spec$to$graph %null% "")
+    to <- ctx$part_spec$to
+    knn <- if (!is.null(to$nn_type)) identical(to$nn_type, "kNN") else grepl("_nn$", to$graph %null% "")
     if (knn) {
         i <- c(i, seq_along(cells))
         j <- c(j, seq_along(cells))
@@ -485,5 +491,12 @@ hookRegistry <- function() {
     ctx$add_loss("recovered_from_parameters", "distance",
         "distances recomputed in spatialCoords; weight = 1 / distance (spdep weights not kept)")
     edges
+}
+
+# transcripts -> x, y, gene (Seurat's feature names: "_" becomes "-")
+.hook_points_to_molecules <- function(node) {
+    sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
+    xy <- terra::crds(sv)
+    data.frame(x = xy[, 1], y = xy[, 2], gene = .seurat_feat(sv$feat_ID), stringsAsFactors = FALSE)
 }
 
