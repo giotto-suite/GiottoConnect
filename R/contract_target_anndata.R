@@ -44,7 +44,10 @@ setMethod("targetComparators", "anndataTarget", function(target) .RB_COMPARE_ANN
 .ad_cells_by_feats <- function(m) {
     m <- if (is.matrix(m)) m else if (methods::is(m, "Matrix")) methods::as(m, "CsparseMatrix") else
         methods::as(m, "dgCMatrix")
-    Matrix::t(m)
+    m <- Matrix::t(m)
+    # plain character ids (some Giotto matrices carry named dimnames)
+    dimnames(m) <- lapply(dimnames(m), function(d) as.character(unname(d)))
+    m
 }
 
 # edge table -> cells x cells sparse matrix of one column (rows = from)
