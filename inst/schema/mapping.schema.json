@@ -140,7 +140,9 @@
               "type": "string",
               "enum": [
                 "giotto",
-                "seurat"
+                "seurat",
+                "anndata",
+                "spatialexperiment"
               ]
             },
             "version": {
@@ -418,6 +420,36 @@
           "items": {
             "type": "string"
           }
+        },
+        "obsm": {
+          "type": "string"
+        },
+        "obsp": {
+          "type": "string"
+        },
+        "varm": {
+          "type": "string"
+        },
+        "uns": {
+          "type": "string"
+        },
+        "altExp": {
+          "type": "string"
+        },
+        "colPair": {
+          "type": "string"
+        },
+        "colGeometry": {
+          "type": "string"
+        },
+        "rowGeometry": {
+          "type": "string"
+        },
+        "spatialGraph": {
+          "type": "string"
+        },
+        "reducedDim": {
+          "type": "string"
         }
       }
     },

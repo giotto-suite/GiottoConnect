@@ -78,3 +78,36 @@ test_that("a Giotto object that did not come from Seurat converts", {
     expect_equal(ncol(s), length(GiottoClass::spatIDs(g)))
     expect_true(attr(suppressWarnings(readbackCheck(g, s)), "pass"))
 })
+
+test_that("findMapping can filter by target", {
+    skip_if_not_installed("SeuratObject")
+    g <- seuratToGiotto(seurat_fixture())
+    p <- GiottoConnect:::adapterProfile(GiottoConnect:::.adapter_for("giotto"), g)
+    expect_equal(findMapping(p, ecosystem = "giotto", target = "seurat")$mapping$mapping$id,
+        "giotto-seurat5")
+    expect_equal(findMapping(p, ecosystem = "giotto", target = "spatialexperiment")$status, "none")
+})
+
+test_that("a chosen feature type is exported and read back", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    neg <- matrix(stats::rpois(4 * ncol(s), 1), 4, ncol(s),
+        dimnames = list(sprintf("NegProbe%02d", 1:4), colnames(s)))
+    s[["ControlProbe"]] <- SO$CreateAssay5Object(counts = methods::as(neg, "CsparseMatrix"))
+    g <- seuratToGiotto(s)
+    out <- giottoToSeurat(g, feat_type = "NegControlProbe")
+    expect_equal(SO$Assays(out), "NegControlProbe")
+    expect_equal(sort(rownames(out)), sprintf("NegProbe%02d", 1:4))
+    expect_equal(mappingProvenance(out)$pinned, list(feat_type = "NegControlProbe"))
+    expect_true(attr(readbackCheck(g, out), "pass"))
+})
+
+test_that("reductions whose name differs from their method are exported", {
+    skip_if_not_installed("SeuratObject")
+    skip_if_not_installed("GiottoData")
+    g <- suppressWarnings(GiottoData::loadGiottoMini("visium"))
+    s <- suppressWarnings(giottoToSeurat(g))
+    expect_true(all(c("custom_pca", "custom_umap") %in% SeuratObject::Reductions(s)))
+    expect_true(attr(readbackCheck(g, s), "pass"))
+})

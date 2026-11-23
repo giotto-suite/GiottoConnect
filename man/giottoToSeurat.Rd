@@ -4,10 +4,19 @@
 \alias{giottoToSeurat}
 \title{Convert a Giotto object to a Seurat object}
 \usage{
-giottoToSeurat(gobject, mapping = NULL, verbose = FALSE)
+giottoToSeurat(
+  gobject,
+  spat_unit = NULL,
+  feat_type = NULL,
+  mapping = NULL,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{gobject}{giotto object}
+
+\item{spat_unit, feat_type}{spatial unit and feature type to export (default:
+the active ones)}
 
 \item{mapping}{optional \code{giottoMapping}, mapping file or bundled mapping id}
 
