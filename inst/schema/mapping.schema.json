@@ -248,6 +248,10 @@
         "value": {
           "type": "string"
         },
+        "prefer": {
+          "type": "string",
+          "description": "rule first: pick the first child whose name matches this regex, else the first child"
+        },
         "class": {
           "type": "string"
         },
@@ -474,6 +478,14 @@
         },
         "reducedDim": {
           "type": "string"
+        },
+        "imgData": {
+          "type": "string",
+          "description": "SpatialExperiment image_id"
+        },
+        "library_id": {
+          "type": "string",
+          "description": "AnnData uns/spatial library (scanpy Visium layout)"
         }
       }
     },
@@ -541,7 +553,8 @@
             "dim_reduction",
             "nn_network",
             "feature_info",
-            "spatial_network"
+            "spatial_network",
+            "images"
           ]
         },
         "from": {

@@ -4,7 +4,7 @@
     "package": "GiottoClass",
     "version": "0.8.0"
   },
-  "profiled_at": "2026-11-23T14:55:46-0500",
+  "profiled_at": "2026-11-23T15:45:24-0500",
   "profiler_version": "0.1.0",
   "n_cells": 200,
   "n_feat": 50,
@@ -1772,8 +1772,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "g-20261123195546-...",
-      "value": "g-20261123195546-632f7f7e2195"
+      "sample": "g-20261123204523-...",
+      "value": "g-20261123204523-1401232696835"
     },
     {
       "path": "join_info",

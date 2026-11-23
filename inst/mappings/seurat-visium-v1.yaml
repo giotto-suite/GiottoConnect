@@ -6,7 +6,7 @@ mapping:
   id: seurat-visium-v1
   version: 0.1.0
   status: verified
-  built: "2026-11-20"
+  built: "2026-11-23"
   schema_version: 0.1.0
   source:
     ecosystem: seurat
@@ -38,6 +38,7 @@ source_nodes:
   image:      { path: "images/{image}", get: { fn: "[[", args: { i: "{image}" } } }
   reduction:  { path: "reductions/{red}/cell.embeddings", get: { fn: Embeddings, args: { reduction: "{red}" } } }
   nn:         { path: "graphs/{nn_graph}", get: { fn: "[[", args: { i: "{nn_graph}" } } }
+  other_graph: { path: "graphs/{g}", get: { fn: "[[", args: { i: "{g}" } } }
   # assays other than the main one (control probes, protein, ...)
   extra_counts:       { path: "assays/{extra}/layers/counts", get: { fn: LayerData, args: { assay: "{extra}", layer: counts } } }
   extra_counts_v3:    { path: "assays/{extra}/counts", get: { fn: LayerData, args: { assay: "{extra}", layer: counts } } }
@@ -96,6 +97,14 @@ parts:
     optional: true
     to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_graph}" }
 
+  # every other graph (e.g. those giottoToSeurat() writes), by name
+  - id: "nn_{g}"
+    part: nn_network
+    from: other_graph
+    hook: seurat_graph_to_nn
+    for_each: { list: Graphs, as: g, exclude: "^({nn_graph}|{assay}_snn)$" }
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{g}" }
+
   # every other assay is its own feature type; Xenium/Atera controls take
   # the names Giotto's readers use
   - id: "expr_{extra_label}"
@@ -150,8 +159,16 @@ parts:
       - { op: rownames_to_col, col: feat_ID }
     to: { spat_unit: cell, feat_type: "{extra_label}" }
 
+  # the lowres tissue image, placed in the units of locs
+  - id: image
+    part: images
+    from: image
+    hook: seurat_visium_image
+    optional: true
+    to: { name: "{image}" }
+
 lossy:
-  - { kind: dropped, path: "images/{image}/image", note: "tissue image is not carried over yet" }
+  - { kind: dropped, path: "misc/giottoConnect", note: "record of the conversion that wrote this object" }
   - { kind: dropped, path: "assays/{assay}/scale.data", note: "recomputable from normalized values; no Giotto slot" }
   - { kind: dropped, path: "assays/{assay}/layers/scale.data", note: "recomputable from normalized values; no Giotto slot" }
   - { kind: dropped, path: "graphs/{assay}_snn", note: "only the kNN graph is mapped; sNN can be rebuilt with createNearestNetwork()" }

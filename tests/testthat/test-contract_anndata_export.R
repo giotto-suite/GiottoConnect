@@ -84,3 +84,11 @@ test_that("the Visium mini round-trips its networks and reductions", {
     w2 <- GiottoClass::getNearestNetwork(g2, nn_type = "sNN", name = "sNN.pca", output = "data.table")
     expect_equal(w2$weight[order(w2$from, w2$to)], w$weight[order(w$from, w$to)])
 })
+
+test_that("matrices with named dimnames are written with plain ids", {
+    m <- Matrix::Matrix(matrix(1:6, 2, dimnames = list(c(a = "g1", b = "g2"), c(x = "c1", y = "c2", z = "c3"))),
+        sparse = TRUE)
+    out <- GiottoConnect:::.ad_cells_by_feats(m)
+    expect_identical(rownames(out), c("c1", "c2", "c3"))
+    expect_identical(colnames(out), c("g1", "g2"))
+})

@@ -10,6 +10,8 @@
 #                                          loadings / eigenvalues in misc)
 #   nn_network     graph [, nn_type]     (cells x cells sparse adjacency)
 #   feature_info   fov                   (x, y, gene; FOV molecules)
+#   images         fov                   (list(image, scale); the FOV becomes a
+#                                          VisiumV2 holding the image)
 
 .SEURAT_TARGET <- list(
     expression = c("assay", "layer"),
@@ -19,7 +21,8 @@
     spatial_info = c("fov", "boundary"),
     dim_reduction = c("reduction", "key"),
     nn_network = c("graph"),
-    feature_info = c("fov")
+    feature_info = c("fov"),
+    images = c("fov")
 )
 # keys a part may carry besides the required ones
 .SEURAT_TARGET_OPTIONAL <- list(nn_network = "nn_type")
@@ -67,6 +70,7 @@
     # transcripts (molecules)
     geo <- c(by_part("spatial_locs"), by_part("spatial_info"))
     mols <- by_part("feature_info")
+    imgs <- by_part("images")
     for (fov in unique(vapply(c(geo, mols), function(pp) pp$spec$to$fov, character(1)))) {
         bnd <- list()
         mol <- Filter(function(pp) pp$spec$to$fov == fov, mols)
@@ -82,8 +86,11 @@
         }
         type <- vapply(bnd, function(b) if (methods::is(b, "Centroids")) "centroids" else "segmentation",
             character(1))
-        s[[fov]] <- SO$CreateFOV(bnd, type = unname(type), molecules = mol, assay = SO$DefaultAssay(s),
+        fo <- SO$CreateFOV(bnd, type = unname(type), molecules = mol, assay = SO$DefaultAssay(s),
             key = paste0(gsub("[^A-Za-z0-9]", "", fov), "fov_"))
+        im <- Filter(function(pp) pp$spec$to$fov == fov, imgs)
+        if (length(im)) fo <- .seurat_visium_v2(fo, im[[1L]]$data)
+        s[[fov]] <- fo
     }
 
     for (pp in by_part("dim_reduction")) {
@@ -111,6 +118,25 @@
         s[[pp$spec$to$graph]] <- g
     }
     s
+}
+
+# FOV + image -> VisiumV2 (coordinates are full-resolution "pixels" in Giotto
+# units; the image is scaled by the lowres factor), as Seurat's
+# Read10X_Image() builds it
+.seurat_visium_v2 <- function(fov, img) {
+    if (!requireNamespace("Seurat", quietly = TRUE)) {
+        warning(wrap_txt("Seurat is not installed: the image is not exported"), call. = FALSE)
+        return(fov)
+    }
+    SO <- asNamespace("SeuratObject")
+    cen <- Filter(function(b) methods::is(b, "Centroids"), methods::slot(fov, "boundaries"))
+    xy <- if (length(cen)) SO$GetTissueCoordinates(cen[[1L]]) else SO$GetTissueCoordinates(fov)
+    d <- .spot_diameter(xy[, c("x", "y")])
+    sf <- Seurat::scalefactors(spot = d, fiducial = 1.6 * d, hires = img$scale, lowres = img$scale)
+    methods::new("VisiumV2", boundaries = methods::slot(fov, "boundaries"),
+        molecules = methods::slot(fov, "molecules"), assay = methods::slot(fov, "assay"),
+        key = methods::slot(fov, "key"), image = img$image, scale.factors = sf,
+        coords_x_orientation = "horizontal")
 }
 
 .record_seurat_conversion <- function(s, prov) {
@@ -262,6 +288,17 @@
             .rb_row("placement", TRUE, paste0(spec$to$fov, "/molecules")),
             .rb_row("ids", identical(sort(names(a)), sort(names(b))) && all(a == b[names(a)]),
                 sprintf("%d transcripts of %d features", nrow(data), length(a)))
+        )
+    },
+    images = function(spec, data, s, n_cells) {
+        im <- s[[spec$to$fov]]
+        ok <- methods::is(im, "VisiumV2")
+        list(
+            .rb_row("placement", ok, paste0(spec$to$fov, if (ok) " (VisiumV2)" else " has no image")),
+            .rb_row("values", ok && .rb_same(methods::slot(im, "image"), data$image),
+                sprintf("%s px", paste(dim(data$image)[2:1], collapse = " x "))),
+            .rb_row("scale", ok && .rb_same(methods::slot(im, "scale.factors")[["lowres"]], data$scale),
+                sprintf("lowres %.4g", data$scale))
         )
     },
     nn_network = function(spec, data, s, n_cells) {

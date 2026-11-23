@@ -25,7 +25,10 @@
         setter = "setSpatialNetwork", list_fn = "list_spatial_networks"),
     # transcripts; `method` names the S4 method whose arguments apply
     feature_info = list(slot = "feat_info", constructor = "createGiottoPoints", method = "data.frame",
-        data_arg = "x", setter = "setFeatureInfo", list_fn = "list_feature_info")
+        data_arg = "x", setter = "setFeatureInfo", list_fn = "list_feature_info"),
+    # a SpatRaster placed in spatial coordinates (its extent)
+    images = list(slot = "images", constructor = "createGiottoLargeImage", data_arg = "raster_object",
+        setter = "setGiottoImage", list_fn = "list_images")
 )
 
 # columns of list_* tables that are nesting keys (the rest are descriptive)
@@ -228,6 +231,9 @@ print.giottoContract <- function(x, ...) {
             name = "Delaunay_network", spat_unit = "cell"),
         feature_info = GiottoClass::createGiottoPoints(
             data.frame(x = c(0.2, 2.2, 2.7), y = c(0.5, 0.4, 0.6), feat_ID = feats),
-            feat_type = "rna", verbose = FALSE)
+            feat_type = "rna", verbose = FALSE),
+        images = GiottoClass::createGiottoLargeImage(
+            terra::rast(array(1:12, c(2L, 2L, 3L)), extent = terra::ext(0, 3, -1, 1)),
+            name = "image", use_rast_ext = TRUE, verbose = FALSE)
     ))
 }

@@ -45,6 +45,7 @@ R/
   contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
   contract_target_anndata.R AnnData target: writes an .h5ad (anndataR), key/semantic checks, comparators
   contract_target_spe.R  SpatialExperiment / SFE target (mapping target `class`), key/semantic checks, comparators
+  contract_images.R      images: Giotto extent <-> RGB array + scale factor (origin at the top-left), image hooks
   anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology

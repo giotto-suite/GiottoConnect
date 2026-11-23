@@ -68,6 +68,8 @@ setMethod("adapterRead", "speAdapter", function(adapter, x, node, params) {
         rownames(m) <- colnames(x)
         m
     },
+    # images with their sample, id and scale factor
+    speImgData = function(x) .spe_ns("SpatialExperiment")$imgData(x),
     # SelfHits between columns (cell graphs), with their mcols and metadata
     speColPair = function(x, type) .spe_ns("SingleCellExperiment")$colPair(x, type),
     speAltExpAssay = function(x, e, i = "counts") {

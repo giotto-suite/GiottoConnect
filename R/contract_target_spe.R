@@ -12,6 +12,8 @@
 #                   | spatialGraph
 #   spatial_info    colGeometry    (SFE) sf polygons named by cell
 #   feature_info    rowGeometry    (SFE) a MULTIPOINT per feature
+#   images          imgData        image_id; list(image, scale) as a loaded
+#                                  SpatialImage with its scaleFactor
 # Edge networks keep their Giotto name and type in metadata(<hits>)$giotto.
 # The conversion record is stored in metadata(x)$giottoConnect.
 
@@ -24,7 +26,8 @@
     nn_network = c("colPair", "nn_type"),
     spatial_network = list("colPair", "spatialGraph"),
     spatial_info = "colGeometry",
-    feature_info = "rowGeometry"
+    feature_info = "rowGeometry",
+    images = "imgData"
 )
 # parts only a SpatialFeatureExperiment holds
 .SFE_ONLY_KEYS <- c("spatialGraph", "colGeometry", "rowGeometry")
@@ -96,6 +99,29 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
     out <- sf::st_sf(geometry = sf::st_sfc(geo))
     rownames(out) <- feats
     out
+}
+
+# list(image, scale) -> a SpatialExperiment image placed by its scale factor,
+# or for a SpatialFeatureExperiment a SpatRasterImage placed by its extent in
+# spatialCoords units (y down: the raster's first row is the image's bottom
+# row, as terra reads a PNG)
+.spe_image <- function(img, sfe = FALSE) {
+    if (!sfe) return(SpatialExperiment::SpatialImage(grDevices::as.raster(img$image)))
+    a <- img$image
+    r <- terra::rast(a[rev(seq_len(dim(a)[1L])), , , drop = FALSE] * 255)
+    terra::ext(r) <- c(0, dim(a)[2L] / img$scale, 0, dim(a)[1L] / img$scale)
+    SpatialFeatureExperiment::SpatRasterImage(r)
+}
+
+# an imgData image back as an H x W x 3 array of 0..1 values (top row first)
+.spe_image_array <- function(im) {
+    if (methods::is(im, "SpatRasterImage")) {
+        a <- terra::as.array(methods::as(im, "SpatRaster"))
+        return(a[rev(seq_len(dim(a)[1L])), , seq_len(min(3L, dim(a)[3L])), drop = FALSE] / 255)
+    }
+    m <- as.matrix(SpatialExperiment::imgRaster(im))
+    rgb <- grDevices::col2rgb(m) / 255
+    array(t(rgb), c(nrow(m), ncol(m), 3L))
 }
 
 .assemble_spe <- function(prepared, sfe = FALSE) {
@@ -174,6 +200,14 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
         } else {
             SingleCellExperiment::colPair(x, to$colPair) <- .spe_edges_to_hits(pp$data, cells, giotto)
         }
+    }
+    imgs <- by_part("images")
+    if (length(imgs)) {
+        SpatialExperiment::imgData(x) <- S4Vectors::DataFrame(
+            sample_id = rep(x$sample_id[1L], length(imgs)),
+            image_id = unname(vapply(imgs, function(pp) pp$spec$to$imgData, character(1))),
+            data = I(unname(lapply(imgs, function(pp) .spe_image(pp$data, sfe)))),
+            scaleFactor = unname(vapply(imgs, function(pp) pp$data$scale, numeric(1))))
     }
     for (pp in by_part("feature_info")) {
         x <- SpatialFeatureExperiment::`rowGeometry<-`(x, pp$spec$to$rowGeometry,
@@ -333,6 +367,18 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
             .rb_row("placement", TRUE, paste0("colGeometry ", spec$to$colGeometry)),
             .rb_row("ids", setequal(rownames(g), rownames(data)), sprintf("%d polygons", nrow(g))),
             .rb_row("geometry", .rb_same(as.numeric(a), as.numeric(b)), "bounding box")
+        )
+    },
+    images = function(spec, data, x, n_cells) {
+        d <- SpatialExperiment::imgData(x)
+        i <- match(spec$to$imgData, d$image_id)
+        got <- if (!is.na(i)) .spe_image_array(d$data[[i]])
+        list(
+            .rb_row("placement", !is.na(i), paste0("imgData ", spec$to$imgData)),
+            # an R raster holds 8-bit colours
+            .rb_row("values", !is.na(i) && .rb_same(got, data$image, tol = 1 / 255),
+                sprintf("%s px", paste(dim(data$image)[2:1], collapse = " x "))),
+            .rb_row("scale", !is.na(i) && .rb_same(d$scaleFactor[i], data$scale), sprintf("scaleFactor %.4g", data$scale))
         )
     },
     feature_info = function(spec, data, x, n_cells) {

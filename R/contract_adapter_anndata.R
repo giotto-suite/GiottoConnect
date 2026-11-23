@@ -136,7 +136,9 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
 
 .h5ad_read_array <- function(node) {
     x <- node$read()
+    # row-major on disk: hdf5r returns the dimensions reversed
     if (length(node$dims) == 2L) x <- t(x)
+    if (length(node$dims) > 2L) x <- aperm(x, rev(seq_along(node$dims)))
     # bool enum on older hdf5r
     if (is.factor(x) && all(levels(x) %in% c("FALSE", "TRUE"))) {
         x <- as.logical(as.character(x))
