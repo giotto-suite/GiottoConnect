@@ -317,7 +317,12 @@ mappingProvenance <- function(gobject) {
     if (!nrow(kids)) return(NA_character_)
     name <- sub(".*/", "", kids$path)
     ok <- switch(pr$rule,
-        first = seq_len(nrow(kids)) == 1L,
+        # `prefer`: the first name matching it, else the first
+        first = if (!is.null(pr$prefer) && any(grepl(pr$prefer, name))) {
+            grepl(pr$prefer, name)
+        } else {
+            seq_len(nrow(kids)) == 1L
+        },
         name_is = name == pr$value,
         value_of = {
             v <- nodes$value[nodes$path == .pf_bind(pr$path, list())]
@@ -542,6 +547,8 @@ mappingProvenance <- function(gobject) {
     }
     if ("verbose" %in% cp$args) args$verbose <- FALSE
     if (p$part == "spatial_info") args$calc_centroids <- FALSE
+    # the raster's extent places the image
+    if (p$part == "images") args$use_rast_ext <- TRUE
     if (p$part == "feature_info" && !is.null(args$split_keyword)) {
         # split only on keywords that occur; the first feat_type takes the rest
         kw <- unlist(args$split_keyword)

@@ -80,6 +80,31 @@
         packages = c("GiottoClass", "terra"),
         description = "giottoPoints (in memory or GiottoDisk) -> transcript table x, y, feat_ID"
     ),
+    giotto_image_to_array = list(
+        fn = function(node, params, ctx) .hook_giotto_image_to_array(node, params, ctx),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoLargeImage -> RGB array from the origin and its scale (px per unit)"
+    ),
+    seurat_visium_image = list(
+        fn = function(node, params, ctx) .hook_seurat_visium_image(node, params, ctx),
+        packages = c("SeuratObject", "terra"),
+        description = "VisiumV1/V2 lowres image -> SpatRaster placed in the locs units"
+    ),
+    spe_image = list(
+        fn = function(node, params, ctx) .hook_spe_image(node, params, ctx),
+        packages = c("SpatialExperiment", "terra"),
+        description = "SpatialExperiment imgData image -> SpatRaster in spatialCoords units"
+    ),
+    spe_visium_image = list(
+        fn = function(node, params, ctx) .hook_spe_image(node, params, ctx, to_um = TRUE),
+        packages = c("SpatialExperiment", "terra"),
+        description = "VisiumIO imgData image -> SpatRaster in microns"
+    ),
+    anndata_spatial_image = list(
+        fn = function(node, params, ctx) .hook_anndata_spatial_image(node, params, ctx),
+        packages = "terra",
+        description = "scanpy uns/spatial hires/lowres image -> SpatRaster in obsm/spatial units"
+    ),
     spe_colpair_to_network = list(
         fn = function(node, params, ctx) .hook_colpair_to_network(node, params, ctx),
         packages = "SingleCellExperiment",
@@ -139,7 +164,7 @@ hookRegistry <- function() {
     edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
         weight = NA_real_, distance = NA_real_)
 
-    graph <- params$nn_graph
+    graph <- ctx$part_spec$to$name %null% params$nn_graph
     rec <- .seurat_neighbors_record(ctx$x, graph)
     if (!is.null(rec)) {
         name <- paste(nn_type, rec$reduction, sep = ".")
@@ -222,6 +247,17 @@ hookRegistry <- function() {
 # Standard Visium: spots sit on a 100 um center-to-center grid, so the pixel
 # size comes from the measured nearest-neighbour spacing.
 .hook_visium_to_um <- function(node, params, ctx) {
+    u <- .visium_um_per_px(node, params, ctx)
+    ctx$add_loss("recovered_from_parameters", "units", u$how)
+    xy <- u$xy
+    xy$x <- xy$x * u$um
+    xy$y <- xy$y * u$um
+    xy
+}
+
+# microns per full-resolution pixel of a VisiumV1 / VisiumV2 image (1 for
+# coordinates giottoToSeurat() wrote, already in Giotto units)
+.visium_um_per_px <- function(node, params, ctx) {
     if (methods::is(node, "VisiumV1")) {
         # VisiumV1 keeps full-resolution imagerow (y) / imagecol (x)
         v1 <- asNamespace("SeuratObject")$GetTissueCoordinates(node, scale = NULL)
@@ -229,6 +265,9 @@ hookRegistry <- function() {
             stringsAsFactors = FALSE)
     } else {
         xy <- asNamespace("SeuratObject")$GetTissueCoordinates(node)
+    }
+    if (!is.null(tryCatch(methods::slot(ctx$x, "misc")$giottoConnect, error = function(e) NULL))) {
+        return(list(um = 1, xy = xy, how = "coordinates written by giottoToSeurat(), kept in Giotto units"))
     }
     sf <- methods::slot(node, "scale.factors")
     bin <- regmatches(params$image, regexpr("(?<=\\.)\\d+(?=um$)", params$image, perl = TRUE))
@@ -240,11 +279,7 @@ hookRegistry <- function() {
         um_per_px <- 100 / nn_px
         how <- sprintf("100 um spot pitch / measured spacing %.2f px", nn_px)
     }
-    ctx$add_loss("recovered_from_parameters", "units", sprintf(
-        "%.5f um per px (%s)", um_per_px, how))
-    xy$x <- xy$x * um_per_px
-    xy$y <- xy$y * um_per_px
-    xy
+    list(um = um_per_px, xy = xy, how = sprintf("%.5f um per px (%s)", um_per_px, how))
 }
 
 .median_nn_spacing <- function(m, n = 500L) {
@@ -460,14 +495,24 @@ hookRegistry <- function() {
 # VisiumIO keeps full-resolution pixel positions; microns from the bin size
 # (Visium HD) or the 100 um spot pitch over the measured spacing
 .hook_spe_visium_to_um <- function(node, params, ctx) {
-    cd <- asNamespace("SummarizedExperiment")$colData(ctx$x)
+    u <- .spe_um_per_px(ctx$x, node)
+    ctx$add_loss("recovered_from_parameters", "units", u$how)
+    node[, 1:2] * u$um
+}
+
+# microns per full-resolution pixel of VisiumIO coordinates (1 for those
+# giottoToSpatialExperiment() wrote, already in Giotto units)
+.spe_um_per_px <- function(x, coords) {
+    if (!is.null(S4Vectors::metadata(x)$giottoConnect)) {
+        return(list(um = 1, how = "coordinates written by giottoToSpatialExperiment(), kept in Giotto units"))
+    }
+    cd <- asNamespace("SummarizedExperiment")$colData(x)
     bin <- if ("bin_size" %in% names(cd)) suppressWarnings(as.numeric(cd$bin_size[1L])) else NA_real_
-    nn_px <- .median_nn_spacing(as.matrix(node[, 1:2]))
+    nn_px <- .median_nn_spacing(as.matrix(coords[, 1:2]))
     pitch <- if (is.na(bin)) 100 else bin
-    um_per_px <- pitch / nn_px
-    ctx$add_loss("recovered_from_parameters", "units", sprintf("%.5f um per px (%s / measured spacing %.2f px)",
-        um_per_px, if (is.na(bin)) "100 um spot pitch" else sprintf("%s um bins", bin), nn_px))
-    node[, 1:2] * um_per_px
+    um <- pitch / nn_px
+    list(um = um, how = sprintf("%.5f um per px (%s / measured spacing %.2f px)", um,
+        if (is.na(bin)) "100 um spot pitch" else sprintf("%s um bins", bin), nn_px))
 }
 
 # sf POLYGON / MULTIPOLYGON -> outer-ring vertices with the row names as poly_ID

@@ -12,6 +12,8 @@
 #                   | spatialGraph
 #   spatial_info    colGeometry    (SFE) sf polygons named by cell
 #   feature_info    rowGeometry    (SFE) a MULTIPOINT per feature
+#   images          imgData        image_id; list(image, scale) as a loaded
+#                                  SpatialImage with its scaleFactor
 # Edge networks keep their Giotto name and type in metadata(<hits>)$giotto.
 # The conversion record is stored in metadata(x)$giottoConnect.
 
@@ -24,7 +26,8 @@
     nn_network = c("colPair", "nn_type"),
     spatial_network = list("colPair", "spatialGraph"),
     spatial_info = "colGeometry",
-    feature_info = "rowGeometry"
+    feature_info = "rowGeometry",
+    images = "imgData"
 )
 # parts only a SpatialFeatureExperiment holds
 .SFE_ONLY_KEYS <- c("spatialGraph", "colGeometry", "rowGeometry")
@@ -174,6 +177,16 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
         } else {
             SingleCellExperiment::colPair(x, to$colPair) <- .spe_edges_to_hits(pp$data, cells, giotto)
         }
+    }
+    imgs <- by_part("images")
+    if (length(imgs)) {
+        SpatialExperiment::imgData(x) <- S4Vectors::DataFrame(
+            sample_id = rep(x$sample_id[1L], length(imgs)),
+            image_id = unname(vapply(imgs, function(pp) pp$spec$to$imgData, character(1))),
+            data = I(unname(lapply(imgs, function(pp) {
+                SpatialExperiment::SpatialImage(grDevices::as.raster(pp$data$image))
+            }))),
+            scaleFactor = unname(vapply(imgs, function(pp) pp$data$scale, numeric(1))))
     }
     for (pp in by_part("feature_info")) {
         x <- SpatialFeatureExperiment::`rowGeometry<-`(x, pp$spec$to$rowGeometry,
@@ -333,6 +346,18 @@ setMethod("targetComparators", "speTarget", function(target) .RB_COMPARE_SPE)
             .rb_row("placement", TRUE, paste0("colGeometry ", spec$to$colGeometry)),
             .rb_row("ids", setequal(rownames(g), rownames(data)), sprintf("%d polygons", nrow(g))),
             .rb_row("geometry", .rb_same(as.numeric(a), as.numeric(b)), "bounding box")
+        )
+    },
+    images = function(spec, data, x, n_cells) {
+        d <- SpatialExperiment::imgData(x)
+        i <- match(spec$to$imgData, d$image_id)
+        ras <- if (!is.na(i)) SpatialExperiment::imgRaster(x, sample_id = d$sample_id[i], image_id = d$image_id[i])
+        list(
+            .rb_row("placement", !is.na(i), paste0("imgData ", spec$to$imgData)),
+            .rb_row("values", !is.na(i) && identical(as.vector(as.matrix(ras)),
+                as.vector(as.matrix(grDevices::as.raster(data$image)))),
+                sprintf("%s px", paste(dim(data$image)[2:1], collapse = " x "))),
+            .rb_row("scale", !is.na(i) && .rb_same(d$scaleFactor[i], data$scale), sprintf("scaleFactor %.4g", data$scale))
         )
     },
     feature_info = function(spec, data, x, n_cells) {

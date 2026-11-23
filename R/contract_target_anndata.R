@@ -8,6 +8,8 @@
 #                                 eigenvalues -> uns/pca/variance
 #   nn_network     obsp, nn_type  obsp/<obsp>_distances / _connectivities +
 #   spatial_network obsp            a uns/<obsp> record (scanpy keys + giotto)
+#   images         library_id     uns/spatial/<library_id>: images/hires and
+#                                 scalefactors (scanpy Visium layout)
 # The conversion record is stored as JSON in uns/giottoConnect.
 
 .ANNDATA_TARGET <- list(
@@ -17,7 +19,8 @@
     spatial_locs = "obsm",
     dim_reduction = "obsm",
     nn_network = c("obsp", "nn_type"),
-    spatial_network = "obsp"
+    spatial_network = "obsp",
+    images = "library_id"
 )
 
 setClass("anndataTarget", contains = "giottoConnectTarget", prototype = list(contract = "anndata"))
@@ -86,6 +89,7 @@ setMethod("targetComparators", "anndataTarget", function(target) .RB_COMPARE_ANN
     varm <- list()
     obsp <- list()
     uns <- list()
+    libs <- list()
     for (pp in prepared) {
         to <- pp$spec$to
         d <- pp$data
@@ -117,6 +121,7 @@ setMethod("targetComparators", "anndataTarget", function(target) .RB_COMPARE_ANN
                     }
                 }
             },
+            images = libs[[to$library_id]] <- d,
             nn_network = ,
             spatial_network = {
                 key <- to$obsp
@@ -130,6 +135,11 @@ setMethod("targetComparators", "anndataTarget", function(target) .RB_COMPARE_ANN
             },
             NULL
         )
+    }
+    if (length(libs)) {
+        d <- if (!is.null(obsm$spatial)) .spot_diameter(obsm$spatial[, 1:2, drop = FALSE]) else NA_real_
+        uns$spatial <- lapply(libs, function(im) list(images = list(hires = im$image),
+            scalefactors = list(tissue_hires_scalef = im$scale, spot_diameter_fullres = d)))
     }
     uns$giottoConnect <- as.character(jsonlite::toJSON(prov, auto_unbox = TRUE, null = "null",
         na = "null", force = TRUE, digits = NA))
@@ -244,6 +254,19 @@ setMethod("targetComparators", "anndataTarget", function(target) .RB_COMPARE_ANN
         list(
             .rb_row("placement", TRUE, paste0("obsm/", spec$to$obsm)),
             .rb_row("values", .rb_same(as.numeric(m), as.numeric(coords[rownames(m), , drop = FALSE])), "")
+        )
+    },
+    images = function(spec, data, path, n_cells) {
+        h5 <- .h5ad_open(path)
+        on.exit(h5$close_all())
+        lib <- paste0("uns/spatial/", spec$to$library_id)
+        ok <- .h5ad_exists(h5, paste0(lib, "/images/hires"))
+        list(
+            .rb_row("placement", ok, paste0(lib, "/images/hires")),
+            .rb_row("values", ok && .rb_same(.h5ad_value(h5, paste0(lib, "/images/hires")), data$image),
+                sprintf("%s px", paste(dim(data$image)[2:1], collapse = " x "))),
+            .rb_row("scale", ok && .rb_same(as.numeric(.h5ad_value(h5, paste0(lib, "/scalefactors/tissue_hires_scalef"))),
+                data$scale), sprintf("tissue_hires_scalef %.4g", data$scale))
         )
     },
     nn_network = function(spec, data, path, n_cells) .rb_anndata_network(spec, data, path),

@@ -87,12 +87,13 @@ setMethod("adapterListPaths", "giottoAdapter", function(adapter) c(
     SpatNets = "spatial_network/{on}", FeatInfo = "feat_info",
     # every nn network by name; its type (kNN, sNN) is the parent
     NNAll = "nn_network/{on}/*",
+    Images = "images",
     children = "{on}", columns = "{on}"
 ))
 setMethod("adapterAccessors", "giottoAdapter", function(adapter) c(
     "getExpression", "getCellMetadata", "getFeatureMetadata", "getSpatialLocations",
     "getPolygonInfo", "getDimReduction", "getNearestNetwork", "getSpatialNetwork",
-    "getFeatureInfo", "[[", "path"
+    "getFeatureInfo", "getGiottoImage", "[[", "path"
 ))
 setMethod("adapterObjectLists", "giottoAdapter", function(adapter) {
     c("SpatUnits", "FeatTypes", "Polygons", "DimMethods", "NNNames")

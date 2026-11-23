@@ -17,6 +17,12 @@
   scater-named reductions with PCA loadings, networks as colPairs (and SFE
   spatialGraphs), polygons as `cellSeg`, transcripts as `txSpots`.
   `spatialExperimentToGiotto()` reads them back under their Giotto names.
+- Tissue images go both ways. Seurat Visium images, SpatialExperiment
+  `imgData` and scanpy `uns/spatial` images become Giotto images placed in the
+  spot coordinates; `giottoToSeurat()` writes a VisiumV2 (so
+  `SpatialFeaturePlot()` shows the tissue), `giottoToSpatialExperiment()` an
+  `imgData` image and `giottoToAnnData()` a scanpy `uns/spatial` library.
+- `seuratToGiotto()` reads every nearest-neighbour Graph, not only the first.
 - `spatialExperimentToGiotto()` converts SpatialExperiment and
   SpatialFeatureExperiment objects through the same mapping engine: the layouts
   of SpatialExperimentIO (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD;

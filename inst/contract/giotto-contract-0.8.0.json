@@ -2,7 +2,7 @@
   "contract": "giotto",
   "schema_version": "0.1.0",
   "giottoclass_version": "0.8.0",
-  "generated_at": "2026-11-20",
+  "generated_at": "2026-11-23",
   "manifest_schema": "giotto-manifest-0.2.0",
   "orientation": {
     "expression": "features_x_cells"
@@ -115,6 +115,18 @@
       "list_fn": "list_feature_info",
       "nesting": "feat_info",
       "disk_backable": true
+    },
+    "images": {
+      "slot": "images",
+      "class": "giottoLargeImage",
+      "constructor": "createGiottoLargeImage",
+      "data_arg": "raster_object",
+      "args": ["raster_object", "name", "negative_y", "extent", "use_rast_ext", "image_transformations", "flip_vertical", "flip_horizontal", "xmax_bound", "xmin_bound", "ymax_bound", "ymin_bound", "scale_factor", "verbose"],
+      "required_args": "raster_object",
+      "setter": "setGiottoImage",
+      "list_fn": "list_images",
+      "nesting": "name",
+      "disk_backable": false
     }
   }
 }

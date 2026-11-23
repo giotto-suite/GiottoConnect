@@ -35,6 +35,7 @@ source_nodes:
   reduction:   { path: "int_colData/listData/reducedDims/listData/{red}", get: { fn: speReducedDim, args: { type: "{red}" } } }
   alt_counts:  { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpAssay, args: { e: "{extra}", i: counts } } }
   alt_meta:    { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpRowData, args: { e: "{extra}" } } }
+  img:         { path: "int_metadata/imgData/listData/data/*", get: { fn: speImgData } }
   other_assay: { path: "assays/data/listData/{as}", get: { fn: speAssay, args: { i: "{as}" } } }
   colpair:     { path: "int_colData/listData/colPairs/listData/{cp}", get: { fn: speColPair, args: { type: "{cp}" } } }
 
@@ -128,6 +129,14 @@ parts:
     for_each: { list: ColPairs, as: cp, where: { name_matches: "^spatial_" }, strip: "^spatial_" }
     to: { spat_unit: cell, name: "{cp_label}" }
 
+  # the first image (hires preferred) with its scale factor, in the units of
+  # locs
+  - id: image
+    part: images
+    from: img
+    hook: spe_image
+    optional: true
+    to: { name: image }
+
 lossy:
   - { kind: dropped, path: metadata, note: "metadata (e.g. paths to transcripts and boundary files) is not mapped" }
-  - { kind: dropped, path: "int_metadata/imgData", note: "images are not carried over yet" }

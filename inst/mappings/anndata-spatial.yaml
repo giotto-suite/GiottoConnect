@@ -31,11 +31,13 @@ params:
                 where: { name_matches: "^X$", kind: [sparse_matrix, dense_matrix], not_role: [integer_valued] } }
   spatial:    { list: Obsm, rule: first_where, where: { name_matches: "^(X_)?spatial$", kind: dense_matrix }, optional: true }
   rna_type:   { list: FeatureTypes, rule: name_is, value: "Gene Expression", optional: true }
+  library:    { list: children, on: "uns/spatial", rule: first, optional: true }
 
 source_nodes:
   counts:     { path: "{counts}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
   normalized: { path: "{normalized}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
   obs:        { path: obs, get: { fn: h5adFrame } }
+  library:    { path: "uns/spatial/{library}/images", get: { fn: h5adValue, on: "uns/spatial/{library}" } }
   # the feature table of the counts: raw/var (plus var columns) for raw/X
   var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}", feature_type: "{rna_type}" } } }
   # one var/feature_types category
@@ -171,6 +173,15 @@ parts:
     from: other_layer
     for_each: { list: Layers, as: lay, exclude: "^(counts|raw|raw_counts)$" }
     to: { spat_unit: cell, feat_type: rna, name: "{lay}" }
+
+  # scanpy Visium layout: the hires (else lowres) image of the first library,
+  # placed in obsm/spatial units by its scale factor
+  - id: image
+    part: images
+    from: library
+    hook: anndata_spatial_image
+    optional: true
+    to: { name: "{library}" }
 
 lossy:
   - { kind: dropped, path: "obsp/connectivities", note: "UMAP connectivities; Giotto weights come from distances" }

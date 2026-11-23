@@ -29,8 +29,10 @@ params:
   expr_raw:  { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: raw }
   expr_norm: { list: Expressions, on: "{spat_unit}/{feat_type}", rule: name_is, value: normalized, optional: true }
   locs:      { list: SpatLocs, on: "{spat_unit}", rule: first, optional: true }
+  image:     { list: Images, rule: first, prefer: "^(image|hires|lowres)", optional: true }
 
 source_nodes:
+  image:      { path: "images/{image}", get: { fn: getGiottoImage, args: { name: "{image}" } } }
   counts:     { path: "expression/{spat_unit}/{feat_type}/{expr_raw}",
                 get: { fn: getExpression, args: { values: "{expr_raw}", spat_unit: "{spat_unit}", feat_type: "{feat_type}", output: matrix } } }
   normalized: { path: "expression/{spat_unit}/{feat_type}/{expr_norm}",
@@ -107,15 +109,26 @@ parts:
     for_each: { list: SpatNets, on: "{spat_unit}", as: sn }
     to: { obsp: "spatial_{sn}", name: "{sn}" }
 
+  # one tissue image, resampled onto a grid from the origin so that the
+  # coordinates stay as they are
+  - id: image
+    part: images
+    from: image
+    hook: giotto_image_to_array
+    optional: true
+    to: { library_id: "{image}" }
+    lossy:
+      - { kind: estimated, field: spot_diameter_fullres, note: "spot diameter estimated as 0.55 x the centre spacing" }
+
 lossy:
   - { kind: dropped, path: "spatial_info", note: "polygons have no AnnData slot" }
   - { kind: dropped, path: "feat_info", note: "transcript points have no AnnData slot" }
-  - { kind: dropped, path: "images", note: "images are not carried over yet" }
   - { kind: dropped, path: "spatial_enrichment", note: "enrichment results are not carried over yet" }
   - { kind: estimated, field: connectivities, note: "obsp connectivities hold Giotto edge weights, not UMAP connectivities" }
 
 # one spatial unit and feature type per conversion (spat_unit / feat_type)
 out_of_scope:
+  - { pattern: "^images/(?!{image}(/|$))", note: "one image per conversion" }
   - { pattern: "^(expression|cell_metadata|feat_metadata|nn_network|dimension_reduction/cells|spatial_enrichment)/(?!{spat_unit}/{feat_type}(/|$))",
       note: "other spatial units and feature types are converted separately (spat_unit / feat_type)" }
   - { pattern: "^(spatial_locs|spatial_network)/(?!{spat_unit}(/|$))",

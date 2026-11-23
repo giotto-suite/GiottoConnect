@@ -3,7 +3,7 @@ test_that("the bundled contract describes every mappable part", {
     expect_s3_class(ct, "giottoContract")
     expect_setequal(names(ct$parts), c("expression", "cell_metadata", "feat_metadata",
         "spatial_locs", "spatial_info", "dim_reduction", "nn_network", "spatial_network",
-        "feature_info"))
+        "feature_info", "images"))
     expect_equal(ct$orientation$expression, "features_x_cells")
     expect_equal(ct$parts$expression$nesting, c("spat_unit", "feat_type", "name"))
     expect_equal(ct$parts$expression$class, "exprObj")
