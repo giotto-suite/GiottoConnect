@@ -1,12 +1,11 @@
 # GiottoConnect
 
 Interoperability hub of the Giotto Suite: conversions between Giotto and other
-ecosystems (Seurat, AnnData, SpatialData, Bento, Stereo-seq GEF).
+ecosystems (Seurat, AnnData, SpatialExperiment / SFE, SpatialData, Bento, Stereo-seq GEF).
 
-Seurat ↔ Giotto and AnnData → Giotto run on the **mapping engine**, a declarative and
+Seurat ↔ Giotto, AnnData → Giotto and SpatialExperiment / SFE → Giotto run on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
-hand-written converters and move to the engine one adapter at a time (SpatialExperiment
-next; see `docs/contract-prototype/REEVALUATION_ANNDATA.md`).
+hand-written converters and move to the engine one adapter at a time.
 
 ## Documentation map
 

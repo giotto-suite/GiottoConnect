@@ -17,7 +17,10 @@ builders <- list(
     giotto_fixture_small = env$build_giotto_fixture,
     seurat_visium_v1_fixture = env$build_seurat_visium_v1_fixture,
     seurat_slideseq_fixture = env$build_seurat_slideseq_fixture,
-    anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path
+    anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path,
+    spe_fixture = env$build_spe_fixture,
+    spe_visium_fixture = env$build_spe_visium_fixture,
+    sfe_fixture = env$build_sfe_fixture
 )
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))

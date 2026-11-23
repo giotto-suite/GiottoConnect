@@ -169,6 +169,12 @@ mappingProvenance <- function(gobject) {
             }
         }
         data <- .apply_ops(data, p$ops, params$values, p$id)
+        # an optional part with nothing left after its ops (e.g. no control
+        # features to select) is absent
+        if (isTRUE(p$optional) && !is.null(dim(data)) && nrow(data) == 0L) {
+            ctx$absent <- c(ctx$absent, p$id)
+            next
+        }
         for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
         out[[p$id]] <- list(spec = p, data = data)
     }
@@ -400,6 +406,12 @@ mappingProvenance <- function(gobject) {
             if (length(o$cols) != ncol(data)) stop("set_colnames needs one name per column")
             colnames(data) <- unlist(o$cols)
             data
+        },
+        # keep rows whose names match `pattern` (regex), or the others with invert
+        select_rows = {
+            hit <- grepl(o$pattern, rownames(data))
+            if (isTRUE(o$invert)) hit <- !hit
+            data[hit, , drop = FALSE]
         },
         replace = {
             for (cl in unlist(o$cols)) data[[cl]] <- gsub(o$pattern, o$replacement, data[[cl]], fixed = TRUE)

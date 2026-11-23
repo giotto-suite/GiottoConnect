@@ -35,6 +35,26 @@
         packages = c("hdf5r", "Matrix"),
         description = "AnnData obsp spatial graph (squidpy) -> spatial network; Giotto name from the spatial_neighbors record"
     ),
+    spe_reduction_misc = list(
+        fn = function(node, params, ctx) .hook_spe_reduction_misc(node, params, ctx),
+        packages = "SingleCellExperiment",
+        description = "scater reduction attributes (rotation, varExplained) -> dimObj misc"
+    ),
+    spe_visium_to_um = list(
+        fn = function(node, params, ctx) .hook_spe_visium_to_um(node, params, ctx),
+        packages = "SpatialExperiment",
+        description = "VisiumIO spot/bin centers in full-resolution pixels -> microns"
+    ),
+    sf_to_vertices = list(
+        fn = function(node, params, ctx) .hook_sf_to_vertices(node, params, ctx),
+        packages = "sf",
+        description = "sf polygons (SFE colGeometry) -> vertex table x, y, poly_ID"
+    ),
+    listw_to_network = list(
+        fn = function(node, params, ctx) .hook_listw_to_network(node, params, ctx),
+        packages = "SpatialExperiment",
+        description = "spdep listw (SFE spatialGraph) -> spatial network edges, distances from spatialCoords"
+    ),
     giotto_polygons_to_vertices = list(
         fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
         packages = c("GiottoClass", "terra"),
@@ -382,5 +402,66 @@ hookRegistry <- function() {
     if (has("n_neighbors") && !has("radius")) return("kNN_network")
     if (!has("n_neighbors") && !length(val("radius"))) return("Delaunay_network")
     key
+}
+
+# scater keeps loadings (rotation) and variances (varExplained) as attributes
+# of the reduction matrix
+.hook_spe_reduction_misc <- function(node, params, ctx) {
+    misc <- .reduction_misc(attr(node, "rotation"), attr(node, "varExplained"))
+    m <- node
+    attributes(m) <- attributes(node)[c("dim", "dimnames")]
+    if (!length(misc)) return(m)
+    .hook_result(m, to = list(misc = misc))
+}
+
+# VisiumIO keeps full-resolution pixel positions; microns from the bin size
+# (Visium HD) or the 100 um spot pitch over the measured spacing
+.hook_spe_visium_to_um <- function(node, params, ctx) {
+    cd <- asNamespace("SummarizedExperiment")$colData(ctx$x)
+    bin <- if ("bin_size" %in% names(cd)) suppressWarnings(as.numeric(cd$bin_size[1L])) else NA_real_
+    nn_px <- .median_nn_spacing(as.matrix(node[, 1:2]))
+    pitch <- if (is.na(bin)) 100 else bin
+    um_per_px <- pitch / nn_px
+    ctx$add_loss("recovered_from_parameters", "units", sprintf("%.5f um per px (%s / measured spacing %.2f px)",
+        um_per_px, if (is.na(bin)) "100 um spot pitch" else sprintf("%s um bins", bin), nn_px))
+    node[, 1:2] * um_per_px
+}
+
+# sf POLYGON / MULTIPOLYGON -> outer-ring vertices with the row names as poly_ID
+.hook_sf_to_vertices <- function(node, params, ctx) {
+    xy <- sf::st_coordinates(sf::st_geometry(node))
+    lcols <- grep("^L[0-9]$", colnames(xy), value = TRUE)
+    feat <- xy[, lcols[length(lcols)]]
+    holes <- xy[, "L1"] > 1
+    if (any(holes)) {
+        ctx$add_loss("dropped", "geometry", sprintf("%d hole vertices dropped (outer rings kept)", sum(holes)))
+    }
+    ids <- rownames(node) %null% as.character(seq_len(nrow(node)))
+    data.frame(x = xy[!holes, "X"], y = xy[!holes, "Y"], poly_ID = ids[feat[!holes]],
+        stringsAsFactors = FALSE)
+}
+
+# spdep listw -> undirected edges (each pair once) with Euclidean distances in
+# spatialCoords and weight = 1 / distance, as Giotto's spatial networks
+.hook_listw_to_network <- function(node, params, ctx) {
+    nb <- node$neighbours
+    ids <- attr(nb, "region.id") %null% colnames(ctx$x)
+    from <- rep(seq_along(nb), lengths(nb))
+    to <- unlist(nb)
+    keep <- to > 0L
+    from <- from[keep]
+    to <- to[keep]
+    a <- pmin(from, to)
+    b <- pmax(from, to)
+    dup <- duplicated(paste(a, b))
+    a <- a[!dup]
+    b <- b[!dup]
+    xy <- asNamespace("SpatialExperiment")$spatialCoords(ctx$x)
+    d <- sqrt(rowSums((xy[a, 1:2, drop = FALSE] - xy[b, 1:2, drop = FALSE])^2))
+    edges <- data.table::data.table(from = ids[a], to = ids[b], distance = d, weight = 1 / d)
+    attr(edges, "nodes") <- ids
+    ctx$add_loss("recovered_from_parameters", "distance",
+        "distances recomputed in spatialCoords; weight = 1 / distance (spdep weights not kept)")
+    edges
 }
 
