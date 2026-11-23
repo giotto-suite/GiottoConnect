@@ -17,8 +17,8 @@ test_that("checkGiottoMethod passes a conforming run and explains failures", {
         cell_ID = GiottoClass::spatIDs(g), foo = NA), by_column = TRUE,
         column_cell_ID = "cell_ID")
     res <- checkGiottoMethod(g, bad, slots = "dimension_reduction")
-    expect_false(res[check == "only declared slots changed"]$pass)
-    expect_false(res[check == "param in history"]$pass)
-    expect_match(res[check == "param in history"]$message,
+    expect_false(res$pass[res$check == "only declared slots changed"])
+    expect_false(res$pass[res$check == "param in history"])
+    expect_match(res$message[res$check == "param in history"],
         "update_giotto_params")
 })
