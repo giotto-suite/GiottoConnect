@@ -3,7 +3,7 @@
 Interoperability hub of the Giotto Suite: conversions between Giotto and other
 ecosystems (Seurat, AnnData, SpatialExperiment / SFE, SpatialData, Bento, Stereo-seq GEF).
 
-Seurat ↔ Giotto, AnnData → Giotto and SpatialExperiment / SFE → Giotto run on the **mapping engine**, a declarative and
+Seurat, AnnData and SpatialExperiment / SFE ↔ Giotto run on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
 hand-written converters and move to the engine one adapter at a time.
 
@@ -43,6 +43,8 @@ R/
   contract_repair.R      repairMapping(), writeMappingRequest()
   contract_llm.R         llmBackend(), llmPatch() (opt-in, repair only)
   contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
+  contract_target_anndata.R AnnData target: writes an .h5ad (anndataR), key/semantic checks, comparators
+  contract_target_spe.R  SpatialExperiment / SFE target (mapping target `class`), key/semantic checks, comparators
   anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology

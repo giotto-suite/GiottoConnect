@@ -163,6 +163,23 @@ GiottoClass::list_nearest_networks(g_back)
 
 In scanpy, use a network by its name: `sc.tl.leiden(adata, neighbors_key = "kNN.pca")`.
 
+## Giotto to SpatialExperiment and back
+
+`giottoToSpatialExperiment()` converts a spatial unit and feature type to a
+SpatialExperiment: raw counts in `counts`, normalized values in `logcounts`,
+reductions under scater's names (`PCA`, `UMAP`) and networks as colPairs. When
+the object has polygons, transcripts or spatial networks, it builds a
+SpatialFeatureExperiment that also holds them (`cellSeg`, `txSpots`,
+spatialGraphs); `sfe = "no"` keeps a plain SpatialExperiment.
+
+```{r spe-export}
+spe <- giottoToSpatialExperiment(g)
+spe
+
+g_back <- spatialExperimentToGiotto(spe)
+GiottoClass::list_nearest_networks(g_back)
+```
+
 ## Checking a conversion
 
 Every converted object records what was done. `mappingProvenance()` shows the

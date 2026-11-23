@@ -85,7 +85,9 @@ test_that("findMapping can filter by target", {
     p <- GiottoConnect:::adapterProfile(GiottoConnect:::.adapter_for("giotto"), g)
     expect_equal(findMapping(p, ecosystem = "giotto", target = "seurat")$mapping$mapping$id,
         "giotto-seurat5")
-    expect_equal(findMapping(p, ecosystem = "giotto", target = "spatialexperiment")$status, "none")
+    expect_match(findMapping(p, ecosystem = "giotto", target = "spatialexperiment")$mapping$mapping$id,
+        "^giotto-s(p|f)e$")
+    expect_equal(findMapping(p, ecosystem = "giotto", target = "nothing")$status, "none")
 })
 
 test_that("a chosen feature type is exported and read back", {

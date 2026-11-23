@@ -7,7 +7,7 @@ mapping:
   id: spe-basic
   version: 0.1.0
   status: verified
-  built: "2026-11-21"
+  built: "2026-11-23"
   schema_version: 0.1.0
   source:
     ecosystem: spatialexperiment
@@ -35,6 +35,8 @@ source_nodes:
   reduction:   { path: "int_colData/listData/reducedDims/listData/{red}", get: { fn: speReducedDim, args: { type: "{red}" } } }
   alt_counts:  { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpAssay, args: { e: "{extra}", i: counts } } }
   alt_meta:    { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpRowData, args: { e: "{extra}" } } }
+  other_assay: { path: "assays/data/listData/{as}", get: { fn: speAssay, args: { i: "{as}" } } }
+  colpair:     { path: "int_colData/listData/colPairs/listData/{cp}", get: { fn: speColPair, args: { type: "{cp}" } } }
 
 parts:
   - id: expr_raw
@@ -102,6 +104,29 @@ parts:
     ops:
       - { op: rownames_to_col, col: feat_ID }
     to: { spat_unit: cell, feat_type: "{extra_label}" }
+
+  # other assays (e.g. scaled) as expression values of the same name
+  - id: "expr_{as}"
+    part: expression
+    from: other_assay
+    for_each: { list: Assays, as: as, exclude: "^({counts}|{normalized})$" }
+    to: { spat_unit: cell, feat_type: rna, name: "{as}" }
+
+  # colPairs: nearest-neighbour networks; those of giottoToSpatialExperiment()
+  # keep their Giotto name and type
+  - id: "nn_{cp}"
+    part: nn_network
+    from: colpair
+    hook: spe_colpair_to_network
+    for_each: { list: ColPairs, as: cp, exclude: "^spatial_" }
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{cp}" }
+
+  - id: "spatial_network_{cp}"
+    part: spatial_network
+    from: colpair
+    hook: spe_colpair_to_network
+    for_each: { list: ColPairs, as: cp, where: { name_matches: "^spatial_" }, strip: "^spatial_" }
+    to: { spat_unit: cell, name: "{cp_label}" }
 
 lossy:
   - { kind: dropped, path: metadata, note: "metadata (e.g. paths to transcripts and boundary files) is not mapped" }

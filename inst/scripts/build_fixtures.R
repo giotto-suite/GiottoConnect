@@ -60,6 +60,12 @@ build_giotto_fixture <- function(source = NULL) {
     GiottoConnect::seuratToGiotto(build_seurat_fixture(), source = source)
 }
 
+# a giotto object with polygons, transcripts and a spatial network (from the
+# SFE fixture)
+build_giotto_sfe_fixture <- function(source = NULL) {
+    GiottoConnect::spatialExperimentToGiotto(build_sfe_fixture(), source = source)
+}
+
 # Seurat v3/v4 layout: a v3 Assay (counts/data/scale.data slots) with the
 # same FOV, reductions, graphs and FindNeighbors record as the v5 fixture
 build_seurat_v3_fixture <- function(n_cells = 200L, n_feat = 50L, assay = "Xenium",

@@ -167,6 +167,10 @@
             },
             "version": {
               "type": "string"
+            },
+            "class": {
+              "type": "string",
+              "description": "class the target builds when it has several (spatialexperiment: SpatialExperiment or SpatialFeatureExperiment)"
             }
           }
         },
