@@ -88,10 +88,12 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
 #' @description Retrieve what [convertWithMapping()] recorded in the giotto
 #' object history: mapping id, version, status, fingerprint, bound params,
 #' converted parts and losses.
-#' @param gobject giotto object, or a Seurat object produced by a mapping
+#' @param gobject giotto object, a Seurat object produced by a mapping, or the
+#' path of an `.h5ad` file written by [giottoToAnnData()]
 #' @returns list, or `NULL` if the object was not produced by a mapping
 #' @export
 mappingProvenance <- function(gobject) {
+    if (.is_h5ad_path(gobject)) return(.anndata_provenance(gobject))
     if (!inherits(gobject, "giotto")) {
         misc <- tryCatch(methods::slot(gobject, "misc"), error = function(e) NULL)
         return(misc$giottoConnect)

@@ -8,7 +8,7 @@ giotto_fixture <- local({
 
 test_that("giotto objects select the Giotto-to-Seurat mapping", {
     skip_if_not_installed("SeuratObject")
-    f <- findMapping(profileObject(giotto_fixture()), ecosystem = "giotto")
+    f <- findMapping(profileObject(giotto_fixture()), ecosystem = "giotto", target = "seurat")
     expect_equal(f$mapping$mapping$id, "giotto-seurat5")
     expect_equal(f$status, "match")
     expect_equal(f$params$values$spat_unit, "cell")

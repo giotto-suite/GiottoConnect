@@ -26,6 +26,7 @@ Imports:
     digest,
     yaml
 Suggests:
+    anndataR,
     GiottoData,
     GiottoDisk,
     hdf5r,

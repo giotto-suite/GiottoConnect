@@ -38,6 +38,26 @@
       "items": {
         "$ref": "#/$defs/loss"
       }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "description": "source data left out by design (not reported as unmapped); pattern is a perl regex on profile paths and may use params",
+      "items": {
+        "type": "object",
+        "required": [
+          "pattern",
+          "note"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {

@@ -98,7 +98,7 @@ seurat_content <- function(s) {
 
 record <- function(x, to) {
     p <- profileObject(x)
-    f <- findMapping(p)
+    f <- findMapping(p, target = to)
     row <- list(mapping = f$mapping$mapping$id %||% "-", status = f$status,
         fingerprint = f$fingerprint, params = f$params$values)
     if (f$status == "none") return(row)

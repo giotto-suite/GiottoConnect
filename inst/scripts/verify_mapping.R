@@ -27,7 +27,9 @@ yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
 m <- readMapping(yaml_file)
 x <- builders[[m$mapping$fixtures[[1]]]]()
 p <- adapterProfile(GiottoConnect:::.adapter_for(m), x)
-g <- convertWithMapping(x, m, profile = p)
+# file targets (AnnData) write to a temporary file
+out_file <- function() if (identical(m$mapping$target$contract, "anndata")) tempfile(fileext = ".h5ad")
+g <- convertWithMapping(x, m, profile = p, output = out_file())
 if (identical(m$mapping$target$contract, "giotto")) {
     # the same mapping onto a GiottoDisk project
     res <- convertWithMapping(x, m, profile = p, source = tempfile("verify_"))
@@ -35,7 +37,7 @@ if (identical(m$mapping$target$contract, "giotto")) {
 } else {
     # a GiottoDisk-backed source through the same mapping
     xd <- builders[[m$mapping$fixtures[[1]]]](source = tempfile("verify_"))
-    res <- convertWithMapping(xd, m)
+    res <- convertWithMapping(xd, m, output = out_file())
     v <- validateMapping(m, profileObject(xd), result = res)
 }
 if (any(v$level == "FAIL")) stop("validation failed; mapping not stamped")

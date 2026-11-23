@@ -186,6 +186,17 @@ print.giottoValidation <- function(x, ...) {
         startsWith(covered, paste0(p, "/")))
     # report subtree roots only
     left <- data_nodes[!vapply(data_nodes, inside, logical(1))]
+    # data the mapping leaves out by design (e.g. other spatial units / feature
+    # types of a giotto export); summarised once
+    ign <- vapply(mapping$out_of_scope %null% list(), function(o) .pf_bind(o$pattern, params$values),
+        character(1))
+    skipped <- left[vapply(left, function(p) any(vapply(ign, grepl, logical(1), x = p, perl = TRUE)),
+        logical(1))]
+    if (length(skipped)) {
+        out$add("out_of_scope", NA, "OK", sprintf("%d part(s) left out by design: %s", length(skipped),
+            paste(unique(vapply(mapping$out_of_scope, `[[`, character(1), "note")), collapse = "; ")))
+        left <- setdiff(left, skipped)
+    }
     left <- left[!vapply(left, function(p) any(startsWith(p, paste0(setdiff(left, p), "/"))), logical(1))]
     for (p in left) {
         r <- nd[nd$path == p, ]

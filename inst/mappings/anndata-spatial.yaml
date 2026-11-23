@@ -9,7 +9,7 @@ mapping:
   id: anndata-spatial
   version: 0.1.0
   status: verified
-  built: "2026-11-20"
+  built: "2026-11-23"
   schema_version: 0.1.0
   source:
     ecosystem: anndata
@@ -30,9 +30,7 @@ params:
   normalized: { list: Matrices, on: "", rule: first_where, as: path, optional: true,
                 where: { name_matches: "^X$", kind: [sparse_matrix, dense_matrix], not_role: [integer_valued] } }
   spatial:    { list: Obsm, rule: first_where, where: { name_matches: "^(X_)?spatial$", kind: dense_matrix }, optional: true }
-  nn_dist:    { list: Obsp, rule: first_where, where: { name_matches: "^distances$" }, optional: true }
   rna_type:   { list: FeatureTypes, rule: name_is, value: "Gene Expression", optional: true }
-  spatial_net: { list: Obsp, rule: first_where, where: { name_matches: "spatial_connectivities$" }, optional: true }
 
 source_nodes:
   counts:     { path: "{counts}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
@@ -46,8 +44,9 @@ source_nodes:
   ft_var:        { path: var, get: { fn: h5adVar, args: { matrix: "{counts}", feature_type: "{ft}" } } }
   spatial:    { path: "obsm/{spatial}", get: { fn: h5adObsm } }
   reduction:  { path: "obsm/{red}", get: { fn: h5adObsm } }
-  nn:         { path: "obsp/{nn_dist}", get: { fn: h5adObsp } }
-  spatial_net: { path: "obsp/{spatial_net}", get: { fn: h5adObsp } }
+  nn:         { path: "obsp/{nnk}", get: { fn: h5adObsp } }
+  spatial_net: { path: "obsp/{snk}", get: { fn: h5adObsp } }
+  other_layer: { path: "layers/{lay}", get: { fn: h5adMatrix, args: { feature_type: "{rna_type}" } } }
 
 parts:
   - id: expr_raw
@@ -147,22 +146,31 @@ parts:
       - { op: rownames_to_col, col: feat_ID }
     to: { spat_unit: cell, feat_type: "{ft_label}" }
 
-  - id: nn
+  # every kNN distances matrix (scanpy neighbors, also with key_added); the
+  # hook names it kNN.<space> from its uns record, or takes the Giotto name
+  # and type a giottoToAnnData() record holds
+  - id: "nn_{nnk}"
     part: nn_network
     from: nn
     hook: anndata_distances_to_nn
-    optional: true
-    # the hook names it kNN.<space> from the scanpy neighbors record
-    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nn_dist}" }
+    for_each: { list: Obsp, as: nnk, where: { name_matches: "distances$" }, exclude: "spatial" }
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{nnk}" }
 
-  # squidpy spatial graph -> Giotto spatial network (kNN_network /
-  # Delaunay_network from its spatial_neighbors record)
-  - id: spatial_network
+  # squidpy spatial graphs -> Giotto spatial networks (kNN_network /
+  # Delaunay_network from their spatial_neighbors record, or the Giotto name)
+  - id: "spatial_network_{snk}"
     part: spatial_network
     from: spatial_net
     hook: anndata_spatial_network
-    optional: true
-    to: { spat_unit: cell, name: "{spatial_net}" }
+    for_each: { list: Obsp, as: snk, where: { name_matches: "spatial.*connectivities$" } }
+    to: { spat_unit: cell, name: "{snk}" }
+
+  # other layers (e.g. scaled) as expression values of the same name
+  - id: "expr_layer_{lay}"
+    part: expression
+    from: other_layer
+    for_each: { list: Layers, as: lay, exclude: "^(counts|raw|raw_counts)$" }
+    to: { spat_unit: cell, feat_type: rna, name: "{lay}" }
 
 lossy:
   - { kind: dropped, path: "obsp/connectivities", note: "UMAP connectivities; Giotto weights come from distances" }
