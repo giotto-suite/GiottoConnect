@@ -55,3 +55,29 @@ test_that("runONTraC writes cell metadata and a spatial enrichment", {
     h <- g@parameters[[length(g@parameters)]]
     expect_s4_class(attr(h, "attachments")$param, "ontracParam")
 })
+
+test_that("plotONTraCConnectivity draws the stored connectivity", {
+    skip_if_not_installed("ggplot2")
+    skip_if_not_installed("GiottoVisuals")
+    skip_if_not_installed("GiottoData")
+    g <- GiottoData::loadGiottoMini("visium")
+    ids <- GiottoClass::spatIDs(g)
+    cl <- paste0("NicheCluster_", 0:2)
+    pr <- matrix(1 / 3, length(ids), 3, dimnames = list(NULL, cl))
+    adj <- matrix(c(1, .6, .1, .6, 1, .3, .1, .3, 1), 3, dimnames = list(cl, cl))
+    enr <- GiottoClass::createSpatEnrObj(
+        data.table::data.table(cell_ID = ids, pr), name = "ontrac",
+        spat_unit = "cell", feat_type = "rna", method = "ONTraC",
+        misc = list(connectivity = adj, niche_clusters = data.table::data.table(
+            niche_cluster = cl, NTScore = c(0, .5, 1))), verbose = FALSE)
+    g <- GiottoClass::setSpatialEnrichment(g, enr, verbose = FALSE)
+    pl <- plotONTraCConnectivity(g, show_plot = FALSE, return_plot = TRUE,
+        save_plot = FALSE)
+    expect_s3_class(pl, "ggplot")
+    expect_equal(nrow(pl$layers[[1]]$data), 3L)  # 3 cluster pairs
+    expect_equal(nrow(plotONTraCConnectivity(g, min_connectivity = 0.2,
+        show_plot = FALSE, return_plot = TRUE,
+        save_plot = FALSE)$layers[[1]]$data), 2L)
+    expect_error(plotONTraCConnectivity(g, name = "none", show_plot = FALSE,
+        return_plot = TRUE, save_plot = FALSE))
+})

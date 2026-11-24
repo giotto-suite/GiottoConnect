@@ -27,9 +27,11 @@ Imports:
 Suggests:
     Banksy,
     BayesSpace,
+    ggplot2,
     Giotto,
     GiottoData,
     GiottoDisk,
+    GiottoVisuals,
     hdf5r,
     httr2,
     nnSVG,

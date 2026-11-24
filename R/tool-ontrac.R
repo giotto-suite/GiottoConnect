@@ -191,8 +191,17 @@ setMethod("analyzeData", signature(x = "data.frame", param = "ontracParam"),
 #' @param name prefix of the results
 #' @param verbose be verbose
 #' @returns The giotto object with the results.
+#' @details Plot the results with Giotto's plots:
+#' * niche clusters in space: `spatPlot2D(g, cell_color = "<name>_niche_cluster")`
+#' * niche cluster probabilities in space: `spatCellPlot2D(g,
+#'   spat_enr_names = "<name>", cell_annotation_values = <clusters>)`
+#' * NT score per cell type: `ridgePlot(g, feats = "<name>_NTScore",
+#'   group_by = <cell_type>)`
+#' * cell type composition of the niche clusters: `plotLabelComposition(g,
+#'   groups = "<name>_niche_cluster", labels = <cell_type>)`
+#' * how the niche clusters connect: [plotONTraCConnectivity()]
 #' @inherit ontracParam references
-#' @seealso [ontracParam()]
+#' @seealso [ontracParam()], [plotONTraCConnectivity()]
 #' @examples
 #' \dontrun{
 #' g <- GiottoData::loadGiottoMini("vizgen")
@@ -254,4 +263,79 @@ runONTraC <- function(gobject, cell_type, spat_unit = NULL, feat_type = NULL,
         feat_type = feat_type, name = name, verbose = FALSE)
     update_giotto_params(gobject, description = "_ontrac",
         attachments = list(param = param))
+}
+
+#' @title Plot ONTraC niche cluster connectivity
+#' @name plotONTraCConnectivity
+#' @description
+#' Draws the niche clusters of [runONTraC()] as a graph: one node per niche
+#' cluster (labelled by its number), coloured by its NT score, and edges shaded by how strongly the
+#' clusters connect (ONTraC's consolidated adjacency). This view has no
+#' general Giotto plot, so it lives with the connection.
+#' @param gobject giotto object after [runONTraC()]
+#' @param spat_unit,feat_type spatial unit and feature type
+#' @param name name given to [runONTraC()]
+#' @param min_connectivity numeric, edges at or below it are not drawn
+#' @param seed integer, seed of the layout
+#' @param show_plot,return_plot,save_plot,save_param,default_save_name see
+#'   `GiottoVisuals::plot_output_handler()`
+#' @returns A `ggplot` (when returned).
+#' @inherit ontracParam references
+#' @seealso [runONTraC()]
+#' @examples
+#' \dontrun{
+#' plotONTraCConnectivity(g, spat_unit = "aggregate")
+#' }
+#' @md
+#' @export
+plotONTraCConnectivity <- function(gobject, spat_unit = NULL,
+    feat_type = NULL, name = "ontrac", min_connectivity = 0, seed = 1L,
+    show_plot = NULL, return_plot = NULL, save_plot = NULL,
+    save_param = list(), default_save_name = "ONTraCConnectivity") {
+    x <- y <- xend <- yend <- connectivity <- NTScore <- cluster <- NULL # NSE
+    package_check("ggplot2", repository = "CRAN")
+    package_check("GiottoVisuals",
+        repository = "github:giotto-suite/GiottoVisuals")
+    enr <- getSpatialEnrichment(gobject, spat_unit = spat_unit,
+        feat_type = feat_type, name = name, output = "spatEnrObj")
+    adj <- enr@misc$connectivity
+    nc <- enr@misc$niche_clusters
+    if (is.null(adj) || is.null(nc)) {
+        stop("[plotONTraCConnectivity] spatial enrichment ", name,
+            " has no ONTraC connectivity; run runONTraC() first",
+            call. = FALSE)
+    }
+    ids <- rownames(adj)
+    keep <- upper.tri(adj) & adj > min_connectivity
+    ij <- which(keep, arr.ind = TRUE)
+    g <- igraph::make_empty_graph(length(ids), directed = FALSE)
+    g <- igraph::add_edges(g, as.vector(t(ij)), weight = adj[ij])
+    set.seed(seed)
+    xy <- igraph::layout_with_fr(g, weights = igraph::E(g)$weight)
+    nodes <- data.frame(cluster = sub("^NicheCluster_", "", ids),
+        x = xy[, 1], y = xy[, 2],
+        NTScore = nc$NTScore[match(ids, nc$niche_cluster)])
+    edges <- data.frame(x = xy[ij[, 1], 1], y = xy[ij[, 1], 2],
+        xend = xy[ij[, 2], 1], yend = xy[ij[, 2], 2],
+        connectivity = adj[ij])
+    pl <- ggplot2::ggplot() +
+        ggplot2::geom_segment(data = edges, ggplot2::aes(x = x, y = y,
+            xend = xend, yend = yend, colour = connectivity,
+            alpha = connectivity), linewidth = 3, lineend = "round") +
+        ggplot2::scale_colour_gradient(low = "#FEE0D2", high = "#A50F15",
+            name = "connectivity") +
+        ggplot2::scale_alpha(range = c(0.2, 1), guide = "none") +
+        ggplot2::geom_point(data = nodes, ggplot2::aes(x = x, y = y,
+            fill = NTScore), shape = 21, size = 12, colour = "grey30") +
+        ggplot2::scale_fill_viridis_c(option = "turbo", name = "NT score") +
+        ggplot2::geom_text(data = nodes, ggplot2::aes(x = x, y = y,
+            label = cluster), size = 3) +
+        ggplot2::scale_x_continuous(expand = ggplot2::expansion(0.15)) +
+        ggplot2::scale_y_continuous(expand = ggplot2::expansion(0.15)) +
+        ggplot2::coord_equal(clip = "off") +
+        ggplot2::theme_void()
+    GiottoVisuals::plot_output_handler(gobject = gobject, plot_object = pl,
+        save_plot = save_plot, return_plot = return_plot,
+        show_plot = show_plot, default_save_name = default_save_name,
+        save_param = save_param, else_return = NULL)
 }

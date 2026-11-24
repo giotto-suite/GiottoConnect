@@ -53,6 +53,16 @@ ONTraC is a Python package, installed in a cached environment the first
 time this runs. \strong{If you use it, please cite the original paper} (see
 \code{\link[=ontracParam]{ontracParam()}}).
 }
+\details{
+Plot the results with Giotto's plots:
+\itemize{
+\item niche clusters in space: \code{spatPlot2D(g, cell_color = "<name>_niche_cluster")}
+\item niche cluster probabilities in space: \verb{spatCellPlot2D(g, spat_enr_names = "<name>", cell_annotation_values = <clusters>)}
+\item NT score per cell type: \verb{ridgePlot(g, feats = "<name>_NTScore", group_by = <cell_type>)}
+\item cell type composition of the niche clusters: \verb{plotLabelComposition(g, groups = "<name>_niche_cluster", labels = <cell_type>)}
+\item how the niche clusters connect: \code{\link[=plotONTraCConnectivity]{plotONTraCConnectivity()}}
+}
+}
 \examples{
 \dontrun{
 g <- GiottoData::loadGiottoMini("vizgen")
@@ -67,5 +77,5 @@ through niche trajectory analysis. \emph{Genome Biology} 26, 117 (2025).
 \doi{10.1186/s13059-025-03588-5}
 }
 \seealso{
-\code{\link[=ontracParam]{ontracParam()}}
+\code{\link[=ontracParam]{ontracParam()}}, \code{\link[=plotONTraCConnectivity]{plotONTraCConnectivity()}}
 }
