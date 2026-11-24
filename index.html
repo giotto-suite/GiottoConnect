@@ -62,7 +62,7 @@
 <h2 id="converting-seurat-anndata-and-spatialexperiment-objects">Converting Seurat, AnnData and SpatialExperiment objects<a class="anchor" aria-label="anchor" href="#converting-seurat-anndata-and-spatialexperiment-objects"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">GiottoConnect</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://giotto-suite.github.io/GiottoConnect/">GiottoConnect</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/seuratToGiotto.html">seuratToGiotto</a></span><span class="op">(</span><span class="va">seurat_object</span><span class="op">)</span>                 <span class="co"># in memory</span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/anndataToGiotto.html">anndataToGiotto</a></span><span class="op">(</span><span class="st">"sample.h5ad"</span>, source <span class="op">=</span> <span class="st">"my_project/"</span><span class="op">)</span>  <span class="co"># GiottoDisk-backed</span></span>
@@ -76,7 +76,15 @@
 <p>Each converter profiles the input, picks the bundled mapping that fits its structure and builds the Giotto object from it. <code>.h5ad</code> files are read directly (hdf5r); no python is needed. See the <em>Converting Seurat, AnnData and SpatialExperiment objects to Giotto</em> article.</p>
 </div>
 </div>
-  </main><aside class="col-md-3"><div class="license">
+  </main><aside class="col-md-3"><div class="links">
+<h2 data-toc-skip>Links</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/giotto-suite/GiottoConnect/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/giotto-suite/GiottoConnect/issues" class="external-link">Report a bug</a></li>
+</ul>
+</div>
+
+<div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
 <li><a href="LICENSE.html">Full license</a></li>
