@@ -1,0 +1,34 @@
+# Rebuilds https://giotto-suite.github.io/GiottoConnect/ when dev_connect changes.
+#
+# The site is built by pkgdown.yaml on the `website` branch, which checks this
+# branch out. This dispatches it, so the site follows the package. GITHUB_TOKEN
+# may start a workflow_dispatch run, so no extra secret is needed.
+
+name: pkgdown trigger
+
+on:
+  push:
+    branches: [dev_connect]
+    paths:
+      - "R/**"
+      - "man/**"
+      - "vignettes/**"
+      - "DESCRIPTION"
+      - "NAMESPACE"
+      - "NEWS.md"
+      - "README.md"
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Rebuild the site
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run pkgdown.yaml --repo "$GITHUB_REPOSITORY" \
+            --ref website -f package-ref=dev_connect

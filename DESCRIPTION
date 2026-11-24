@@ -11,6 +11,8 @@ Description: Interoperability between Giotto and other single-cell and
     in memory or onto a GiottoDisk project; further conversions cover
     SpatialData, Bento and Stereo-seq GEF.
 License: MIT + file LICENSE
+URL: https://giotto-suite.github.io/GiottoConnect/, https://github.com/giotto-suite/GiottoConnect
+BugReports: https://github.com/giotto-suite/GiottoConnect/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
