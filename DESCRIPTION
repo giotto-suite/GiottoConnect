@@ -27,19 +27,25 @@ Imports:
     yaml
 Suggests:
     anndataR,
+    Banksy,
+    BayesSpace,
+    ggplot2,
+    Giotto,
     GiottoData,
     GiottoDisk,
+    GiottoVisuals,
     hdf5r,
     httr2,
+    nnSVG,
     rhdf5,
+    S4Vectors,
     Seurat,
     SeuratObject,
+    sf,
     SingleCellExperiment,
     SpatialExperiment,
     SpatialFeatureExperiment,
     SummarizedExperiment,
-    S4Vectors,
-    sf,
     terra,
     testthat (>= 3.0.0)
 Remotes:

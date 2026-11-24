@@ -47,6 +47,9 @@ R/
   contract_target_spe.R  SpatialExperiment / SFE target (mapping target `class`), key/semantic checks, comparators
   contract_images.R      images: Giotto extent <-> RGB array + scale factor (origin at the top-left), image hooks
   anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
+  tool-utils.R           shared helpers for external tool connections (py_require CLI path, run + log)
+  tool-<name>.R          one external tool per file (adr/0008 in GiottoClass): <name>Param, analyzeData
+                         method, run<Tool>(); the tool is checked or installed only when it runs
 inst/
   mappings/<id>.yaml (+ <id>.profile.json)   one file per source structure, not per technology
   contract/giotto-contract-<GiottoClass version>.json
