@@ -1,0 +1,76 @@
+# Builds https://giotto-suite.github.io/GiottoConnect/
+#
+# The build lives in giotto-suite/.github and is shared across the org. This
+# branch holds only the website content (_pkgdown.yml, pkgdown/); the package
+# is checked out from package-ref at build time, so nothing here has to be kept
+# in sync with it. Articles stay with the package, in vignettes/articles/.
+#
+# WHEN DOES IT REBUILD?
+# On a push here, and whenever dev_connect changes: .github/workflows/
+# pkgdown-trigger.yaml on dev_connect dispatches this workflow.
+#
+# WHY resolve-packages AND pins
+# GiottoConnect's Remotes pin GiottoUtils@dev and GiottoClass@gsource, while
+# GiottoClass@gsource declares a bare GiottoUtils remote. Pinned versus bare for
+# one package is a conflict pak refuses (the same case as GiottoDisk). So
+# resolve the CRAN/Bioconductor tree explicitly, then install the suite packages
+# in dependency order with dependency resolution switched off. GiottoConnect
+# itself is installed after the pins by the shared workflow. Order matters: a
+# pin is built against what is installed before it, and GitHub-only imports
+# (Giotto and tilework for GiottoDisk) must be their own earlier pins.
+#
+# The extra packages are what the converting_to_giotto article runs.
+
+name: pkgdown
+
+on:
+  push:
+    branches: [website]
+  workflow_dispatch:
+    inputs:
+      package-ref:
+        description: "Branch/tag of giotto-suite/GiottoConnect to document"
+        default: dev_connect
+        required: false
+
+jobs:
+  site:
+    permissions:
+      contents: write
+    uses: giotto-suite/.github/.github/workflows/pkgdown-site.yaml@main
+    with:
+      mode: release
+      package-repo: giotto-suite/GiottoConnect
+      package-ref: ${{ inputs.package-ref || 'dev_connect' }}
+      overlay-files: "_pkgdown.yml"
+      examples: "false"
+      resolve-packages: |
+        pkgdown
+        checkmate
+        data.table
+        digest
+        igraph
+        jsonlite
+        Matrix
+        reticulate
+        yaml
+        hdf5r
+        anndataR
+        Seurat
+        SeuratObject
+        bioc::SpatialExperiment
+        bioc::SpatialExperimentIO
+        bioc::SpatialFeatureExperiment
+        bioc::scuttle
+        bioc::scater
+        terra
+        sf
+      pins: |
+        giotto-suite/GiottoUtils@dev
+        giotto-suite/GiottoClass@gsource
+        giotto-suite/GiottoVisuals@gsource
+        giotto-suite/Giotto@gsource
+        drieslab/tilework@dev
+        giotto-suite/GiottoDisk@dev
+        giotto-suite/GiottoData
+      expect-versions: "GiottoClass>=0.8.0"

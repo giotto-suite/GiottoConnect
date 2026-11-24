@@ -1,0 +1,111 @@
+url: https://giotto-suite.github.io/GiottoConnect/
+
+template:
+  bootstrap: 5
+  # katex, not the default mathml: mathml relies on pandoc, which Rd \deqn{}
+  # and \eqn{} never pass through, so formulae render as literal source.
+  math-rendering: katex
+  bslib:
+    bg: "#FFFFFF"
+    fg: "#000000"
+    primary: "#7E69AE"
+    code_font: {google: "JetBrains Mono"}
+  params:
+    search: true
+
+navbar:
+  bg: light
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, suite, github, lightswitch]
+  components:
+    reference:
+      text: Documentation
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+      - text: Converting Seurat, AnnData and SpatialExperiment objects
+        href: articles/converting_to_giotto.html
+    news:
+      text: News
+      href: news/index.html
+    suite:
+      text: Giotto Suite
+      href: https://giottosuite.com
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/giotto-suite/GiottoConnect/
+      aria-label: github
+
+news:
+  cran_dates: false
+
+reference:
+- title: To Giotto
+  desc: >
+    Convert objects and files from other ecosystems into Giotto objects.
+- contents:
+  - seuratToGiotto
+  - anndataToGiotto
+  - spatialExperimentToGiotto
+  - spatialdataToGiotto
+  - gefToGiotto
+
+- title: From Giotto
+  desc: >
+    Convert a Giotto object into another ecosystem's object or file.
+- contents:
+  - giottoToSeurat
+  - giottoToAnnData
+  - giottoToSpatialExperiment
+  - createBentoAdata
+
+- title: Checking a conversion
+  desc: >
+    What a conversion kept, dropped or changed.
+- contents:
+  - mappingProvenance
+  - readbackCheck
+
+- title: Mapping engine
+  desc: >
+    Profile an object, choose the mapping that fits it and apply it.
+- contents:
+  - convertWithMapping
+  - findMapping
+  - readMapping
+  - validateMapping
+  - summary.giottoMapping
+  - profileObject
+  - fingerprint
+  - diffProfiles
+  - giottoContract
+  - adapterRegistry
+  - hookRegistry
+
+- title: Mapping repair
+  desc: >
+    Adapt a mapping when an object's structure has drifted from it.
+- contents:
+  - repairMapping
+  - writeMappingRequest
+  - llmBackend
+  - llmPatch
+
+- title: External tools
+  desc: >
+    Run methods from other packages on a Giotto object.
+- contents:
+  - runBanksy
+  - banksyParam
+  - runBayesSpace
+  - bayesspaceParam
+  - runCellChat
+  - cellchatParam
+  - runNnSVG
+  - nnsvgParam
+  - runONTraC
+  - ontracParam
+  - plotONTraCConnectivity
+  - checkGiottoMethod
