@@ -26,12 +26,15 @@ Imports:
     yaml
 Suggests:
     Banksy,
+    BayesSpace,
     Giotto,
     GiottoData,
     GiottoDisk,
     hdf5r,
     httr2,
+    nnSVG,
     rhdf5,
+    S4Vectors,
     Seurat,
     SeuratObject,
     sf,

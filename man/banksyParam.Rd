@@ -69,5 +69,5 @@ and tissue domain segmentation for scalable spatial omics data analysis.
 \emph{Nature Genetics} 56, 431–441 (2024). \doi{10.1038/s41588-024-01664-3}
 }
 \seealso{
-\code{\link[Giotto:runBanksy]{runBanksy()}}
+\code{\link[=runBanksy]{runBanksy()}}
 }
