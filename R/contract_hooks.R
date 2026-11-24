@@ -35,15 +35,80 @@
         packages = c("hdf5r", "Matrix"),
         description = "AnnData obsp spatial graph (squidpy) -> spatial network; Giotto name from the spatial_neighbors record"
     ),
+    spe_reduction_misc = list(
+        fn = function(node, params, ctx) .hook_spe_reduction_misc(node, params, ctx),
+        packages = "SingleCellExperiment",
+        description = "scater reduction attributes (rotation, varExplained) -> dimObj misc"
+    ),
+    spe_visium_to_um = list(
+        fn = function(node, params, ctx) .hook_spe_visium_to_um(node, params, ctx),
+        packages = "SpatialExperiment",
+        description = "VisiumIO spot/bin centers in full-resolution pixels -> microns"
+    ),
+    sf_to_vertices = list(
+        fn = function(node, params, ctx) .hook_sf_to_vertices(node, params, ctx),
+        packages = "sf",
+        description = "sf polygons (SFE colGeometry) -> vertex table x, y, poly_ID"
+    ),
+    listw_to_network = list(
+        fn = function(node, params, ctx) .hook_listw_to_network(node, params, ctx),
+        packages = "SpatialExperiment",
+        description = "spdep listw (SFE spatialGraph) -> spatial network edges, distances from spatialCoords"
+    ),
     giotto_polygons_to_vertices = list(
         fn = function(node, params, ctx) .hook_polygons_to_vertices(node),
         packages = c("GiottoClass", "terra"),
         description = "giottoPolygon (in memory or GiottoDisk) -> vertex table x, y, cell"
     ),
+    giotto_points_to_molecules = list(
+        fn = function(node, params, ctx) .hook_points_to_molecules(node),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoPoints (in memory or GiottoDisk) -> molecule table x, y, gene for a Seurat FOV"
+    ),
     giotto_nn_to_graph = list(
         fn = function(node, params, ctx) .hook_nn_to_graph(node, params, ctx),
         packages = c("GiottoClass", "Matrix"),
         description = "Giotto nearest-neighbour edges -> cells x cells adjacency for a Seurat Graph"
+    ),
+    giotto_polygons_to_sf = list(
+        fn = function(node, params, ctx) .hook_polygons_to_sf(node),
+        packages = c("GiottoClass", "terra", "sf"),
+        description = "giottoPolygon (in memory or GiottoDisk) -> sf polygons named by cell, image space (y down)"
+    ),
+    giotto_points_to_table = list(
+        fn = function(node, params, ctx) .points_table(node),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoPoints (in memory or GiottoDisk) -> transcript table x, y, feat_ID"
+    ),
+    giotto_image_to_array = list(
+        fn = function(node, params, ctx) .hook_giotto_image_to_array(node, params, ctx),
+        packages = c("GiottoClass", "terra"),
+        description = "giottoLargeImage -> RGB array from the origin and its scale (px per unit)"
+    ),
+    seurat_visium_image = list(
+        fn = function(node, params, ctx) .hook_seurat_visium_image(node, params, ctx),
+        packages = c("SeuratObject", "terra"),
+        description = "VisiumV1/V2 lowres image -> SpatRaster placed in the locs units"
+    ),
+    spe_image = list(
+        fn = function(node, params, ctx) .hook_spe_image(node, params, ctx),
+        packages = c("SpatialExperiment", "terra"),
+        description = "SpatialExperiment imgData image -> SpatRaster in spatialCoords units"
+    ),
+    spe_visium_image = list(
+        fn = function(node, params, ctx) .hook_spe_image(node, params, ctx, to_um = TRUE),
+        packages = c("SpatialExperiment", "terra"),
+        description = "VisiumIO imgData image -> SpatRaster in microns"
+    ),
+    anndata_spatial_image = list(
+        fn = function(node, params, ctx) .hook_anndata_spatial_image(node, params, ctx),
+        packages = "terra",
+        description = "scanpy uns/spatial hires/lowres image -> SpatRaster in obsm/spatial units"
+    ),
+    spe_colpair_to_network = list(
+        fn = function(node, params, ctx) .hook_colpair_to_network(node, params, ctx),
+        packages = "SingleCellExperiment",
+        description = "colPair SelfHits -> network edges; Giotto name and type from metadata when present"
     )
 )
 
@@ -99,7 +164,7 @@ hookRegistry <- function() {
     edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
         weight = NA_real_, distance = NA_real_)
 
-    graph <- params$nn_graph
+    graph <- ctx$part_spec$to$name %null% params$nn_graph
     rec <- .seurat_neighbors_record(ctx$x, graph)
     if (!is.null(rec)) {
         name <- paste(nn_type, rec$reduction, sep = ".")
@@ -182,6 +247,17 @@ hookRegistry <- function() {
 # Standard Visium: spots sit on a 100 um center-to-center grid, so the pixel
 # size comes from the measured nearest-neighbour spacing.
 .hook_visium_to_um <- function(node, params, ctx) {
+    u <- .visium_um_per_px(node, params, ctx)
+    ctx$add_loss("recovered_from_parameters", "units", u$how)
+    xy <- u$xy
+    xy$x <- xy$x * u$um
+    xy$y <- xy$y * u$um
+    xy
+}
+
+# microns per full-resolution pixel of a VisiumV1 / VisiumV2 image (1 for
+# coordinates giottoToSeurat() wrote, already in Giotto units)
+.visium_um_per_px <- function(node, params, ctx) {
     if (methods::is(node, "VisiumV1")) {
         # VisiumV1 keeps full-resolution imagerow (y) / imagecol (x)
         v1 <- asNamespace("SeuratObject")$GetTissueCoordinates(node, scale = NULL)
@@ -189,6 +265,9 @@ hookRegistry <- function() {
             stringsAsFactors = FALSE)
     } else {
         xy <- asNamespace("SeuratObject")$GetTissueCoordinates(node)
+    }
+    if (!is.null(tryCatch(methods::slot(ctx$x, "misc")$giottoConnect, error = function(e) NULL))) {
+        return(list(um = 1, xy = xy, how = "coordinates written by giottoToSeurat(), kept in Giotto units"))
     }
     sf <- methods::slot(node, "scale.factors")
     bin <- regmatches(params$image, regexpr("(?<=\\.)\\d+(?=um$)", params$image, perl = TRUE))
@@ -200,18 +279,20 @@ hookRegistry <- function() {
         um_per_px <- 100 / nn_px
         how <- sprintf("100 um spot pitch / measured spacing %.2f px", nn_px)
     }
-    ctx$add_loss("recovered_from_parameters", "units", sprintf(
-        "%.5f um per px (%s)", um_per_px, how))
-    xy$x <- xy$x * um_per_px
-    xy$y <- xy$y * um_per_px
-    xy
+    list(um = um_per_px, xy = xy, how = sprintf("%.5f um per px (%s)", um_per_px, how))
 }
 
+# median distance from a sample of points to their nearest neighbour among all
+# points
 .median_nn_spacing <- function(m, n = 500L) {
-    if (nrow(m) > n) m <- m[as.integer(seq(1L, nrow(m), length.out = n)), , drop = FALSE]
-    d <- as.matrix(stats::dist(m))
-    diag(d) <- Inf
-    stats::median(apply(d, 1L, min))
+    m <- as.matrix(m)[, 1:2, drop = FALSE]
+    use <- if (nrow(m) > n) as.integer(seq(1L, nrow(m), length.out = n)) else seq_len(nrow(m))
+    nn <- vapply(use, function(i) {
+        d2 <- (m[, 1] - m[i, 1])^2 + (m[, 2] - m[i, 2])^2
+        d2[i] <- Inf
+        sqrt(min(d2))
+    }, numeric(1))
+    stats::median(nn)
 }
 
 # outer ring vertices of each polygon (holes are dropped), in Giotto's
@@ -230,7 +311,8 @@ hookRegistry <- function() {
     e <- as.data.frame(node)
     i <- match(e$from, cells)
     j <- match(e$to, cells)
-    knn <- grepl("_nn$", ctx$part_spec$to$graph %null% "")
+    to <- ctx$part_spec$to
+    knn <- if (!is.null(to$nn_type)) identical(to$nn_type, "kNN") else grepl("_nn$", to$graph %null% "")
     if (knn) {
         i <- c(i, seq_along(cells))
         j <- c(j, seq_along(cells))
@@ -259,10 +341,21 @@ hookRegistry <- function() {
     tr <- tr[tr$i != tr$j, , drop = FALSE]
     edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j],
         weight = 1 / (1 + tr$x), distance = tr$x)
-    key <- params$nn_dist
+    key <- params$nn_dist %null% ctx$part_spec$to$name
     h5 <- .h5ad_open(.h5ad_path(ctx$x))
     on.exit(h5$close_all())
     rec <- .h5ad_neighbors_record(h5, key)
+    if (!is.null(rec$giotto)) {
+        # written by giottoToAnnData(): name, type and weights as in Giotto
+        if (!is.null(rec$connectivities_key) && .h5ad_exists(h5, paste0("obsp/", rec$connectivities_key))) {
+            w <- .h5ad_obsp(h5, paste0("obsp/", rec$connectivities_key))
+            edges$weight <- w[cbind(tr$i, tr$j)]
+        }
+        ctx$add_loss("recovered_from_parameters", "name", sprintf("%s %s from the uns/%s record",
+            rec$giotto$type, rec$giotto$name, rec$key))
+        return(.hook_result(edges, to = list(nn_type = as.character(rec$giotto$type),
+            name = as.character(rec$giotto$name))))
+    }
     k <- stats::median(tabulate(tr$i, nbins = nrow(m)))
     if (is.null(rec)) {
         name <- paste0("kNN.", key)
@@ -295,7 +388,12 @@ hookRegistry <- function() {
         dk <- paste("uns", k, field, sep = "/")
         if (!.h5ad_exists(h5, dk) || !identical(as.character(.h5ad_value(h5, dk)), key)) next
         pp <- paste("uns", k, "params", sep = "/")
-        return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list()))
+        gp <- paste("uns", k, "giotto", sep = "/")
+        ck <- paste("uns", k, "connectivities_key", sep = "/")
+        return(list(key = k, params = if (.h5ad_exists(h5, pp)) .h5ad_value(h5, pp) else list(),
+            # written by giottoToAnnData(): the Giotto name and type
+            giotto = if (.h5ad_exists(h5, gp)) .h5ad_value(h5, gp),
+            connectivities_key = if (.h5ad_exists(h5, ck)) as.character(.h5ad_value(h5, ck))))
     }
     NULL
 }
@@ -347,7 +445,7 @@ hookRegistry <- function() {
     tr <- tr[tr$i != tr$j & (!sym | tr$i < tr$j), , drop = FALSE]
     h5 <- .h5ad_open(.h5ad_path(ctx$x))
     on.exit(h5$close_all())
-    key <- params$spatial_net
+    key <- params$spatial_net %null% ctx$part_spec$to$name
     rec <- .h5ad_graph_record(h5, key, "connectivities_key")
     dkey <- if (!is.null(rec) && .h5ad_exists(h5, paste0("uns/", rec$key, "/distances_key"))) {
         as.character(.h5ad_value(h5, paste0("uns/", rec$key, "/distances_key")))
@@ -361,9 +459,15 @@ hookRegistry <- function() {
     } else {
         rep(NA_real_, nrow(tr))
     }
-    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j], distance = d, weight = 1 / d)
+    w <- if (!is.null(rec$giotto)) tr$x else 1 / d
+    edges <- data.table::data.table(from = ids[tr$i], to = ids[tr$j], distance = d, weight = w)
     # every cell is a node, also cells without a neighbour
     attr(edges, "nodes") <- ids
+    if (!is.null(rec$giotto)) {
+        ctx$add_loss("recovered_from_parameters", "name", sprintf("spatial network %s from the uns/%s record",
+            rec$giotto$name, rec$key))
+        return(.hook_result(edges, to = list(name = as.character(rec$giotto$name))))
+    }
     name <- if (is.null(rec)) key else .squidpy_network_name(h5, rec$key)
     ctx$add_loss("recovered_from_parameters", "name", sprintf("%s from %s%s", name,
         if (is.null(rec)) paste0("obsp/", key) else paste0("uns/", rec$key),
@@ -382,5 +486,140 @@ hookRegistry <- function() {
     if (has("n_neighbors") && !has("radius")) return("kNN_network")
     if (!has("n_neighbors") && !length(val("radius"))) return("Delaunay_network")
     key
+}
+
+# scater keeps loadings (rotation) and variances (varExplained) as attributes
+# of the reduction matrix
+.hook_spe_reduction_misc <- function(node, params, ctx) {
+    misc <- .reduction_misc(attr(node, "rotation"), attr(node, "varExplained"))
+    m <- node
+    attributes(m) <- attributes(node)[c("dim", "dimnames")]
+    if (!length(misc)) return(m)
+    .hook_result(m, to = list(misc = misc))
+}
+
+# VisiumIO keeps full-resolution pixel positions; microns from the bin size
+# (Visium HD) or the 100 um spot pitch over the measured spacing
+.hook_spe_visium_to_um <- function(node, params, ctx) {
+    u <- .spe_um_per_px(ctx$x, node)
+    ctx$add_loss("recovered_from_parameters", "units", u$how)
+    node[, 1:2] * u$um
+}
+
+# microns per full-resolution pixel of VisiumIO coordinates (1 for those
+# giottoToSpatialExperiment() wrote, already in Giotto units)
+.spe_um_per_px <- function(x, coords) {
+    if (!is.null(S4Vectors::metadata(x)$giottoConnect)) {
+        return(list(um = 1, how = "coordinates written by giottoToSpatialExperiment(), kept in Giotto units"))
+    }
+    cd <- asNamespace("SummarizedExperiment")$colData(x)
+    bin <- if ("bin_size" %in% names(cd)) suppressWarnings(as.numeric(cd$bin_size[1L])) else NA_real_
+    nn_px <- .median_nn_spacing(as.matrix(coords[, 1:2]))
+    pitch <- if (is.na(bin)) 100 else bin
+    um <- pitch / nn_px
+    list(um = um, how = sprintf("%.5f um per px (%s / measured spacing %.2f px)", um,
+        if (is.na(bin)) "100 um spot pitch" else sprintf("%s um bins", bin), nn_px))
+}
+
+# sf POLYGON / MULTIPOLYGON -> outer-ring vertices with the row names as poly_ID
+.hook_sf_to_vertices <- function(node, params, ctx) {
+    geo <- sf::st_geometry(node)
+    # mixed POLYGON / MULTIPOLYGON columns
+    if (inherits(geo, "sfc_GEOMETRY")) geo <- sf::st_cast(geo, "MULTIPOLYGON")
+    xy <- sf::st_coordinates(geo)
+    lcols <- grep("^L[0-9]$", colnames(xy), value = TRUE)
+    feat <- xy[, lcols[length(lcols)]]
+    holes <- xy[, "L1"] > 1
+    if (any(holes)) {
+        ctx$add_loss("dropped", "geometry", sprintf("%d hole vertices dropped (outer rings kept)", sum(holes)))
+    }
+    ids <- rownames(node) %null% as.character(seq_len(nrow(node)))
+    data.frame(x = xy[!holes, "X"], y = xy[!holes, "Y"], poly_ID = ids[feat[!holes]],
+        stringsAsFactors = FALSE)
+}
+
+# spdep listw -> undirected edges (each pair once) with Euclidean distances in
+# spatialCoords and weight = 1 / distance, as Giotto's spatial networks
+.hook_listw_to_network <- function(node, params, ctx) {
+    nb <- node$neighbours
+    ids <- attr(nb, "region.id") %null% colnames(ctx$x)
+    from <- rep(seq_along(nb), lengths(nb))
+    to <- unlist(nb)
+    keep <- to > 0L
+    from <- from[keep]
+    to <- to[keep]
+    a <- pmin(from, to)
+    b <- pmax(from, to)
+    dup <- duplicated(paste(a, b))
+    a <- a[!dup]
+    b <- b[!dup]
+    xy <- asNamespace("SpatialExperiment")$spatialCoords(ctx$x)
+    d <- sqrt(rowSums((xy[a, 1:2, drop = FALSE] - xy[b, 1:2, drop = FALSE])^2))
+    giotto <- attr(node, "giotto")
+    w <- if (is.null(giotto)) 1 / d else {
+        # weights of a Giotto network written by giottoToSpatialExperiment()
+        mapply(function(k, l) node$weights[[k]][match(l, nb[[k]])], a, b)
+    }
+    edges <- data.table::data.table(from = ids[a], to = ids[b], distance = d, weight = w)
+    attr(edges, "nodes") <- ids
+    if (!is.null(giotto)) return(.hook_result(edges, to = list(name = as.character(giotto$name))))
+    ctx$add_loss("recovered_from_parameters", "distance",
+        "distances recomputed in spatialCoords; weight = 1 / distance (spdep weights not kept)")
+    edges
+}
+
+# transcripts -> x, y, gene (Seurat's feature names: "_" becomes "-")
+.hook_points_to_molecules <- function(node) {
+    d <- .points_table(node)
+    data.frame(x = d$x, y = d$y, gene = .seurat_feat(d$feat_ID), stringsAsFactors = FALSE)
+}
+
+# transcripts -> x, y, feat_ID
+.points_table <- function(node) {
+    sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
+    xy <- terra::crds(sv)
+    data.frame(x = xy[, 1], y = xy[, 2], feat_ID = sv$feat_ID, stringsAsFactors = FALSE)
+}
+
+# polygons -> sf named by poly_ID, flipped to image space (y down) as
+# spatialCoords
+.hook_polygons_to_sf <- function(node) {
+    sv <- if (inherits(node[], "SpatVector")) node[] else GiottoClass::as.terra(node[])
+    g <- sf::st_as_sf(sv)
+    geo <- sf::st_geometry(g) * matrix(c(1, 0, 0, -1), 2L)
+    # one geometry type per column (multi-part cells make all MULTIPOLYGON)
+    if (length(unique(sf::st_geometry_type(geo))) > 1L) geo <- sf::st_cast(geo, "MULTIPOLYGON")
+    out <- sf::st_sf(geometry = geo)
+    rownames(out) <- sv$poly_ID
+    out
+}
+
+# colPair SelfHits -> edges; distance and weight from the hits' columns when
+# present (else distances in spatialCoords and weight = 1 / distance), the
+# Giotto name and nn type from metadata(<hits>)$giotto
+.hook_colpair_to_network <- function(node, params, ctx) {
+    ids <- colnames(ctx$x)
+    i <- S4Vectors::from(node)
+    j <- S4Vectors::to(node)
+    mc <- S4Vectors::mcols(node)
+    d <- if ("distance" %in% names(mc)) as.numeric(mc$distance) else {
+        xy <- asNamespace("SpatialExperiment")$spatialCoords(ctx$x)
+        sqrt(rowSums((xy[i, 1:2, drop = FALSE] - xy[j, 1:2, drop = FALSE])^2))
+    }
+    w <- if ("weight" %in% names(mc)) as.numeric(mc$weight) else if ("value" %in% names(mc)) {
+        as.numeric(mc$value)
+    } else {
+        1 / d
+    }
+    edges <- data.table::data.table(from = ids[i], to = ids[j], distance = d, weight = w)
+    attr(edges, "nodes") <- ids
+    giotto <- S4Vectors::metadata(node)$giotto
+    if (is.null(giotto)) {
+        ctx$add_loss("recovered_from_parameters", "weight", "colPair without a Giotto record: weights from the hits, distances in spatialCoords when absent")
+        return(edges)
+    }
+    to <- list(name = as.character(giotto$name))
+    if (ctx$part_spec$part == "nn_network" && length(giotto$type)) to$nn_type <- as.character(giotto$type)
+    .hook_result(edges, to = to)
 }
 

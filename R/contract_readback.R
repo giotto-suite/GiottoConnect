@@ -33,7 +33,8 @@ readbackCheck <- function(x, result, mapping = NULL, n_cells = 99L) {
     }
     package_check(.adapter_for(mapping)@package)
     profile <- adapterProfile(.adapter_for(mapping), x)
-    res <- .resolve_parts(mapping, profile)
+    # the spat_unit / feat_type a conversion was pinned to
+    res <- .resolve_parts(mapping, profile, prov$pinned)
     mapping <- res$mapping
     params <- res$params
     mapping <- .expand_for_each(mapping, profile, params)
@@ -263,5 +264,19 @@ print.giottoReadback <- function(x, ...) {
             sprintf("missing: %s; extra: %s", lst(miss), lst(extra))
         } else sprintf("%d columns", length(shared))),
         .rb_row("values", !length(bad), if (length(bad)) paste("differ:", paste(bad, collapse = ",")) else "")
+    )
+}
+
+# an image is placed by its extent; values compared on a sample of pixels
+.RB_COMPARE$images <- function(spec, data, g, n_cells) {
+    img <- GiottoClass::getGiottoImage(g, name = spec$to$name)
+    r <- img@raster_object
+    use <- unique(as.integer(seq(1L, terra::ncell(data), length.out = min(500L, terra::ncell(data)))))
+    list(
+        .rb_row("placement", TRUE, spec$to$name),
+        .rb_row("extent", .rb_same(as.vector(terra::ext(r)), as.vector(terra::ext(data))),
+            paste(signif(as.vector(terra::ext(r)), 6), collapse = ", ")),
+        .rb_row("values", .rb_same(as.numeric(terra::values(r)[use, 1:3]),
+            as.numeric(terra::values(data)[use, 1:3])), sprintf("%d sampled pixels", length(use)))
     )
 }

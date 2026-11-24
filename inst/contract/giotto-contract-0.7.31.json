@@ -115,6 +115,18 @@
       "list_fn": "list_feature_info",
       "nesting": "feat_info",
       "disk_backable": true
+    },
+    "images": {
+      "slot": "images",
+      "class": "giottoLargeImage",
+      "constructor": "createGiottoLargeImage",
+      "data_arg": "raster_object",
+      "args": ["raster_object", "name", "negative_y", "extent", "use_rast_ext", "image_transformations", "flip_vertical", "flip_horizontal", "xmax_bound", "xmin_bound", "ymax_bound", "ymin_bound", "scale_factor", "verbose"],
+      "required_args": "raster_object",
+      "setter": "setGiottoImage",
+      "list_fn": "list_images",
+      "nesting": "name",
+      "disk_backable": false
     }
   }
 }

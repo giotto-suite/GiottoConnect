@@ -1,0 +1,296 @@
+# SpatialFeatureExperiment -> Giotto: as spe-basic, plus cell / nucleus
+# segmentations (colGeometries), transcripts (rowGeometries) and spatial
+# graphs. Control probes inside the main matrix (CosMx readCosMX()) are split
+# into their own feature types, named as Giotto's readers name them.
+# Coordinates follow the Giotto convention: sdimx = x, sdimy = -y.
+mapping:
+  id: sfe
+  version: 0.1.0
+  status: verified
+  built: "2026-11-23"
+  schema_version: 0.1.0
+  source:
+    ecosystem: spatialexperiment
+    class: SpatialFeatureExperiment
+    package: SpatialFeatureExperiment
+    applies_to:
+      predicates:
+        - { path: "assays/data/listData/{counts}" }
+        - { path: "int_colData/listData/spatialCoords", kind: dense_matrix }
+  target: { contract: giotto, version: "0.7.31" }
+  fingerprint: "dc23e80a0d50d7d5"
+  fixtures: [sfe_fixture]
+  history: []
+
+params:
+  counts:     { list: Assays, rule: first_where, where: { name_matches: "^counts$", or_role: integer_valued } }
+  normalized: { list: Assays, rule: name_is, value: logcounts, optional: true }
+  cell_seg:   { list: ColGeometries, rule: first_where, where: { name_matches: "^cell(Seg)?$|^cell_?seg" }, optional: true }
+  nuc_seg:    { list: ColGeometries, rule: first_where, where: { name_matches: "^nuc(Seg)?$|nucle" }, optional: true }
+  tx:         { list: RowGeometries, rule: first_where, where: { name_matches: "^txSpots$|transcript" }, optional: true }
+  graph_sample: { list: children, on: "int_metadata/spatialGraphs/listData", rule: first, optional: true }
+
+source_nodes:
+  counts:      { path: "assays/data/listData/{counts}", get: { fn: speAssay, args: { i: "{counts}" } } }
+  normalized:  { path: "assays/data/listData/{normalized}", get: { fn: speAssay, args: { i: "{normalized}" } } }
+  cell_meta:   { path: colData, get: { fn: speColData } }
+  feat_meta:   { path: rowRanges, get: { fn: speRowData } }
+  coords:      { path: "int_colData/listData/spatialCoords", get: { fn: speSpatialCoords } }
+  reduction:   { path: "int_colData/listData/reducedDims/listData/{red}", get: { fn: speReducedDim, args: { type: "{red}" } } }
+  alt_counts:  { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpAssay, args: { e: "{extra}", i: counts } } }
+  alt_meta:    { path: "int_colData/listData/altExps/listData/{extra}", get: { fn: speAltExpRowData, args: { e: "{extra}" } } }
+  img:         { path: "int_metadata/imgData/listData/data/*", get: { fn: speImgData } }
+  other_assay: { path: "assays/data/listData/{as}", get: { fn: speAssay, args: { i: "{as}" } } }
+  colpair:     { path: "int_colData/listData/colPairs/listData/{cp}", get: { fn: speColPair, args: { type: "{cp}" } } }
+  cell_seg:    { path: "int_colData/listData/colGeometries/listData/{cell_seg}", get: { fn: sfeColGeometry, args: { type: "{cell_seg}" } } }
+  nuc_seg:     { path: "int_colData/listData/colGeometries/listData/{nuc_seg}", get: { fn: sfeColGeometry, args: { type: "{nuc_seg}" } } }
+  tx:          { path: "int_elementMetadata/listData/rowGeometries/listData/{tx}", get: { fn: sfeTxSpots, args: { type: "{tx}" } } }
+  graph:       { path: "int_metadata/spatialGraphs/listData/{graph_sample}/col/{graph}",
+                 get: { fn: sfeSpatialGraph, args: { type: "{graph}", sample_id: "{graph_sample}" } } }
+
+parts:
+  # control probes in the main matrix get their own feature types below
+  - id: expr_raw
+    part: expression
+    from: counts
+    ops: &not_controls
+      - { op: select_rows, pattern: &controls "^(Negative|SystemControl|NegControlProbe|NegControlCodeword|UnassignedCodeword|BLANK|GenomicControl|DeprecatedCodeword)", invert: true }
+    to: { spat_unit: cell, feat_type: rna, name: raw }
+
+  - id: expr_normalized
+    part: expression
+    from: normalized
+    optional: true
+    ops: *not_controls
+    to: { spat_unit: cell, feat_type: rna, name: normalized }
+
+  - id: cell_meta
+    part: cell_metadata
+    from: cell_meta
+    ops:
+      - { op: rownames_to_col, col: cell_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: feat_meta
+    part: feat_metadata
+    from: feat_meta
+    ops:
+      - { op: select_rows, pattern: *controls, invert: true }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: rna }
+
+  - id: locs
+    part: spatial_locs
+    from: coords
+    ops:
+      - { op: cast, to: table }
+      - { op: set_colnames, cols: [sdimx, sdimy] }
+      - { op: rownames_to_col, col: cell_ID }
+      - { op: scale, factor: -1, cols: [sdimy] }
+    to: { spat_unit: cell, name: raw }
+    lossy:
+      - { kind: estimated, field: units, note: "kept in the unit SFE records (unit(); CosMx: full-resolution pixels, Xenium: microns)" }
+      - { kind: ambiguous, field: orientation, note: "spatialCoords assumed image-space (y down)" }
+
+  - id: expr_negprobes
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^Negative" }
+    to: { spat_unit: cell, feat_type: negprobes, name: raw }
+
+  - id: feat_meta_negprobes
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^Negative" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: negprobes }
+
+  - id: expr_SystemControl
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^SystemControl" }
+    to: { spat_unit: cell, feat_type: SystemControl, name: raw }
+
+  - id: feat_meta_SystemControl
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^SystemControl" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: SystemControl }
+
+  - id: expr_NegControlProbe
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^NegControlProbe" }
+    to: { spat_unit: cell, feat_type: NegControlProbe, name: raw }
+
+  - id: feat_meta_NegControlProbe
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^NegControlProbe" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: NegControlProbe }
+
+  - id: expr_NegControlCodeword
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^NegControlCodeword" }
+    to: { spat_unit: cell, feat_type: NegControlCodeword, name: raw }
+
+  - id: feat_meta_NegControlCodeword
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^NegControlCodeword" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: NegControlCodeword }
+
+  - id: expr_UnassignedCodeword
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^(UnassignedCodeword|BLANK)" }
+    to: { spat_unit: cell, feat_type: UnassignedCodeword, name: raw }
+
+  - id: feat_meta_UnassignedCodeword
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^(UnassignedCodeword|BLANK)" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: UnassignedCodeword }
+
+  - id: expr_GenomicControl
+    part: expression
+    from: counts
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^GenomicControl" }
+    to: { spat_unit: cell, feat_type: GenomicControl, name: raw }
+
+  - id: feat_meta_GenomicControl
+    part: feat_metadata
+    from: feat_meta
+    optional: true
+    ops:
+      - { op: select_rows, pattern: "^GenomicControl" }
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: GenomicControl }
+
+  - id: polygons
+    part: spatial_info
+    from: cell_seg
+    optional: true
+    hook: sf_to_vertices
+    ops:
+      - { op: scale, factor: -1, cols: [y] }
+    to: { name: cell }
+
+  - id: nucleus_polygons
+    part: spatial_info
+    from: nuc_seg
+    optional: true
+    hook: sf_to_vertices
+    ops:
+      - { op: scale, factor: -1, cols: [y] }
+    to: { name: nucleus }
+
+  # transcripts; control transcripts go to the control feature types
+  - id: points
+    part: feature_info
+    from: tx
+    optional: true
+    ops:
+      - { op: scale, factor: -1, cols: [y] }
+    to: { feat_type: [rna, negprobes, SystemControl, NegControlProbe, NegControlCodeword, UnassignedCodeword, GenomicControl],
+          split_keyword: [Negative, SystemControl, NegControlProbe, NegControlCodeword, UnassignedCodeword, GenomicControl] }
+
+  # every spatial graph of the first sample
+  - id: "spatial_network_{graph}"
+    part: spatial_network
+    from: graph
+    hook: listw_to_network
+    for_each: { list: SpatialGraphs, on: "{graph_sample}", as: graph }
+    to: { spat_unit: cell, name: "{graph}" }
+
+  # one dim_reduction per reducedDim; scater's PCA loadings and variances go
+  # to the misc
+  - id: "dimred_{red}"
+    part: dim_reduction
+    from: reduction
+    for_each: { list: Reductions, as: red, strip: "^X_", rename: { PCA: pca, UMAP: umap, TSNE: tsne } }
+    hook: spe_reduction_misc
+    to: { spat_unit: cell, feat_type: rna, name: "{red_label}", method: "{red_label}" }
+
+  # every altExp (control probes) is its own feature type
+  - id: "expr_{extra_label}"
+    part: expression
+    from: alt_counts
+    for_each: &alt_exps
+      list: AltExps
+      as: extra
+      rename: { Negative: negprobes, ControlProbe: NegControlProbe, ControlCodeword: NegControlCodeword,
+                BlankCodeword: UnassignedCodeword }
+    to: { spat_unit: cell, feat_type: "{extra_label}", name: raw }
+
+  - id: "feat_meta_{extra_label}"
+    part: feat_metadata
+    from: alt_meta
+    for_each: *alt_exps
+    ops:
+      - { op: rownames_to_col, col: feat_ID }
+    to: { spat_unit: cell, feat_type: "{extra_label}" }
+
+  # other assays (e.g. scaled) as expression values of the same name
+  - id: "expr_{as}"
+    part: expression
+    from: other_assay
+    for_each: { list: Assays, as: as, exclude: "^({counts}|{normalized})$" }
+    ops: *not_controls
+    to: { spat_unit: cell, feat_type: rna, name: "{as}" }
+
+  # colPairs: nearest-neighbour networks; those of giottoToSpatialExperiment()
+  # keep their Giotto name and type
+  - id: "nn_{cp}"
+    part: nn_network
+    from: colpair
+    hook: spe_colpair_to_network
+    for_each: { list: ColPairs, as: cp, exclude: "^spatial_" }
+    to: { spat_unit: cell, feat_type: rna, nn_type: kNN, name: "{cp}" }
+
+  - id: "spatial_network_{cp}"
+    part: spatial_network
+    from: colpair
+    hook: spe_colpair_to_network
+    for_each: { list: ColPairs, as: cp, where: { name_matches: "^spatial_" }, strip: "^spatial_" }
+    to: { spat_unit: cell, name: "{cp_label}" }
+
+  # the first image (hires preferred) with its scale factor, in the units of
+  # locs
+  - id: image
+    part: images
+    from: img
+    hook: spe_image
+    optional: true
+    to: { name: image }
+
+lossy:
+  - { kind: dropped, path: "int_colData/listData/colGeometries/listData/centroids", note: "cell centroids; the same positions as spatialCoords (mapped as locs)" }
+  - { kind: dropped, path: metadata, note: "metadata (e.g. paths to transcripts and boundary files) is not mapped" }

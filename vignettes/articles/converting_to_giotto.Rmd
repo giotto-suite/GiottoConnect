@@ -1,12 +1,12 @@
 ---
-title: "Converting Seurat and AnnData objects to Giotto"
+title: "Converting Seurat, AnnData and SpatialExperiment objects to Giotto"
 output:
     html_document:
         toc: true
         toc_depth: 2
         number_sections: false
 vignette: >
-    %\VignetteIndexEntry{Converting Seurat and AnnData objects to Giotto}
+    %\VignetteIndexEntry{Converting Seurat, AnnData and SpatialExperiment objects to Giotto}
     %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
 ---
@@ -16,15 +16,18 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE)
 options(giotto.has_conda = FALSE, giotto.use_conda = FALSE, giotto.no_python_warn = TRUE)
 ```
 
-GiottoConnect converts Seurat objects and AnnData (`.h5ad`) files into Giotto
-objects with two functions:
+GiottoConnect converts Seurat objects, AnnData (`.h5ad`) files and Bioconductor
+SpatialExperiment / SpatialFeatureExperiment objects into Giotto objects with
+three functions:
 
 - `seuratToGiotto(sobject)`
 - `anndataToGiotto("file.h5ad")`
+- `spatialExperimentToGiotto(spe)`
 
-Both work the same way. They look at the structure of the input, pick the
-bundled *mapping* that fits it (for example "Seurat v5 with an FOV image" or
-"scanpy/squidpy AnnData") and build the Giotto object from that mapping. Add
+All work the same way. They look at the structure of the input, pick the
+bundled *mapping* that fits it (for example "Seurat v5 with an FOV image",
+"scanpy/squidpy AnnData" or "SpatialExperimentIO layout") and build the Giotto
+object from that mapping. Add
 `source = "<directory>"` to get a Giotto object backed by a GiottoDisk project
 instead of an in-memory one.
 
@@ -111,6 +114,70 @@ from the file instead of being loaded into memory:
 
 ```{r anndata-disk}
 g2_disk <- anndataToGiotto(h5ad, source = file.path(tempdir(), "from_h5ad"))
+```
+
+## SpatialExperiment to Giotto
+
+`spatialExperimentToGiotto()` takes the layouts the Bioconductor readers
+produce. Here the same Xenium crop is read with SpatialExperimentIO and
+normalized with scuttle and scater:
+
+```{r spe-convert, warning = FALSE}
+library(SpatialExperimentIO)
+spe <- readXeniumSXE(xenium_dir)
+spe <- spe[, Matrix::colSums(SummarizedExperiment::assay(spe, "counts")) > 0]
+spe <- scuttle::logNormCounts(spe) |>
+    scater::runPCA(ncomponents = 20)
+
+g3 <- spatialExperimentToGiotto(spe)
+g3
+```
+
+The control probes that SpatialExperimentIO keeps as `altExps` become their
+own feature types. PCA loadings and variances (scater's `rotation` and
+`varExplained`) go with the PCA.
+
+The bundled mappings cover:
+
+| Input | Mapping | Converted on top of counts, metadata and reductions |
+|---|---|---|
+| SpatialExperimentIO (`readXeniumSXE()`, `readCosmxSXE()`, `readMerscopeSXE()`) | `spe-basic` | `spatialCoords`; altExps as feature types |
+| VisiumIO (`TENxVisium()`, `TENxVisiumHD()`) | `spe-visium` | spot/bin positions converted from pixels to microns |
+| SpatialFeatureExperiment (e.g. `readCosMX()`) | `sfe` | cell / nucleus segmentations, transcripts (`txSpots`), spatial graphs; control probes in the main matrix as feature types |
+
+## Giotto to AnnData and back
+
+`giottoToAnnData()` writes a spatial unit and feature type of a Giotto object
+(the active ones by default) as an `.h5ad` file in scanpy's layout, without
+python: normalized values in `X`, raw counts in `layers/counts`, reductions in
+`obsm`, and nearest-neighbour and spatial networks in `obsp`. Networks keep
+their Giotto names, so reading the file back gives the same object parts.
+
+```{r anndata-export}
+out <- file.path(tempdir(), "xenium.h5ad")
+giottoToAnnData(g, out)
+
+g_back <- anndataToGiotto(out)
+GiottoClass::list_nearest_networks(g_back)
+```
+
+In scanpy, use a network by its name: `sc.tl.leiden(adata, neighbors_key = "kNN.pca")`.
+
+## Giotto to SpatialExperiment and back
+
+`giottoToSpatialExperiment()` converts a spatial unit and feature type to a
+SpatialExperiment: raw counts in `counts`, normalized values in `logcounts`,
+reductions under scater's names (`PCA`, `UMAP`) and networks as colPairs. When
+the object has polygons, transcripts or spatial networks, it builds a
+SpatialFeatureExperiment that also holds them (`cellSeg`, `txSpots`,
+spatialGraphs); `sfe = "no"` keeps a plain SpatialExperiment.
+
+```{r spe-export}
+spe <- giottoToSpatialExperiment(g)
+spe
+
+g_back <- spatialExperimentToGiotto(spe)
+GiottoClass::list_nearest_networks(g_back)
 ```
 
 ## Checking a conversion

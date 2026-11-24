@@ -60,6 +60,12 @@ build_giotto_fixture <- function(source = NULL) {
     GiottoConnect::seuratToGiotto(build_seurat_fixture(), source = source)
 }
 
+# a giotto object with polygons, transcripts and a spatial network (from the
+# SFE fixture)
+build_giotto_sfe_fixture <- function(source = NULL) {
+    GiottoConnect::spatialExperimentToGiotto(build_sfe_fixture(), source = source)
+}
+
 # Seurat v3/v4 layout: a v3 Assay (counts/data/scale.data slots) with the
 # same FOV, reductions, graphs and FindNeighbors record as the v5 fixture
 build_seurat_v3_fixture <- function(n_cells = 200L, n_feat = 50L, assay = "Xenium",
@@ -509,4 +515,105 @@ build_h5ad_fixture <- function(path, n_cells = 200L, n_feat = 60L, k = 5L,
     invisible(list(path = path, counts = counts, norm = norm, xy = xy, pca = pca,
         type = type, cells = cells, feats = feats,
         load = if (!legacy) load, spatial = if (!legacy) adj))
+}
+
+
+# SpatialExperiment / SpatialFeatureExperiment ####
+#   build_spe_fixture()          SpatialExperimentIO-like: counts + logcounts,
+#       spatialCoords (um), scater-style PCA (rotation, varExplained) + UMAP,
+#       a NegControlProbe altExp
+#   build_spe_visium_fixture()   VisiumIO HD-like: bins on a pixel grid,
+#       in_tissue, bin_size "016"
+#   build_sfe_fixture()          readCosMX-like SFE: Negative / SystemControl
+#       rows in the main matrix, cellSeg + centroids, txSpots, a kNN graph
+
+.fx_spe_core <- function(n_cells, n_feat, ctrl = character(), seed = 1L) {
+    set.seed(seed)
+    cells <- sprintf("cell_%03d", seq_len(n_cells))
+    feats <- c(sprintf("gene%02d", seq_len(n_feat)), ctrl)
+    counts <- Matrix::rsparsematrix(length(feats), n_cells, density = 0.3,
+        rand.x = function(n) as.double(stats::rpois(n, 4) + 1))
+    dimnames(counts) <- list(feats, cells)
+    logc <- log1p(counts)
+    list(cells = cells, feats = feats, counts = counts, logc = logc)
+}
+
+.fx_spe_reductions <- function(x, logc, n_pcs = 5L) {
+    SCE <- asNamespace("SingleCellExperiment")
+    pc <- stats::prcomp(t(as.matrix(logc)), rank. = n_pcs)
+    emb <- pc$x
+    attr(emb, "rotation") <- pc$rotation
+    attr(emb, "varExplained") <- pc$sdev[seq_len(n_pcs)]^2
+    attr(emb, "percentVar") <- 100 * pc$sdev[seq_len(n_pcs)]^2 / sum(pc$sdev^2)
+    x <- SCE$`reducedDim<-`(x, "PCA", value = emb)
+    SCE$`reducedDim<-`(x, "UMAP", value = matrix(stats::rnorm(ncol(x) * 2), ncol(x)))
+}
+
+build_spe_fixture <- function(n_cells = 200L, n_feat = 50L, seed = 1L) {
+    stopifnot(requireNamespace("SpatialExperiment", quietly = TRUE))
+    SPE <- asNamespace("SpatialExperiment")
+    S4V <- asNamespace("S4Vectors")
+    core <- .fx_spe_core(n_cells, n_feat, seed = seed)
+    xy <- cbind(x_centroid = stats::runif(n_cells, 0, 2000), y_centroid = stats::runif(n_cells, 0, 2000))
+    x <- SPE$SpatialExperiment(
+        assays = list(counts = core$counts, logcounts = core$logc),
+        colData = S4V$DataFrame(cell_id = core$cells, cluster = factor(sample(1:3, n_cells, TRUE)),
+            sample_id = "sample01", row.names = core$cells),
+        rowData = S4V$DataFrame(Symbol = core$feats, row.names = core$feats),
+        spatialCoords = xy, sample_id = "sample01")
+    x <- .fx_spe_reductions(x, core$logc)
+    neg <- Matrix::rsparsematrix(4, n_cells, density = 0.1, rand.x = function(n) as.double(stats::rpois(n, 1) + 1))
+    dimnames(neg) <- list(sprintf("NegControlProbe_%05d", 1:4), core$cells)
+    SingleCellExperiment::altExp(x, "NegControlProbe") <-
+        SingleCellExperiment::SingleCellExperiment(assays = list(counts = neg))
+    x
+}
+
+build_spe_visium_fixture <- function(n_side = 12L, n_feat = 50L, bin_um = 16, um_per_px = 0.25,
+                                     seed = 1L) {
+    stopifnot(requireNamespace("SpatialExperiment", quietly = TRUE))
+    SPE <- asNamespace("SpatialExperiment")
+    S4V <- asNamespace("S4Vectors")
+    n <- n_side^2
+    core <- .fx_spe_core(n, n_feat, seed = seed)
+    g <- expand.grid(col = seq_len(n_side), row = seq_len(n_side))
+    xy <- cbind(pxl_col_in_fullres = g$col * bin_um / um_per_px,
+        pxl_row_in_fullres = g$row * bin_um / um_per_px)
+    x <- SPE$SpatialExperiment(
+        assays = list(counts = core$counts, logcounts = core$logc),
+        colData = S4V$DataFrame(barcode = core$cells, in_tissue = 1L, array_row = g$row,
+            array_col = g$col, bin_size = sprintf("%03d", as.integer(bin_um)),
+            sample_id = "sample01", row.names = core$cells),
+        rowData = S4V$DataFrame(Symbol = core$feats, row.names = core$feats),
+        spatialCoords = xy, sample_id = "sample01")
+    .fx_spe_reductions(x, core$logc)
+}
+
+build_sfe_fixture <- function(n_cells = 120L, n_feat = 40L, seed = 1L) {
+    stopifnot(requireNamespace("SpatialFeatureExperiment", quietly = TRUE))
+    SFE <- asNamespace("SpatialFeatureExperiment")
+    S4V <- asNamespace("S4Vectors")
+    core <- .fx_spe_core(n_cells, n_feat, ctrl = c("Negative1", "Negative2", "SystemControl1"),
+        seed = seed)
+    xy <- cbind(x = stats::runif(n_cells, 0, 3000), y = stats::runif(n_cells, 0, 3000))
+    sq <- lapply(seq_len(n_cells), function(i) {
+        sf::st_polygon(list(rbind(xy[i, ] + c(-8, -8), xy[i, ] + c(8, -8), xy[i, ] + c(8, 8),
+            xy[i, ] + c(-8, 8), xy[i, ] + c(-8, -8))))
+    })
+    seg <- sf::st_sf(geometry = sf::st_sfc(sq))
+    rownames(seg) <- core$cells
+    # spatialCoords come from the segmentation centroids
+    x <- SFE$SpatialFeatureExperiment(
+        assays = list(counts = core$counts, logcounts = core$logc),
+        colData = S4V$DataFrame(cluster = factor(sample(1:3, n_cells, TRUE)), row.names = core$cells),
+        rowData = S4V$DataFrame(Symbol = core$feats, row.names = core$feats),
+        sample_id = "sample01", colGeometries = list(cellSeg = seg))
+    x <- .fx_spe_reductions(x, core$logc)
+    # transcripts: a MULTIPOINT per feature
+    tx <- lapply(core$feats, function(f) sf::st_multipoint(cbind(stats::runif(6, 0, 3000),
+        stats::runif(6, 0, 3000))))
+    txg <- sf::st_sf(geometry = sf::st_sfc(tx))
+    rownames(txg) <- core$feats
+    x <- SFE$`rowGeometry<-`(x, "txSpots", value = txg)
+    SFE$`colGraph<-`(x, "knn4", value = SFE$findSpatialNeighbors(x, method = "knearneigh", k = 4))
 }

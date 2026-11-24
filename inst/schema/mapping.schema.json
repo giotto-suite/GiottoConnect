@@ -38,6 +38,26 @@
       "items": {
         "$ref": "#/$defs/loss"
       }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "description": "source data left out by design (not reported as unmapped); pattern is a perl regex on profile paths and may use params",
+      "items": {
+        "type": "object",
+        "required": [
+          "pattern",
+          "note"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -140,11 +160,17 @@
               "type": "string",
               "enum": [
                 "giotto",
-                "seurat"
+                "seurat",
+                "anndata",
+                "spatialexperiment"
               ]
             },
             "version": {
               "type": "string"
+            },
+            "class": {
+              "type": "string",
+              "description": "class the target builds when it has several (spatialexperiment: SpatialExperiment or SpatialFeatureExperiment)"
             }
           }
         },
@@ -222,6 +248,10 @@
         "value": {
           "type": "string"
         },
+        "prefer": {
+          "type": "string",
+          "description": "rule first: pick the first child whose name matches this regex, else the first child"
+        },
         "class": {
           "type": "string"
         },
@@ -292,7 +322,8 @@
             "rownames_to_col",
             "set",
             "set_colnames",
-            "replace"
+            "replace",
+            "select_rows"
           ]
         },
         "cols": {
@@ -326,10 +357,14 @@
         "value": {},
         "pattern": {
           "type": "string",
-          "description": "replace: fixed string to replace"
+          "description": "replace: fixed string; select_rows: regex on row names"
         },
         "replacement": {
           "type": "string"
+        },
+        "invert": {
+          "type": "boolean",
+          "description": "select_rows: keep the rows that do not match"
         }
       }
     },
@@ -413,6 +448,44 @@
           "items": {
             "type": "string"
           }
+        },
+        "obsm": {
+          "type": "string"
+        },
+        "obsp": {
+          "type": "string"
+        },
+        "varm": {
+          "type": "string"
+        },
+        "uns": {
+          "type": "string"
+        },
+        "altExp": {
+          "type": "string"
+        },
+        "colPair": {
+          "type": "string"
+        },
+        "colGeometry": {
+          "type": "string"
+        },
+        "rowGeometry": {
+          "type": "string"
+        },
+        "spatialGraph": {
+          "type": "string"
+        },
+        "reducedDim": {
+          "type": "string"
+        },
+        "imgData": {
+          "type": "string",
+          "description": "SpatialExperiment image_id"
+        },
+        "library_id": {
+          "type": "string",
+          "description": "AnnData uns/spatial library (scanpy Visium layout)"
         }
       }
     },
@@ -480,7 +553,8 @@
             "dim_reduction",
             "nn_network",
             "feature_info",
-            "spatial_network"
+            "spatial_network",
+            "images"
           ]
         },
         "from": {

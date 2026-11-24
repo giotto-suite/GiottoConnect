@@ -49,10 +49,11 @@ setMethod("adapterReads", "anndataAdapter", function(adapter, node, params) {
     if (identical(fn, "h5adObsm") && identical(.pf_bind(node$path, params), "obsm/X_pca")) {
         return("varm/PCs")
     }
-    # a squidpy spatial graph is read with its <key>distances partner
+    # a graph is read with its <key>distances / <key>connectivities partner
     if (identical(fn, "h5adObsp")) {
         p <- .pf_bind(node$path, params)
         if (grepl("connectivities$", p)) return(sub("connectivities$", "distances", p))
+        if (grepl("distances$", p)) return(sub("distances$", "connectivities", p))
     }
     m <- node$get$args$matrix
     if (identical(fn, "h5adVar") && is.character(m) && startsWith(.pf_bind(m, params), "raw/")) {
@@ -135,7 +136,9 @@ setMethod("adapterStream", "anndataAdapter", function(adapter, x, node, params) 
 
 .h5ad_read_array <- function(node) {
     x <- node$read()
+    # row-major on disk: hdf5r returns the dimensions reversed
     if (length(node$dims) == 2L) x <- t(x)
+    if (length(node$dims) > 2L) x <- aperm(x, rev(seq_along(node$dims)))
     # bool enum on older hdf5r
     if (is.factor(x) && all(levels(x) %in% c("FALSE", "TRUE"))) {
         x <- as.logical(as.character(x))

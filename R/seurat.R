@@ -18,23 +18,34 @@ NULL
 #' spatial locations and polygons as an FOV, dimension reductions and
 #' nearest-neighbour networks.
 #' @param gobject giotto object
+#' @param spat_unit,feat_type spatial unit and feature type to export (default:
+#' the active ones)
 #' @param mapping optional `giottoMapping`, mapping file or bundled mapping id
 #' @param verbose logical
 #' @returns Seurat object; see [mappingProvenance()] for what was converted and
 #' which losses apply
 #' @seealso [seuratToGiotto()], [convertWithMapping()], [readbackCheck()]
 #' @export
-giottoToSeurat <- function(gobject, mapping = NULL, verbose = FALSE) {
+giottoToSeurat <- function(gobject, spat_unit = NULL, feat_type = NULL, mapping = NULL,
+    verbose = FALSE) {
     profile <- adapterProfile(.adapter_for("giotto"), gobject)
+    pinned <- .pinned_pair(spat_unit, feat_type)
     if (is.null(mapping)) {
-        found <- findMapping(profile, ecosystem = "giotto")
+        found <- findMapping(profile, ecosystem = "giotto", target = "seurat")
         if (found$status == "none") {
             stop(wrap_txt("No bundled mapping applies to this giotto object:",
                 paste(found$reasons, collapse = "; ")), call. = FALSE)
         }
         mapping <- found$mapping
     }
-    convertWithMapping(gobject, mapping, profile = profile, verbose = verbose)
+    convertWithMapping(gobject, mapping, profile = profile, verbose = verbose, params = pinned)
+}
+
+# the spat_unit / feat_type a giotto export is pinned to (NULL: the active ones)
+.pinned_pair <- function(spat_unit = NULL, feat_type = NULL) {
+    out <- list(spat_unit = spat_unit, feat_type = feat_type)
+    out <- out[!vapply(out, is.null, logical(1))]
+    if (length(out)) out else NULL
 }
 
 

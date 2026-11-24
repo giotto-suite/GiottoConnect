@@ -14,7 +14,8 @@
     rownames_to_col = list(required = "col"),
     set_colnames = list(required = "cols"),
     set = list(required = c("field", "value")),
-    replace = list(required = c("cols", "pattern", "replacement"))
+    replace = list(required = c("cols", "pattern", "replacement")),
+    select_rows = list(required = "pattern", optional = "invert")
 )
 
 .mapping_schema <- local({

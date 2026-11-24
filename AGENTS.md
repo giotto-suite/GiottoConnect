@@ -1,12 +1,11 @@
 # GiottoConnect
 
 Interoperability hub of the Giotto Suite: conversions between Giotto and other
-ecosystems (Seurat, AnnData, SpatialData, Bento, Stereo-seq GEF).
+ecosystems (Seurat, AnnData, SpatialExperiment / SFE, SpatialData, Bento, Stereo-seq GEF).
 
-Seurat ↔ Giotto and AnnData → Giotto run on the **mapping engine**, a declarative and
+Seurat, AnnData and SpatialExperiment / SFE ↔ Giotto run on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
-hand-written converters and move to the engine one adapter at a time (SpatialExperiment
-next; see `docs/contract-prototype/REEVALUATION_ANNDATA.md`).
+hand-written converters and move to the engine one adapter at a time.
 
 ## Documentation map
 
@@ -44,6 +43,9 @@ R/
   contract_repair.R      repairMapping(), writeMappingRequest()
   contract_llm.R         llmBackend(), llmPatch() (opt-in, repair only)
   contract_target_seurat.R  Seurat target: assembly, key/semantic checks, readback comparators
+  contract_target_anndata.R AnnData target: writes an .h5ad (anndataR), key/semantic checks, comparators
+  contract_target_spe.R  SpatialExperiment / SFE target (mapping target `class`), key/semantic checks, comparators
+  contract_images.R      images: Giotto extent <-> RGB array + scale factor (origin at the top-left), image hooks
   anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
   tool-utils.R           shared helpers for external tool connections (py_require CLI path, run + log)
   tool-<name>.R          one external tool per file (adr/0008 in GiottoClass): <name>Param, analyzeData
@@ -107,6 +109,11 @@ adapter whose input is a file (.h5ad, read with hdf5r) rather than an R object.
 - Then mapping files, hooks if the op list cannot express a step, and a thin
   `<eco>ToGiotto()` / `giottoTo<Eco>()` wrapper. `readMapping()` rejects listing verbs
   and accessors the adapter does not supply.
+- File targets (AnnData) take `convertWithMapping(output =)`, keep their conversion record
+  in the file (`uns/giottoConnect`) and are read back with the source adapter's readers.
+- A giotto-source mapping converts one spatial unit and feature type (`params =` pins
+  them); `out_of_scope` declares the data it leaves out by design, so it is not reported
+  as unmapped.
 - Add a fixture builder to `inst/scripts/build_fixtures.R` and stamp the mapping with
   `Rscript inst/scripts/verify_mapping.R <id>`.
 - Prove refactors with `examples/seurat_comparison/engine_snapshot.R`: it records

@@ -27,25 +27,32 @@
 #' @param validate logical. Run [validateMapping()] before (structural) and
 #' after (semantic) conversion; FAIL stops, WARN warns.
 #' @param verbose logical
+#' @param params optional named list of param values that replace the
+#' mapping's rules, e.g. `list(spat_unit = "nucleus", feat_type = "protein")`
+#' to export a chosen spatial unit and feature type; recorded in the
+#' provenance and reused by [readbackCheck()]
+#' @param output file to write, for file targets (e.g. `.h5ad`)
 #' @returns giotto object. The conversion (mapping id, version, fingerprint,
 #' params, losses, alternatives used and absent optional parts) is recorded
 #' in the object history.
 #' @export
 convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
-    validate = TRUE, verbose = FALSE) {
+    validate = TRUE, verbose = FALSE, params = NULL, output = NULL) {
+    pinned <- params
     mapping <- if (inherits(mapping, "giottoMapping")) mapping else readMapping(mapping)
     adapter <- .adapter_for(mapping)
     target <- .target_for(mapping)
     package_check(adapter@package)
     profile <- profile %null% adapterProfile(adapter, x)
 
-    params <- .bind_params(mapping, profile)
+    params <- .bind_params(mapping, profile, pinned)
     # fingerprints describe the mapping as written, not its expansion
     fp <- .mapping_fingerprint(mapping, profile, params$values)
-    res <- .resolve_parts(mapping, profile)
+    res <- .resolve_parts(mapping, profile, pinned)
     mapping <- res$mapping
     params <- res$params
     mapping <- .expand_for_each(mapping, profile, params)
+    profile <- .scope_counts(adapter, x, profile, params$values)
     if (isTRUE(validate)) {
         pre <- validateMapping(mapping, profile, params = params, checks = "structural")
         .stop_on_fail(pre, "structural validation")
@@ -64,9 +71,10 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
         targets = lapply(prepared, function(pp) pp$spec$to),
         losses = .collect_losses(mapping, ctx, params$values),
         alternatives = res$switched,
-        absent = ctx$absent
+        absent = ctx$absent,
+        pinned = pinned
     )
-    g <- targetBuild(target, prepared, mapping, prov, source = source)
+    g <- targetBuild(target, prepared, mapping, prov, source = source, output = output)
 
     if (isTRUE(validate)) {
         post <- validateMapping(mapping, profile, params = params, result = g,
@@ -76,15 +84,33 @@ convertWithMapping <- function(x, mapping, profile = NULL, source = NULL,
     g
 }
 
+# a giotto source converts one spatial unit / feature type: semantic checks
+# count its cells and features there
+.scope_counts <- function(adapter, x, profile, values) {
+    if (!methods::is(adapter, "giottoAdapter") || is.null(values$spat_unit)) return(profile)
+    n <- tryCatch(list(
+        c = length(GiottoClass::spatIDs(x, spat_unit = values$spat_unit)),
+        f = if (!is.null(values$feat_type)) {
+            length(GiottoClass::featIDs(x, feat_type = values$feat_type))
+        }
+    ), error = function(e) NULL)
+    if (length(n$c)) profile$n_cells <- n$c
+    if (length(n$f)) profile$n_feat <- n$f
+    profile
+}
+
 #' @title Conversion record of a mapped giotto object
 #' @name mappingProvenance
 #' @description Retrieve what [convertWithMapping()] recorded in the giotto
 #' object history: mapping id, version, status, fingerprint, bound params,
 #' converted parts and losses.
-#' @param gobject giotto object, or a Seurat object produced by a mapping
+#' @param gobject giotto object, a Seurat object or SpatialExperiment produced
+#' by a mapping, or the path of an `.h5ad` file written by [giottoToAnnData()]
 #' @returns list, or `NULL` if the object was not produced by a mapping
 #' @export
 mappingProvenance <- function(gobject) {
+    if (.is_h5ad_path(gobject)) return(.anndata_provenance(gobject))
+    if (methods::is(gobject, "Annotated")) return(S4Vectors::metadata(gobject)$giottoConnect)
     if (!inherits(gobject, "giotto")) {
         misc <- tryCatch(methods::slot(gobject, "misc"), error = function(e) NULL)
         return(misc$giottoConnect)
@@ -113,8 +139,8 @@ mappingProvenance <- function(gobject) {
 # Bind params and, for a part whose source is absent, switch to the first
 # declared alternative that binds. repairMapping() can stamp the same switch
 # into a new mapping version.
-.resolve_parts <- function(mapping, profile) {
-    params <- .bind_params(mapping, profile)
+.resolve_parts <- function(mapping, profile, forced = NULL) {
+    params <- .bind_params(mapping, profile, forced)
     switched <- character()
     for (i in seq_along(mapping$parts)) {
         p <- mapping$parts[[i]]
@@ -125,7 +151,7 @@ mappingProvenance <- function(gobject) {
         alt <- .rule_alternative(mapping, p, profile)
         if (is.null(alt)) next
         mapping <- .apply_alternative(mapping, i, alt)
-        params <- .bind_params(mapping, profile)
+        params <- .bind_params(mapping, profile, forced)
         switched <- c(switched, sprintf("%s: %s", p$id, alt$detail))
     }
     list(mapping = mapping, params = params, switched = switched)
@@ -169,6 +195,12 @@ mappingProvenance <- function(gobject) {
             }
         }
         data <- .apply_ops(data, p$ops, params$values, p$id)
+        # an optional part with nothing left after its ops (e.g. no control
+        # features to select) is absent
+        if (isTRUE(p$optional) && !is.null(dim(data)) && nrow(data) == 0L) {
+            ctx$absent <- c(ctx$absent, p$id)
+            next
+        }
         for (l in p$lossy) ctx$add_loss(l$kind, l$field %null% l$path, l$note, declared = TRUE)
         out[[p$id]] <- list(spec = p, data = data)
     }
@@ -203,11 +235,19 @@ mappingProvenance <- function(gobject) {
         name <- sub(".*/", "", kids$path)
         keep <- if (is.null(fe$where)) rep(TRUE, nrow(kids)) else
             .param_where(fe$where, kids, name, nodes)
-        vals <- name[keep]
-        if (!is.null(fe$exclude)) vals <- vals[!grepl(.pf_bind(fe$exclude, params$values), vals)]
-        for (v in vals) {
+        if (!is.null(fe$exclude)) {
+            # placeholders of params that did not bind match nothing
+            ex <- gsub("\\{[A-Za-z0-9_]+\\}", "\001", .pf_bind(fe$exclude, params$values))
+            keep <- keep & !grepl(ex, name)
+        }
+        for (j in which(keep)) {
+            v <- name[j]
+            kid <- kids$path[j]
             label <- fe$rename[[v]] %null% (if (is.null(fe$strip)) v else sub(fe$strip, "", v))
             sub_v <- function(x) {
+                # {<as>_path}: the item's profile path; {<as>_parent}: its parent's name
+                x <- gsub(sprintf("{%s_path}", fe$as), kid, x, fixed = TRUE)
+                x <- gsub(sprintf("{%s_parent}", fe$as), sub(".*/", "", .pf_parent(kid)), x, fixed = TRUE)
                 x <- gsub(sprintf("{%s_label}", fe$as), label, x, fixed = TRUE)
                 gsub(sprintf("{%s}", fe$as), v, x, fixed = TRUE)
             }
@@ -215,7 +255,8 @@ mappingProvenance <- function(gobject) {
             q$for_each <- NULL
             q <- rapply(q, sub_v, classes = "character", how = "replace")
             q$optional <- TRUE
-            node_id <- sprintf("%s__%s", p$from, v)
+            # a name can repeat under different parents (a `*` listing level)
+            node_id <- sprintf("%s__%s", p$from, if (sum(name[keep] == v) > 1L) gsub("/", "__", kid) else v)
             mapping$source_nodes[[node_id]] <- rapply(mapping$source_nodes[[p$from]], sub_v,
                 classes = "character", how = "replace")
             q$from <- node_id
@@ -230,6 +271,13 @@ mappingProvenance <- function(gobject) {
 # children of a listing verb's path(s); "a|b" lists the children of both
 .list_kids <- function(nodes, lists, verb, on) {
     parents <- strsplit(gsub("{on}", on %null% "", lists[[verb]], fixed = TRUE), "|", fixed = TRUE)[[1L]]
+    # a `*` segment stands for every child at that level
+    glob <- grepl("(^|/)\\*(/|$)", parents)
+    if (any(glob)) {
+        pat <- paste0("^", gsub("\\*", "[^/]+", gsub("([.+?^${}()|\\[\\]\\\\])", "\\\\\\1", parents[glob])), "$")
+        hit <- unique(unlist(lapply(pat, function(p) grep(p, nodes$path, value = TRUE))))
+        parents <- c(parents[!glob], hit)
+    }
     nodes[.pf_parent(nodes$path) %in% parents & !nodes$path %in% parents &
         !endsWith(nodes$path, "/*"), , drop = FALSE]
 }
@@ -239,12 +287,18 @@ mappingProvenance <- function(gobject) {
 
 # Bind each param on the profile, in declaration order. Returns list(values,
 # unbound) with values a named list of strings.
-.bind_params <- function(mapping, profile) {
+# `forced`: named values that replace the rule of those params (e.g. a
+# spat_unit / feat_type chosen by the caller)
+.bind_params <- function(mapping, profile, forced = NULL) {
     lists <- adapterListPaths(.adapter_for(mapping))
     nodes <- profile$nodes
     values <- list()
     unbound <- character()
     for (nm in names(mapping$params)) {
+        if (!is.null(forced[[nm]])) {
+            values[[nm]] <- as.character(forced[[nm]])
+            next
+        }
         pr <- mapping$params[[nm]]
         on <- if (is.null(pr$on)) NULL else .pf_bind(pr$on, values)
         if (!is.null(pr$value)) pr$value <- .pf_bind(pr$value, values)
@@ -263,7 +317,12 @@ mappingProvenance <- function(gobject) {
     if (!nrow(kids)) return(NA_character_)
     name <- sub(".*/", "", kids$path)
     ok <- switch(pr$rule,
-        first = seq_len(nrow(kids)) == 1L,
+        # `prefer`: the first name matching it, else the first
+        first = if (!is.null(pr$prefer) && any(grepl(pr$prefer, name))) {
+            grepl(pr$prefer, name)
+        } else {
+            seq_len(nrow(kids)) == 1L
+        },
         name_is = name == pr$value,
         value_of = {
             v <- nodes$value[nodes$path == .pf_bind(pr$path, list())]
@@ -401,6 +460,12 @@ mappingProvenance <- function(gobject) {
             colnames(data) <- unlist(o$cols)
             data
         },
+        # keep rows whose names match `pattern` (regex), or the others with invert
+        select_rows = {
+            hit <- grepl(o$pattern, rownames(data))
+            if (isTRUE(o$invert)) hit <- !hit
+            data[hit, , drop = FALSE]
+        },
         replace = {
             for (cl in unlist(o$cols)) data[[cl]] <- gsub(o$pattern, o$replacement, data[[cl]], fixed = TRUE)
             data
@@ -482,6 +547,8 @@ mappingProvenance <- function(gobject) {
     }
     if ("verbose" %in% cp$args) args$verbose <- FALSE
     if (p$part == "spatial_info") args$calc_centroids <- FALSE
+    # the raster's extent places the image
+    if (p$part == "images") args$use_rast_ext <- TRUE
     if (p$part == "feature_info" && !is.null(args$split_keyword)) {
         # split only on keywords that occur; the first feat_type takes the rest
         kw <- unlist(args$split_keyword)
@@ -530,12 +597,16 @@ mappingProvenance <- function(gobject) {
 }
 
 .collect_losses <- function(mapping, ctx, params) {
-    # a declared drop only applies when the object holds that path
-    paths <- ctx$profile$nodes$path
+    # a declared drop only applies when the object holds data at that path
+    # (an empty slot or list holds nothing)
+    nodes <- ctx$profile$nodes
+    paths <- nodes$path
+    data_kinds <- c("sparse_matrix", "dense_matrix", "data.frame", "vector", "factor")
     held <- Filter(function(l) {
         if (is.null(l$path)) return(TRUE)
         p <- .pf_bind(l$path, params)
-        p %in% paths || any(startsWith(paths, paste0(p, "/")))
+        below <- startsWith(paths, paste0(p, "/"))
+        any(below) || any(paths == p & nodes$kind %in% data_kinds)
     }, mapping$lossy)
     top <- lapply(held, function(l) data.frame(
         part_id = NA_character_, kind = l$kind,

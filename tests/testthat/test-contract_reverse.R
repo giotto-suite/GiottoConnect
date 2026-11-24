@@ -8,7 +8,7 @@ giotto_fixture <- local({
 
 test_that("giotto objects select the Giotto-to-Seurat mapping", {
     skip_if_not_installed("SeuratObject")
-    f <- findMapping(profileObject(giotto_fixture()), ecosystem = "giotto")
+    f <- findMapping(profileObject(giotto_fixture()), ecosystem = "giotto", target = "seurat")
     expect_equal(f$mapping$mapping$id, "giotto-seurat5")
     expect_equal(f$status, "match")
     expect_equal(f$params$values$spat_unit, "cell")
@@ -77,4 +77,66 @@ test_that("a Giotto object that did not come from Seurat converts", {
     expect_s4_class(s, "Seurat")
     expect_equal(ncol(s), length(GiottoClass::spatIDs(g)))
     expect_true(attr(suppressWarnings(readbackCheck(g, s)), "pass"))
+})
+
+test_that("findMapping can filter by target", {
+    skip_if_not_installed("SeuratObject")
+    g <- seuratToGiotto(seurat_fixture())
+    p <- GiottoConnect:::adapterProfile(GiottoConnect:::.adapter_for("giotto"), g)
+    expect_equal(findMapping(p, ecosystem = "giotto", target = "seurat")$mapping$mapping$id,
+        "giotto-seurat5")
+    expect_match(findMapping(p, ecosystem = "giotto", target = "spatialexperiment")$mapping$mapping$id,
+        "^giotto-s(p|f)e$")
+    expect_equal(findMapping(p, ecosystem = "giotto", target = "nothing")$status, "none")
+})
+
+test_that("a chosen feature type is exported and read back", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    neg <- matrix(stats::rpois(4 * ncol(s), 1), 4, ncol(s),
+        dimnames = list(sprintf("NegProbe%02d", 1:4), colnames(s)))
+    s[["ControlProbe"]] <- SO$CreateAssay5Object(counts = methods::as(neg, "CsparseMatrix"))
+    g <- seuratToGiotto(s)
+    out <- giottoToSeurat(g, feat_type = "NegControlProbe")
+    expect_equal(SO$Assays(out), "NegControlProbe")
+    expect_equal(sort(rownames(out)), sprintf("NegProbe%02d", 1:4))
+    expect_equal(mappingProvenance(out)$pinned, list(feat_type = "NegControlProbe"))
+    expect_true(attr(readbackCheck(g, out), "pass"))
+})
+
+test_that("reductions whose name differs from their method are exported", {
+    skip_if_not_installed("SeuratObject")
+    skip_if_not_installed("GiottoData")
+    g <- suppressWarnings(GiottoData::loadGiottoMini("visium"))
+    s <- suppressWarnings(giottoToSeurat(g))
+    expect_true(all(c("custom_pca", "custom_umap") %in% SeuratObject::Reductions(s)))
+    expect_true(attr(readbackCheck(g, s), "pass"))
+})
+
+test_that("transcripts, PCA loadings and every network go to Seurat", {
+    skip_if_not_installed("SeuratObject")
+    SO <- asNamespace("SeuratObject")
+    s <- seurat_fixture()
+    mol <- data.frame(x = stats::runif(40, 0, 2000), y = stats::runif(40, 0, 2000),
+        gene = rep(rownames(s)[1:4], each = 10))
+    fov <- s[["fov"]]
+    fov@molecules <- list(molecules = SO$CreateMolecules(mol))
+    s[["fov"]] <- fov
+    g <- seuratToGiotto(s)
+    g <- GiottoClass::setGiotto(g, GiottoClass::createNearestNetObj(name = "extra_knn", nn_type = "kNN",
+        network = GiottoClass::getNearestNetwork(g, nn_type = "kNN", output = "data.table"),
+        spat_unit = "cell", feat_type = "rna"), verbose = FALSE)
+
+    out <- giottoToSeurat(g)
+    m <- SO$GetTissueCoordinates(out[["fov"]][["molecules"]])
+    expect_equal(nrow(m), 40L)
+    expect_equal(sort(m$y), sort(mol$y))
+    expect_equal(unname(SO$Loadings(out, "pca")), unname(SO$Loadings(s, "pca")), tolerance = 1e-8)
+    expect_equal(SO$Stdev(out, "pca"), SO$Stdev(s, "pca"), tolerance = 1e-8)
+    expect_true("extra_knn" %in% SO$Graphs(out))
+    # the export merges with a native Seurat object
+    mm <- merge(out, s, add.cell.ids = c("g", "s"))
+    expect_equal(ncol(mm), 2L * ncol(s))
+    expect_true(attr(readbackCheck(g, out), "pass"))
 })

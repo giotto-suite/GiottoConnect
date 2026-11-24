@@ -10,7 +10,9 @@ convertWithMapping(
   profile = NULL,
   source = NULL,
   validate = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  params = NULL,
+  output = NULL
 )
 }
 \arguments{
@@ -27,6 +29,13 @@ GiottoDisk project (requires GiottoDisk)}
 after (semantic) conversion; FAIL stops, WARN warns.}
 
 \item{verbose}{logical}
+
+\item{params}{optional named list of param values that replace the
+mapping's rules, e.g. \code{list(spat_unit = "nucleus", feat_type = "protein")}
+to export a chosen spatial unit and feature type; recorded in the
+provenance and reused by \code{\link[=readbackCheck]{readbackCheck()}}}
+
+\item{output}{file to write, for file targets (e.g. \code{.h5ad})}
 }
 \value{
 giotto object. The conversion (mapping id, version, fingerprint,

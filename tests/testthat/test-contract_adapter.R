@@ -1,7 +1,7 @@
 test_that("adapters and targets are registered and dispatch", {
     reg <- adapterRegistry()
-    expect_setequal(reg$name[reg$role == "adapter"], c("seurat", "giotto", "anndata"))
-    expect_setequal(reg$name[reg$role == "target"], c("giotto", "seurat"))
+    expect_setequal(reg$name[reg$role == "adapter"], c("seurat", "giotto", "anndata", "spatialexperiment"))
+    expect_setequal(reg$name[reg$role == "target"], c("giotto", "seurat", "anndata", "spatialexperiment"))
 
     sa <- GiottoConnect:::.adapter_for("seurat")
     ga <- GiottoConnect:::.adapter_for("giotto")

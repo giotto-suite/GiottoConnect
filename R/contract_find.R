@@ -109,11 +109,13 @@ summary.giottoMapping <- function(object, ...) {
 #' @param mappings list of mappings (`giottoMapping`, files or ids). Defaults
 #' to all bundled mappings.
 #' @param ecosystem optional ecosystem filter, e.g. `"seurat"`
+#' @param target optional target filter (`mapping.target.contract`), e.g.
+#' `"seurat"` for mappings from giotto objects to Seurat
 #' @returns list with `status` (`"match"`, `"repair_needed"` or `"none"`),
 #' `mapping`, `params`, `fingerprint`, `candidates` (one row per mapping
 #' considered) and `reasons`
 #' @export
-findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
+findMapping <- function(profile, mappings = NULL, ecosystem = NULL, target = NULL) {
     checkmate::assert_class(profile, "giottoProfile")
     if (is.null(mappings)) {
         mappings <- list.files(system.file("mappings", package = "GiottoConnect"),
@@ -122,6 +124,9 @@ findMapping <- function(profile, mappings = NULL, ecosystem = NULL) {
     mappings <- lapply(mappings, function(m) if (inherits(m, "giottoMapping")) m else readMapping(m))
     if (!is.null(ecosystem)) {
         mappings <- Filter(function(m) m$mapping$source$ecosystem == ecosystem, mappings)
+    }
+    if (!is.null(target)) {
+        mappings <- Filter(function(m) identical(m$mapping$target$contract, target), mappings)
     }
     rows <- list()
     res <- list()

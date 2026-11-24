@@ -7,7 +7,8 @@
 mappingProvenance(gobject)
 }
 \arguments{
-\item{gobject}{giotto object, or a Seurat object produced by a mapping}
+\item{gobject}{giotto object, a Seurat object or SpatialExperiment produced
+by a mapping, or the path of an \code{.h5ad} file written by \code{\link[=giottoToAnnData]{giottoToAnnData()}}}
 }
 \value{
 list, or \code{NULL} if the object was not produced by a mapping

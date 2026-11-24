@@ -5,7 +5,8 @@ Version: 0.1.0
 Authors@R: person("Giotto Suite Team", role = c("aut", "cre"),
     email = "giottosuite@gmail.com")
 Description: Interoperability between Giotto and other single-cell and
-    spatial ecosystems. Seurat objects and AnnData (.h5ad) files are converted
+    spatial ecosystems. Seurat objects, AnnData (.h5ad) files and
+    SpatialExperiment / SpatialFeatureExperiment objects are converted
     to Giotto through declarative mappings chosen by the object's structure,
     in memory or onto a GiottoDisk project; further conversions cover
     SpatialData, Bento and Stereo-seq GEF.
@@ -25,6 +26,7 @@ Imports:
     digest,
     yaml
 Suggests:
+    anndataR,
     Banksy,
     BayesSpace,
     ggplot2,
@@ -42,6 +44,7 @@ Suggests:
     sf,
     SingleCellExperiment,
     SpatialExperiment,
+    SpatialFeatureExperiment,
     SummarizedExperiment,
     terra,
     testthat (>= 3.0.0)

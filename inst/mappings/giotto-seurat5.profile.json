@@ -2,9 +2,9 @@
   "source": {
     "class": "giotto",
     "package": "GiottoClass",
-    "version": "0.7.31"
+    "version": "0.8.0"
   },
-  "profiled_at": "2026-11-20T14:19:03-0500",
+  "profiled_at": "2026-11-24T11:05:11-0500",
   "profiler_version": "0.1.0",
   "n_cells": 200,
   "n_feat": 50,
@@ -1073,10 +1073,34 @@
       "class": "list",
       "dtype": null,
       "shape": null,
-      "n_children": 1,
+      "n_children": 3,
       "truncated": false,
       "role_hints": null,
-      "sample": "giottoConnect",
+      "sample": "eigenvalues, loadings, giottoConnect",
+      "value": null
+    },
+    {
+      "path": "dimension_reduction/cells/cell/rna/pca/pca/misc/eigenvalues",
+      "kind": "vector",
+      "class": "numeric",
+      "dtype": "double",
+      "shape": "10",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": "nonneg",
+      "sample": "0.635966036616081, 0.549607537328641, 0.507965829805271",
+      "value": null
+    },
+    {
+      "path": "dimension_reduction/cells/cell/rna/pca/pca/misc/loadings",
+      "kind": "dense_matrix",
+      "class": "matrix",
+      "dtype": "double",
+      "shape": "50x10",
+      "n_children": 0,
+      "truncated": false,
+      "role_hints": "has_dimnames,rows_eq_nfeat",
+      "sample": "gene01, gene02 | Dim.1, Dim.2",
       "value": null
     },
     {
@@ -1736,7 +1760,7 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "0.7.31",
+      "sample": "0.8.0",
       "value": null
     },
     {
@@ -1748,8 +1772,8 @@
       "n_children": 0,
       "truncated": false,
       "role_hints": null,
-      "sample": "g-20261120191903-...",
-      "value": "g-20261120191903-f90e7c08e521"
+      "sample": "g-20261124160511-...",
+      "value": "g-20261124160511-617b2b9c8e2b"
     },
     {
       "path": "join_info",

@@ -15,16 +15,22 @@ builders <- list(
     seurat5_visium_fixture = env$build_seurat_visium_fixture,
     seurat_v3_fixture = env$build_seurat_v3_fixture,
     giotto_fixture_small = env$build_giotto_fixture,
+    giotto_sfe_fixture = env$build_giotto_sfe_fixture,
     seurat_visium_v1_fixture = env$build_seurat_visium_v1_fixture,
     seurat_slideseq_fixture = env$build_seurat_slideseq_fixture,
-    anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path
+    anndata_fixture = function() env$build_h5ad_fixture(tempfile(fileext = ".h5ad"))$path,
+    spe_fixture = env$build_spe_fixture,
+    spe_visium_fixture = env$build_spe_visium_fixture,
+    sfe_fixture = env$build_sfe_fixture
 )
 
 yaml_file <- file.path("inst", "mappings", paste0(id, ".yaml"))
 m <- readMapping(yaml_file)
 x <- builders[[m$mapping$fixtures[[1]]]]()
 p <- adapterProfile(GiottoConnect:::.adapter_for(m), x)
-g <- convertWithMapping(x, m, profile = p)
+# file targets (AnnData) write to a temporary file
+out_file <- function() if (identical(m$mapping$target$contract, "anndata")) tempfile(fileext = ".h5ad")
+g <- convertWithMapping(x, m, profile = p, output = out_file())
 if (identical(m$mapping$target$contract, "giotto")) {
     # the same mapping onto a GiottoDisk project
     res <- convertWithMapping(x, m, profile = p, source = tempfile("verify_"))
@@ -32,7 +38,7 @@ if (identical(m$mapping$target$contract, "giotto")) {
 } else {
     # a GiottoDisk-backed source through the same mapping
     xd <- builders[[m$mapping$fixtures[[1]]]](source = tempfile("verify_"))
-    res <- convertWithMapping(xd, m)
+    res <- convertWithMapping(xd, m, output = out_file())
     v <- validateMapping(m, profileObject(xd), result = res)
 }
 if (any(v$level == "FAIL")) stop("validation failed; mapping not stamped")
