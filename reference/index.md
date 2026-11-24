@@ -1,0 +1,113 @@
+# Package index
+
+## To Giotto
+
+Convert objects and files from other ecosystems into Giotto objects.
+
+- [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.md)
+  : Convert a Seurat object to a Giotto object
+- [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/anndataToGiotto.md)
+  : Convert an AnnData .h5ad file to a Giotto object
+- [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialExperimentToGiotto.md)
+  : Convert a SpatialExperiment to a Giotto object
+- [`spatialdataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialdataToGiotto.md)
+  : Convert SpatialData to Giotto
+- [`gefToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/gefToGiotto.md)
+  : Convert gef to Giotto
+
+## From Giotto
+
+Convert a Giotto object into another ecosystem’s object or file.
+
+- [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSeurat.md)
+  : Convert a Giotto object to a Seurat object
+- [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md)
+  : Convert a Giotto object to an AnnData .h5ad file
+- [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSpatialExperiment.md)
+  : Convert a Giotto object to a SpatialExperiment
+- [`createBentoAdata()`](https://giotto-suite.github.io/GiottoConnect/reference/createBentoAdata.md)
+  : Create bento adata object from gobject
+
+## Checking a conversion
+
+What a conversion kept, dropped or changed.
+
+- [`mappingProvenance()`](https://giotto-suite.github.io/GiottoConnect/reference/mappingProvenance.md)
+  : Conversion record of a mapped giotto object
+- [`readbackCheck()`](https://giotto-suite.github.io/GiottoConnect/reference/readbackCheck.md)
+  : Read a converted object back and compare it with its source
+
+## Mapping engine
+
+Profile an object, choose the mapping that fits it and apply it.
+
+- [`convertWithMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/convertWithMapping.md)
+  : Convert an object with a mapping
+- [`findMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/findMapping.md)
+  : Find the mapping for an object
+- [`readMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/readMapping.md)
+  : Read a mapping file
+- [`validateMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/validateMapping.md)
+  : Validate a mapping against an object
+- [`summary(`*`<giottoMapping>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/summary.giottoMapping.md)
+  : Summarise a mapping
+- [`profileObject()`](https://giotto-suite.github.io/GiottoConnect/reference/profileObject.md)
+  : Profile the structure of an object
+- [`fingerprint()`](https://giotto-suite.github.io/GiottoConnect/reference/fingerprint.md)
+  : Structural fingerprint of a profile
+- [`diffProfiles()`](https://giotto-suite.github.io/GiottoConnect/reference/diffProfiles.md)
+  : Compare two profiles
+- [`giottoContract()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoContract.md)
+  : The Giotto contract
+- [`adapterRegistry()`](https://giotto-suite.github.io/GiottoConnect/reference/adapterRegistry.md)
+  : Ecosystem adapters and targets
+- [`hookRegistry()`](https://giotto-suite.github.io/GiottoConnect/reference/hookRegistry.md)
+  : Registered mapping hooks
+
+## Mapping repair
+
+Adapt a mapping when an object’s structure has drifted from it.
+
+- [`repairMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/repairMapping.md)
+  : Repair a mapping for a drifted object
+- [`writeMappingRequest()`](https://giotto-suite.github.io/GiottoConnect/reference/writeMappingRequest.md)
+  : Write a mapping repair request for a human or a stronger model
+- [`llmBackend()`](https://giotto-suite.github.io/GiottoConnect/reference/llmBackend.md)
+  : LLM backend for mapping repair
+- [`llmPatch()`](https://giotto-suite.github.io/GiottoConnect/reference/llmPatch.md)
+  : Ask an LLM backend for a repair patch
+
+## External tools
+
+Run methods from other packages on a Giotto object.
+
+- [`runBanksy()`](https://giotto-suite.github.io/GiottoConnect/reference/runBanksy.md)
+  : Spatial domains with BANKSY
+- [`banksyParam()`](https://giotto-suite.github.io/GiottoConnect/reference/banksyParam.md)
+  [`reduceData(`*`<ANY>`*`,`*`<banksyParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/banksyParam.md)
+  : BANKSY parameters
+- [`runBayesSpace()`](https://giotto-suite.github.io/GiottoConnect/reference/runBayesSpace.md)
+  : Run BayesSpace spatial clustering
+- [`bayesspaceParam()`](https://giotto-suite.github.io/GiottoConnect/reference/bayesspaceParam.md)
+  [`clusterData(`*`<allMatrix>`*`,`*`<bayesspaceParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/bayesspaceParam.md)
+  : BayesSpace parameters
+- [`runCellChat()`](https://giotto-suite.github.io/GiottoConnect/reference/runCellChat.md)
+  : Run CellChat cell-cell communication
+- [`cellchatParam()`](https://giotto-suite.github.io/GiottoConnect/reference/cellchatParam.md)
+  [`analyzeData(`*`<allMatrix>`*`,`*`<cellchatParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/cellchatParam.md)
+  : CellChat parameters
+- [`runNnSVG()`](https://giotto-suite.github.io/GiottoConnect/reference/runNnSVG.md)
+  : Run nnSVG spatially variable genes
+- [`nnsvgParam()`](https://giotto-suite.github.io/GiottoConnect/reference/nnsvgParam.md)
+  [`analyzeData(`*`<allMatrix>`*`,`*`<nnsvgParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/nnsvgParam.md)
+  : nnSVG parameters
+- [`runONTraC()`](https://giotto-suite.github.io/GiottoConnect/reference/runONTraC.md)
+  : Run ONTraC niche trajectories
+- [`ontracParam()`](https://giotto-suite.github.io/GiottoConnect/reference/ontracParam.md)
+  [`analyzeData(`*`<data.frame>`*`,`*`<ontracParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/ontracParam.md)
+  : ONTraC parameters
+- [`plotONTraCConnectivity()`](https://giotto-suite.github.io/GiottoConnect/reference/plotONTraCConnectivity.md)
+  : Plot ONTraC niche cluster connectivity
+- [`checkGiottoMethod()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
+  [`expect_giotto_method()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
+  : Check a method integration

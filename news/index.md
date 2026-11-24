@@ -1,0 +1,90 @@
+# Changelog
+
+## GiottoConnect 0.1.0
+
+### Converters
+
+- [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md)
+  writes one spatial unit and feature type of a giotto object (in memory
+  or GiottoDisk-backed) as an `.h5ad` in scanpy’s layout, without python
+  (anndataR): normalized values in `X`, counts in `layers/counts`, other
+  values as layers, reductions in `obsm` (PCA loadings in `varm/PCs`),
+  nn and spatial networks in `obsp` with a `uns` record.
+  [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/anndataToGiotto.md)
+  reads them back under their Giotto names, and also reads every
+  scanpy/squidpy network and extra layer of other files.
+- [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSeurat.md)
+  takes `spat_unit` / `feat_type` and exports every reduction (with PCA
+  loadings and stdev), every nearest-neighbour network as a Graph, and
+  transcripts as FOV molecules.
+- [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSpatialExperiment.md)
+  converts one spatial unit and feature type to a SpatialExperiment, or
+  a SpatialFeatureExperiment when there are polygons, transcripts or
+  spatial networks: `counts` / `logcounts` and other assays,
+  scater-named reductions with PCA loadings, networks as colPairs (and
+  SFE spatialGraphs), polygons as `cellSeg`, transcripts as `txSpots`.
+  [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialExperimentToGiotto.md)
+  reads them back under their Giotto names.
+- Tissue images go both ways. Seurat Visium images, SpatialExperiment
+  `imgData` and scanpy `uns/spatial` images become Giotto images placed
+  in the spot coordinates;
+  [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSeurat.md)
+  writes a VisiumV2 (so
+  [`SpatialFeaturePlot()`](https://satijalab.org/seurat/reference/SpatialPlot.html)
+  shows the tissue),
+  [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSpatialExperiment.md)
+  an `imgData` image and
+  [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md)
+  a scanpy `uns/spatial` library.
+- [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.md)
+  reads every nearest-neighbour Graph, not only the first.
+- [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialExperimentToGiotto.md)
+  converts SpatialExperiment and SpatialFeatureExperiment objects
+  through the same mapping engine: the layouts of SpatialExperimentIO
+  (Xenium, CosMx, MERSCOPE), VisiumIO (Visium, Visium HD; pixels
+  converted to microns) and SpatialFeatureExperiment (cell and nucleus
+  segmentations, transcripts, spatial graphs). Control probes, as
+  altExps or inside the main matrix, become their own feature types;
+  scater PCA loadings and variances are kept.
+- [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.md)
+  and
+  [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/anndataToGiotto.md)
+  convert with a declarative mapping chosen for the object’s structure,
+  not per object version. Bundled mappings cover Seurat v3/v4 and v5
+  assays with FOV, Visium (V1, V2, HD) or Slide-seq images, and AnnData
+  `.h5ad` files from scanpy/squidpy (read with hdf5r, no python).
+- Converted: expression (every assay or `feature_types` category as its
+  own feature type), cell and feature metadata, spatial locations,
+  polygons, transcripts (Seurat FOV molecules), dimension reductions
+  with PCA loadings and eigenvalues, nearest-neighbour networks and
+  squidpy spatial networks.
+- `source =` builds a GiottoDisk-backed object; AnnData matrices stream
+  from the file.
+- [`mappingProvenance()`](https://giotto-suite.github.io/GiottoConnect/reference/mappingProvenance.md)
+  records the mapping, bound parameters, losses, absent parts and
+  fallback sources used;
+  [`readbackCheck()`](https://giotto-suite.github.io/GiottoConnect/reference/readbackCheck.md)
+  compares the result with the source.
+- Lower-level tools:
+  [`findMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/findMapping.md),
+  [`convertWithMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/convertWithMapping.md),
+  [`validateMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/validateMapping.md),
+  [`repairMapping()`](https://giotto-suite.github.io/GiottoConnect/reference/repairMapping.md),
+  [`profileObject()`](https://giotto-suite.github.io/GiottoConnect/reference/profileObject.md),
+  [`giottoContract()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoContract.md).
+
+### Removed
+
+- `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
+  `giottoToSeuratV5()` (use
+  [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.md)
+  /
+  [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSeurat.md)).
+- `giottoToSpatialData()`, and the reticulate-based
+  [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md)
+  (replaced by the one above);
+  [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/anndataToGiotto.md)
+  no longer needs python.
+- The Vitessce site pipeline (`export_giotto_to_zarr()`,
+  `create_vitessce_config()`, `scaffold_vitessce_site()`,
+  `giotto_to_vitessce_site()`, `setup_giotto_connect_env()`).
