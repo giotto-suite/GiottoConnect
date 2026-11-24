@@ -133,7 +133,13 @@
     xy <- if (length(cen)) SO$GetTissueCoordinates(cen[[1L]]) else SO$GetTissueCoordinates(fov)
     d <- .spot_diameter(xy[, c("x", "y")])
     sf <- Seurat::scalefactors(spot = d, fiducial = 1.6 * d, hires = img$scale, lowres = img$scale)
-    methods::new("VisiumV2", boundaries = methods::slot(fov, "boundaries"),
+    # spots are drawn at the centroids' radius, which Seurat sets to the spot
+    # diameter
+    bnd <- lapply(methods::slot(fov, "boundaries"), function(b) {
+        if (methods::is(b, "Centroids")) methods::slot(b, "radius") <- d
+        b
+    })
+    methods::new("VisiumV2", boundaries = bnd,
         molecules = methods::slot(fov, "molecules"), assay = methods::slot(fov, "assay"),
         key = methods::slot(fov, "key"), image = img$image, scale.factors = sf,
         coords_x_orientation = "horizontal")
