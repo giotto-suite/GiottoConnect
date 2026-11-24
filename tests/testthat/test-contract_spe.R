@@ -98,3 +98,9 @@ test_that("select_rows keeps or drops rows by name", {
     drop <- GiottoConnect:::.apply_op(m, list(op = "select_rows", pattern = "^Negative", invert = TRUE))
     expect_equal(rownames(drop), c("geneA", "SystemControl2"))
 })
+
+test_that("spot spacing is measured against every spot, whatever their order", {
+    xy <- as.matrix(expand.grid(x = seq(0, 990, by = 10), y = seq(0, 990, by = 10)))
+    shuffled <- xy[sample(nrow(xy)), ]
+    expect_equal(GiottoConnect:::.median_nn_spacing(shuffled), 10)
+})

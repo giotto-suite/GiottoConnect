@@ -57,9 +57,10 @@
     list(image = pmin(pmax(a, 0), 1), scale = scale)
 }
 
-# spot diameter in coordinate units, from the centre spacing (Visium: 55 um
-# spots, 100 um apart)
-.spot_diameter <- function(xy) 0.55 * .median_nn_spacing(as.matrix(xy))
+# spot diameter in coordinate units, from the centre spacing, as Space Ranger
+# records it (spot_diameter_fullres: about 65 um for Visium spots 100 um
+# apart); Seurat and scanpy size their spot plots on this value
+.spot_diameter <- function(xy) 0.65 * .median_nn_spacing(as.matrix(xy))
 
 
 # hooks ####

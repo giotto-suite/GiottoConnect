@@ -282,11 +282,17 @@ hookRegistry <- function() {
     list(um = um_per_px, xy = xy, how = sprintf("%.5f um per px (%s)", um_per_px, how))
 }
 
+# median distance from a sample of points to their nearest neighbour among all
+# points
 .median_nn_spacing <- function(m, n = 500L) {
-    if (nrow(m) > n) m <- m[as.integer(seq(1L, nrow(m), length.out = n)), , drop = FALSE]
-    d <- as.matrix(stats::dist(m))
-    diag(d) <- Inf
-    stats::median(apply(d, 1L, min))
+    m <- as.matrix(m)[, 1:2, drop = FALSE]
+    use <- if (nrow(m) > n) as.integer(seq(1L, nrow(m), length.out = n)) else seq_len(nrow(m))
+    nn <- vapply(use, function(i) {
+        d2 <- (m[, 1] - m[i, 1])^2 + (m[, 2] - m[i, 2])^2
+        d2[i] <- Inf
+        sqrt(min(d2))
+    }, numeric(1))
+    stats::median(nn)
 }
 
 # outer ring vertices of each polygon (holes are dropped), in Giotto's

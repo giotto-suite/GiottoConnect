@@ -56,6 +56,8 @@ test_that("an image goes to Seurat as a VisiumV2 and comes back in place", {
     g <- giotto_with_image()
     s <- giottoToSeurat(g)
     expect_s4_class(s[["fov"]], "VisiumV2")
+    # spots are drawn at the spot size, as for Seurat's own Visium reader
+    expect_equal(s[["fov"]][["centroids"]]@radius, s[["fov"]]@scale.factors$spot)
     expect_true(attr(readbackCheck(g, s), "pass"))
     g2 <- seuratToGiotto(s)
     expect_equal(GiottoClass::list_images(g2)$name, "fov")
