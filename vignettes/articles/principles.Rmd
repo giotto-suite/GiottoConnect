@@ -1,0 +1,101 @@
+---
+title: "Principles"
+output:
+    html_document:
+        toc: true
+        toc_depth: 2
+        number_sections: false
+vignette: >
+    %\VignetteIndexEntry{Principles}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+Every connection in GiottoConnect, whether a converter or an external tool,
+follows the same rules. They keep the package light to install, give credit to
+the people whose methods it runs, and let it work at any data size.
+
+## Dependencies
+
+**Only what every conversion needs is required.** Seurat, anndataR,
+SpatialExperiment and every external tool are optional. Each function checks
+for the packages it uses when it runs, and says how to install them.
+
+**No python for conversions.** Seurat, AnnData and SpatialExperiment
+conversions run in R; `.h5ad` files are read and written without python.
+Python tools run through reticulate, which installs them into a managed
+environment the first time they run. Conda is never needed.
+
+## Credit
+
+**Every external tool cites its paper**, in three places:
+
+- its help page lists the paper and asks users to cite it;
+- the citation is printed the first time the tool runs in a session;
+- `objCitations()` lists the papers of every method used on an object, also
+  for an object saved with `saveGiotto()`.
+
+```{r}
+g <- runBanksy(g)
+#> If you use runBanksy() in published research, please cite:
+#>   Singhal V, Chou N, Lee J, et al. (2024). "BANKSY unifies cell typing and
+#>   tissue domain segmentation for scalable spatial omics data analysis."
+#>   Nature Genetics, 56, 431-441. doi:10.1038/s41588-024-01664-3.
+
+objCitations(g)
+```
+
+`options(giotto.cite = FALSE)` turns the messages off.
+
+## Design
+
+**Wrap, never reimplement.** GiottoConnect runs the original implementation of
+a method. When the Suite has its own implementation of a method, it lives in
+Giotto, not here.
+
+**One pattern for every tool.** A tool is a param class holding its settings, a
+method that runs it on a matrix, and a `run<Tool>()` function that takes a
+`giotto` object, runs the method and stores the results. The param is recorded
+in the object's history, so `objHistory()` shows how a result was made.
+
+**No version names.** There is one `seuratToGiotto()`, not one per Seurat
+version. When an object's structure changes, GiottoConnect gets a new mapping
+file; the function stays the same.
+
+**Nothing is lost silently.** What a conversion cannot carry over is reported
+when it runs and listed by `mappingProvenance()`.
+
+## Scale
+
+**Everything works on disk-backed objects.** Converters can write straight into
+a GiottoDisk project (`source =`), streaming large matrices instead of loading
+them into memory. Tools read their input only through Giotto's accessors and
+verbs, never from the object's slots, so the same code can serve in-memory and
+disk-backed objects.
+
+## Adding a tool
+
+A new tool follows the pattern of the existing ones (`R/tool-<name>.R` in the
+package source):
+
+1. A `<tool>Param()` constructor and class, with a `methodCitation()` method
+   returning the paper as a `utils::bibentry()`.
+2. A method on one of GiottoClass's analysis verbs (`analyzeData()`,
+   `reduceData()`, `clusterData()`, ...) that runs the tool on a matrix.
+3. `run<Tool>()`, which reads from the `giotto` object, calls the method, stores
+   the results with the setters and records the param:
+   `update_giotto_params(gobject, description = "_<tool>", attachments = list(param = param))`.
+4. A help page with the paper under References.
+5. A test that runs `checkGiottoMethod()` on the result. It checks that only the
+   declared slots changed, that results cover every cell, that the param is in
+   the history with a citation, and that the help page cites the paper.
+
+```{r}
+g2 <- runMyTool(g)
+checkGiottoMethod(g, g2, slots = "cell_metadata",
+    param_class = "myToolParam", fn = "runMyTool", package = "GiottoConnect")
+```
