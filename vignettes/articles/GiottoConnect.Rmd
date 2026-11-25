@@ -20,49 +20,7 @@ GiottoClass defines it, Giotto analyses it, GiottoVisuals plots it, GiottoDisk
 keeps it on disk and GiottoLens explores it interactively. GiottoConnect is
 where the Suite meets everything outside it. It has three roles.
 
-```{r roles-diagram, echo = FALSE, eval = TRUE, results = "asis"}
-cat('
-<figure class="gc-roles" style="margin: 1.5rem 0;">
-<svg viewBox="0 0 640 300" role="img" style="width: 100%; max-width: 640px; height: auto;"
-  aria-label="GiottoConnect links the giotto object to other ecosystems, other software and external tools">
-  <style>
-    .gc-roles text { fill: currentColor; font-family: inherit; }
-    .gc-roles .box { fill: none; stroke: currentColor; stroke-opacity: .45; }
-    .gc-roles .core { fill: #7E69AE; fill-opacity: .14; stroke: #7E69AE; }
-    .gc-roles .link { stroke: #7E69AE; stroke-width: 2; fill: none; }
-    .gc-roles .t { font-size: 15px; font-weight: 600; }
-    .gc-roles .s { font-size: 12.5px; opacity: .8; }
-  </style>
-  <rect class="core" x="230" y="110" width="180" height="80" rx="10"/>
-  <text class="t" x="320" y="143" text-anchor="middle">Giotto Suite</text>
-  <text class="s" x="320" y="163" text-anchor="middle">giotto object, in memory</text>
-  <text class="s" x="320" y="179" text-anchor="middle">or on disk (GiottoDisk)</text>
-
-  <rect class="box" x="10" y="20" width="190" height="92" rx="8"/>
-  <text class="t" x="105" y="46" text-anchor="middle">1. Other ecosystems</text>
-  <text class="s" x="105" y="68" text-anchor="middle">Seurat, AnnData,</text>
-  <text class="s" x="105" y="84" text-anchor="middle">SpatialExperiment / SFE,</text>
-  <text class="s" x="105" y="100" text-anchor="middle">SpatialData</text>
-
-  <rect class="box" x="10" y="188" width="190" height="92" rx="8"/>
-  <text class="t" x="105" y="214" text-anchor="middle">2. Other software</text>
-  <text class="s" x="105" y="236" text-anchor="middle">files other tools read:</text>
-  <text class="s" x="105" y="252" text-anchor="middle">.h5ad, SpatialExperiment,</text>
-  <text class="s" x="105" y="268" text-anchor="middle">Bento</text>
-
-  <rect class="box" x="440" y="104" width="190" height="92" rx="8"/>
-  <text class="t" x="535" y="130" text-anchor="middle">3. External tools</text>
-  <text class="s" x="535" y="152" text-anchor="middle">Banksy, BayesSpace,</text>
-  <text class="s" x="535" y="168" text-anchor="middle">CellChat, nnSVG,</text>
-  <text class="s" x="535" y="184" text-anchor="middle">ONTraC</text>
-
-  <path class="link" d="M200 66 C 225 66, 230 110, 250 120"/>
-  <path class="link" d="M200 234 C 225 234, 230 190, 250 180"/>
-  <path class="link" d="M410 150 L 440 150"/>
-</svg>
-</figure>
-')
-```
+![GiottoConnect links the giotto object to other ecosystems, other software and external tools](figures/giottoconnect_roles.svg){width=100%}
 
 ## 1. Other ecosystems
 
