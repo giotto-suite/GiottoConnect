@@ -57,7 +57,6 @@ reference:
   - anndataToGiotto
   - spatialExperimentToGiotto
   - spatialdataToGiotto
-  - gefToGiotto
 
 - title: From Giotto
   desc: >
