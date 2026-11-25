@@ -14,6 +14,11 @@ wrapper and checks the rules of GiottoClass ADR 0008:
 - the last history entry carries the method's param
   (`update_giotto_params(attachments = list(param = param))`);
 
+- the param declares its paper
+  ([`GiottoClass::methodCitation()`](https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html)),
+  which is then shown once per session and listed by
+  [`GiottoClass::objCitations()`](https://giotto-suite.github.io/GiottoClass/reference/objCitations.html);
+
 - the help page of `fn` has references and asks users to cite them.
 
 Methods whose results fit no slot (e.g. an interaction table) return
@@ -31,7 +36,8 @@ checkGiottoMethod(
   param_class = NULL,
   fn = NULL,
   package = NULL,
-  result = NULL
+  result = NULL,
+  cite = TRUE
 )
 
 expect_giotto_method(...)
@@ -61,6 +67,11 @@ expect_giotto_method(...)
 - result:
 
   the returned result, with \`slots = "none"
+
+- cite:
+
+  logical. Whether the param must declare a paper. `FALSE` only for a
+  Suite-native method that wraps or reimplements no published method
 
 - ...:
 

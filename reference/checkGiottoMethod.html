@@ -7,6 +7,8 @@ stored dimension reductions and spatial enrichments cover every cell of
 their spatial unit, and new cell metadata columns are not all NA;
 the last history entry carries the method's param
 (update_giotto_params(attachments = list(param = param)));
+the param declares its paper (GiottoClass::methodCitation()), which
+is then shown once per session and listed by GiottoClass::objCitations();
 the help page of fn has references and asks users to cite them.
 
 
@@ -21,6 +23,8 @@ stored dimension reductions and spatial enrichments cover every cell of
 their spatial unit, and new cell metadata columns are not all NA;
 the last history entry carries the method's param
 (update_giotto_params(attachments = list(param = param)));
+the param declares its paper (GiottoClass::methodCitation()), which
+is then shown once per session and listed by GiottoClass::objCitations();
 the help page of fn has references and asks users to cite them.
 
 
@@ -77,6 +81,8 @@ wrapper and checks the rules of GiottoClass ADR 0008:</p><ul><li><p>only the dec
 their spatial unit, and new cell metadata columns are not all <code>NA</code>;</p></li>
 <li><p>the last history entry carries the method's param
 (<code>update_giotto_params(attachments = list(param = param))</code>);</p></li>
+<li><p>the param declares its paper (<code><a href="https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html" class="external-link">GiottoClass::methodCitation()</a></code>), which
+is then shown once per session and listed by <code><a href="https://giotto-suite.github.io/GiottoClass/reference/objCitations.html" class="external-link">GiottoClass::objCitations()</a></code>;</p></li>
 <li><p>the help page of <code>fn</code> has references and asks users to cite them.</p></li>
 </ul><p>Methods whose results fit no slot (e.g. an interaction table) return them
 instead: pass <code>slots = "none"</code> and the returned object as <code>result</code>. Then
@@ -93,7 +99,8 @@ param.</p>
 <span>  param_class <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fn <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  package <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  result <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  result <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">expect_giotto_method</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div>
@@ -125,6 +132,11 @@ documentation check; skipped when <code>NULL</code></p></dd>
 
 <dt id="arg-result">result<a class="anchor" aria-label="anchor" href="#arg-result"></a></dt>
 <dd><p>the returned result, with `slots = "none"</p></dd>
+
+
+<dt id="arg-cite">cite<a class="anchor" aria-label="anchor" href="#arg-cite"></a></dt>
+<dd><p>logical. Whether the param must declare a paper. <code>FALSE</code> only
+for a Suite-native method that wraps or reimplements no published method</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

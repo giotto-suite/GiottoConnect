@@ -65,6 +65,15 @@
 <li>Lower-level tools: <code><a href="../reference/findMapping.html">findMapping()</a></code>, <code><a href="../reference/convertWithMapping.html">convertWithMapping()</a></code>, <code><a href="../reference/validateMapping.html">validateMapping()</a></code>, <code><a href="../reference/repairMapping.html">repairMapping()</a></code>, <code><a href="../reference/profileObject.html">profileObject()</a></code>, <code><a href="../reference/giottoContract.html">giottoContract()</a></code>.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="external-tools-0-1-0">External tools<a class="anchor" aria-label="anchor" href="#external-tools-0-1-0"></a></h3>
+<ul><li>Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers (<code><a href="https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html" class="external-link">GiottoClass::methodCitation()</a></code>): the citation is shown once per session when the tool runs and <code><a href="https://giotto-suite.github.io/GiottoClass/reference/objCitations.html" class="external-link">GiottoClass::objCitations()</a></code> lists it. <code><a href="../reference/checkGiottoMethod.html">checkGiottoMethod()</a></code> checks that a param declares one (<code>cite = FALSE</code> for Suite-native methods that wrap no published method).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="dependencies-0-1-0">Dependencies<a class="anchor" aria-label="anchor" href="#dependencies-0-1-0"></a></h3>
+<ul><li>reticulate moves to Suggests: only the Bento and SpatialData converters and the python tools (ONTraC) use it, and they check for it when they run.</li>
+<li>Requires GiottoClass 0.8.0 (<code>methodCitation()</code>).</li>
+</ul></div>
+<div class="section level3">
 <h3 id="removed-0-1-0">Removed<a class="anchor" aria-label="anchor" href="#removed-0-1-0"></a></h3>
 <ul><li>
 <code>seuratToGiottoV4()</code>, <code>seuratToGiottoV5()</code>, <code>giottoToSeuratV4()</code>, <code>giottoToSeuratV5()</code> (use <code><a href="../reference/seuratToGiotto.html">seuratToGiotto()</a></code> / <code><a href="../reference/giottoToSeurat.html">giottoToSeurat()</a></code>).</li>

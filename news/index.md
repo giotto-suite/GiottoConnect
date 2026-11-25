@@ -73,6 +73,24 @@
   [`profileObject()`](https://giotto-suite.github.io/GiottoConnect/reference/profileObject.md),
   [`giottoContract()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoContract.md).
 
+### External tools
+
+- Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
+  ([`GiottoClass::methodCitation()`](https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html)):
+  the citation is shown once per session when the tool runs and
+  [`GiottoClass::objCitations()`](https://giotto-suite.github.io/GiottoClass/reference/objCitations.html)
+  lists it.
+  [`checkGiottoMethod()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
+  checks that a param declares one (`cite = FALSE` for Suite-native
+  methods that wrap no published method).
+
+### Dependencies
+
+- reticulate moves to Suggests: only the Bento and SpatialData
+  converters and the python tools (ONTraC) use it, and they check for it
+  when they run.
+- Requires GiottoClass 0.8.0 (`methodCitation()`).
+
 ### Removed
 
 - `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
