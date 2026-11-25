@@ -23,7 +23,6 @@ Giotto, and back:
 | AnnData (`.h5ad`) | [`anndataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/anndataToGiotto.md) | [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md) |
 | SpatialExperiment / SpatialFeatureExperiment | [`spatialExperimentToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialExperimentToGiotto.md) | [`giottoToSpatialExperiment()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSpatialExperiment.md) |
 | SpatialData | [`spatialdataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialdataToGiotto.md) |  |
-| Stereo-seq GEF | [`gefToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/gefToGiotto.md) |  |
 
 ``` r
 

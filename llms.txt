@@ -39,8 +39,6 @@ Convert objects and files from other ecosystems into Giotto objects.
   : Convert a SpatialExperiment to a Giotto object
 - [`spatialdataToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/spatialdataToGiotto.md)
   : Convert SpatialData to Giotto
-- [`gefToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/gefToGiotto.md)
-  : Convert gef to Giotto
 
 ## From Giotto
 

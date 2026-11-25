@@ -93,6 +93,9 @@
 
 ### Removed
 
+- `gefToGiotto()`: Giotto’s `importStereoSeq()` (and GiottoDisk’s
+  `importStereoSeqDisk()`) read Stereo-seq GEF files. rhdf5 is no longer
+  suggested.
 - `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
   `giottoToSeuratV5()` (use
   [`seuratToGiotto()`](https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.md)
