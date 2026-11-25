@@ -22,11 +22,18 @@ navbar:
     reference:
       text: Documentation
       href: reference/index.html
+    intro:
+      text: Get started
+      href: articles/GiottoConnect.html
     articles:
       text: Articles
       menu:
+      - text: GiottoConnect in the Giotto Suite
+        href: articles/GiottoConnect.html
       - text: Converting Seurat, AnnData and SpatialExperiment objects
         href: articles/converting_to_giotto.html
+      - text: Principles
+        href: articles/principles.html
     news:
       text: News
       href: news/index.html
