@@ -1,11 +1,60 @@
 # GiottoConnect
 
-Interoperability hub of the Giotto Suite: conversions between Giotto and other
-ecosystems (Seurat, AnnData, SpatialExperiment / SFE, SpatialData, Bento, Stereo-seq GEF).
+Interoperability hub of the Giotto Suite, with three roles:
+
+1. **Other ecosystems:** conversions between Giotto and Seurat, AnnData,
+   SpatialExperiment / SFE, SpatialData, Bento and Stereo-seq GEF.
+2. **Other software:** files and objects in the formats other software reads
+   (`.h5ad`, SpatialExperiment, Bento's AnnData). GiottoLens, the Suite's own
+   viewer, is a separate core package.
+3. **External tools:** run published methods (Banksy, BayesSpace, CellChat,
+   nnSVG, ONTraC) on a Giotto object.
 
 Seurat, AnnData and SpatialExperiment / SFE ↔ Giotto run on the **mapping engine**, a declarative and
 ecosystem-neutral converter driven by YAML mapping files. The other ecosystems still use
 hand-written converters and move to the engine one adapter at a time.
+
+## Core rules
+
+Every change follows these. The user-facing version is
+`vignettes/articles/principles.Rmd`.
+
+**Dependencies**
+
+1. `Imports` holds only what every conversion needs. Ecosystem and tool
+   packages are `Suggests`, checked with `package_check()` when the function
+   runs.
+2. Seurat, AnnData and SpatialExperiment conversions need no python. Python
+   tools run through `reticulate::py_require()` (`.tool_python_cli()` in
+   `R/tool-utils.R`), never conda.
+
+**Credit**
+
+3. A tool's help page cites the paper (`@references` with `\doi{}`) and asks
+   users to cite it.
+4. Its param defines `GiottoClass::methodCitation()`. `run<Tool>()` records the
+   param with `update_giotto_params(attachments = list(param = param))`, or calls
+   `citeMethod()` when it returns a result instead of an object, so the paper is
+   shown once per session and listed by `objCitations()`.
+
+**Design**
+
+5. Wrap, never reimplement. A Suite-native implementation of a method goes to
+   Giotto core, not here.
+6. One pattern per tool: `<tool>Param` + a method on one of the five verbs
+   (GiottoClass ADR 0003) + `run<Tool>()`, in `R/tool-<name>.R`. No tool is
+   hard-wired into another function.
+7. No version names in functions. A new object structure gets a new mapping
+   file.
+8. Nothing is lost silently, and no LLM runs in a conversion (see *Mapping
+   engine: invariants*).
+
+**Scale and tests**
+
+9. Everything works on GiottoDisk-backed objects: conversions stream, and tools
+   read through Giotto's accessors and verbs, never through slots.
+10. Every tool passes `checkGiottoMethod()` in its tests, and its tests skip
+    cleanly when the tool is not installed.
 
 ## Documentation map
 
