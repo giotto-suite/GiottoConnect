@@ -33,7 +33,6 @@ back:
 | AnnData (`.h5ad`) | `anndataToGiotto()` | `giottoToAnnData()` |
 | SpatialExperiment / SpatialFeatureExperiment | `spatialExperimentToGiotto()` | `giottoToSpatialExperiment()` |
 | SpatialData | `spatialdataToGiotto()` | |
-| Stereo-seq GEF | `gefToGiotto()` | |
 
 ```{r}
 g <- seuratToGiotto(seurat_object)

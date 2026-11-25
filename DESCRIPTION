@@ -9,7 +9,7 @@ Description: Interoperability between Giotto and other single-cell and
     SpatialExperiment / SpatialFeatureExperiment objects are converted
     to Giotto through declarative mappings chosen by the object's structure,
     in memory or onto a GiottoDisk project; further conversions cover
-    SpatialData, Bento and Stereo-seq GEF.
+    SpatialData and Bento.
 License: MIT + file LICENSE
 URL: https://giotto-suite.github.io/GiottoConnect/, https://github.com/giotto-suite/GiottoConnect
 BugReports: https://github.com/giotto-suite/GiottoConnect/issues
@@ -39,7 +39,6 @@ Suggests:
     httr2,
     nnSVG,
     reticulate (>= 1.35.0),
-    rhdf5,
     S4Vectors,
     Seurat,
     SeuratObject,
