@@ -79,8 +79,8 @@ disk-backed objects.
 
 ## Adding a tool
 
-A new tool follows the pattern of the existing ones (`R/tool-<name>.R` in the
-package source):
+A new tool follows the pattern of the existing ones (for example
+`R/tool-nnsvg.R` in the package source), in a file of its own:
 
 1. A `<tool>Param()` constructor and class, with a `methodCitation()` method
    returning the paper as a `utils::bibentry()`.
