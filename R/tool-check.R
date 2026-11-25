@@ -13,6 +13,8 @@
 #'   their spatial unit, and new cell metadata columns are not all `NA`;
 #' * the last history entry carries the method's param
 #'   (`update_giotto_params(attachments = list(param = param))`);
+#' * the param declares its paper ([GiottoClass::methodCitation()]), which
+#'   is then shown once per session and listed by [GiottoClass::objCitations()];
 #' * the help page of `fn` has references and asks users to cite them.
 #'
 #' Methods whose results fit no slot (e.g. an interaction table) return them
@@ -24,6 +26,8 @@
 #'   `c("cell_metadata", "spatial_enrichment")`, or `"none"` for methods that
 #'   return their results
 #' @param result the returned result, with `slots = "none"
+#' @param cite logical. Whether the param must declare a paper. `FALSE` only
+#'   for a Suite-native method that wraps or reimplements no published method
 #' @param param_class class of the param expected in the history; `NULL`
 #'   accepts any param
 #' @param fn,package name of the `run*()` function and its package, for the
@@ -41,7 +45,7 @@
 #' @md
 #' @export
 checkGiottoMethod <- function(before, after, slots, param_class = NULL,
-    fn = NULL, package = NULL, result = NULL) {
+    fn = NULL, package = NULL, result = NULL, cite = TRUE) {
     checkmate::assert_class(before, "giotto")
     checkmate::assert_class(after, "giotto")
     checkmate::assert_character(slots, min.len = 1L)
@@ -105,6 +109,11 @@ checkGiottoMethod <- function(before, after, slots, param_class = NULL,
         if (!is.null(param_class)) paste0(" with a ", param_class) else ""))
 
     # credit
+    if (is_param && isTRUE(cite)) {
+        add("param declares a citation", !is.null(methodCitation(p)),
+            paste0("define methodCitation() for ", class(p)[[1]],
+                ", returning a utils::bibentry() of the original paper"))
+    }
     if (!is.null(fn) && !is.null(package)) {
         rd <- .check_rd_text(fn, package)
         add("help page has references", rd$has_refs,

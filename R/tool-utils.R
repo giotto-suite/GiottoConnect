@@ -45,3 +45,11 @@
     }
     invisible(log_file)
 }
+
+# A journal article for methodCitation(). Keep it in sync with @references.
+.cite_article <- function(author, title, journal, year, volume, pages, doi) {
+    utils::bibentry("Article",
+        author = author, title = title, journal = journal, year = year,
+        volume = volume, pages = pages, doi = doi
+    )
+}

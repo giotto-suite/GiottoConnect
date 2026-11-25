@@ -56,6 +56,17 @@ banksyParam <- function(lambda = 0.8, k_geom = 15L, npcs = 20L,
 #' @exportClass banksyParam
 setClass("banksyParam", contains = "reduceParam")
 
+# the paper, shown once per session and listed by objCitations()
+setMethod("methodCitation", signature("banksyParam"), function(x, ...) {
+    .cite_article(
+        author = c("Vipul Singhal", "Nigel Chou", "Joseph Lee", "others"),
+        title = paste("BANKSY unifies cell typing and tissue domain",
+            "segmentation for scalable spatial omics data analysis"),
+        journal = "Nature Genetics", year = 2024, volume = 56,
+        pages = "431--441", doi = "10.1038/s41588-024-01664-3"
+    )
+})
+
 #' @rdname banksyParam
 #' @param x features x cells values with cell IDs as column names
 #' @param param a `banksyParam`

@@ -80,6 +80,17 @@ ontracParam <- function(k = 6L, n_neighbors = 50L, n_local = 20L,
 #' @exportClass ontracParam
 setClass("ontracParam", contains = "analyzeParam")
 
+# the paper, shown once per session and listed by objCitations()
+setMethod("methodCitation", signature("ontracParam"), function(x, ...) {
+    .cite_article(
+        author = c("Wen Wang", "Shiwei Zheng", "Sujung Crystal Shin", "others"),
+        title = paste("ONTraC characterizes spatially continuous variations",
+            "of tissue microenvironment through niche trajectory analysis"),
+        journal = "Genome Biology", year = 2025, volume = 26,
+        pages = "117", doi = "10.1186/s13059-025-03588-5"
+    )
+})
+
 #' @rdname ontracParam
 #' @param x `data.frame` with columns `cell_ID`, `sdimx`, `sdimy`,
 #'   `cell_type` and optionally `sample`

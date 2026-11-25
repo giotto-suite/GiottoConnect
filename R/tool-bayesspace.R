@@ -98,6 +98,17 @@ bayesspaceParam <- function(q, platform = c("Visium", "ST", "VisiumHD"),
 #' @exportClass bayesspaceParam
 setClass("bayesspaceParam", contains = "analyzeParam")
 
+# the paper, shown once per session and listed by objCitations()
+setMethod("methodCitation", signature("bayesspaceParam"), function(x, ...) {
+    .cite_article(
+        author = c("Edward Zhao", "Matthew R. Stone", "Xing Ren", "others"),
+        title = paste("Spatial transcriptomics at subspot resolution with",
+            "BayesSpace"),
+        journal = "Nature Biotechnology", year = 2021, volume = 39,
+        pages = "1375--1384", doi = "10.1038/s41587-021-00935-2"
+    )
+})
+
 #' @rdname bayesspaceParam
 #' @param x count matrix, features x cells (dense or sparse)
 #' @param spatial_locs `data.frame` with `cell_ID` and either the array grid

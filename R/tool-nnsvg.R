@@ -52,6 +52,18 @@ nnsvgParam <- function(n_neighbors = 10L, order = c("AMMD", "Sum_coords"),
 #' @exportClass nnsvgParam
 setClass("nnsvgParam", contains = "analyzeParam")
 
+# the paper, shown once per session and listed by objCitations()
+setMethod("methodCitation", signature("nnsvgParam"), function(x, ...) {
+    .cite_article(
+        author = c("Lukas M. Weber", "Arkajyoti Saha", "Abhirup Datta",
+            "Kasper D. Hansen", "Stephanie C. Hicks"),
+        title = paste("nnSVG for the scalable identification of spatially",
+            "variable genes using nearest-neighbor Gaussian processes"),
+        journal = "Nature Communications", year = 2023, volume = 14,
+        pages = "4059", doi = "10.1038/s41467-023-39748-z"
+    )
+})
+
 #' @rdname nnsvgParam
 #' @param x normalized (log) expression matrix, features x cells
 #' @param param a `nnsvgParam`
