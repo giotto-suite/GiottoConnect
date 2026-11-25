@@ -3,7 +3,8 @@
 Interoperability hub of the Giotto Suite, with three roles:
 
 1. **Other ecosystems:** conversions between Giotto and Seurat, AnnData,
-   SpatialExperiment / SFE, SpatialData, Bento and Stereo-seq GEF.
+   SpatialExperiment / SFE, SpatialData and Bento. Stereo-seq is read by
+   Giotto's `importStereoSeq()`.
 2. **Other software:** files and objects in the formats other software reads
    (`.h5ad`, SpatialExperiment, Bento's AnnData). GiottoLens, the Suite's own
    viewer, is a separate core package.
@@ -95,7 +96,7 @@ R/
   contract_target_anndata.R AnnData target: writes an .h5ad (anndataR), key/semantic checks, comparators
   contract_target_spe.R  SpatialExperiment / SFE target (mapping target `class`), key/semantic checks, comparators
   contract_images.R      images: Giotto extent <-> RGB array + scale factor (origin at the top-left), image hooks
-  anndata.R, spatialdata.R, bento.R, stereoseq_gef.R
+  anndata.R, spatialdata.R, bento.R
   tool-utils.R           shared helpers for external tool connections (py_require CLI path, run + log)
   tool-<name>.R          one external tool per file (adr/0008 in GiottoClass): <name>Param, analyzeData
                          method, run<Tool>(); the tool is checked or installed only when it runs

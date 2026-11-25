@@ -60,6 +60,9 @@
 - Requires GiottoClass 0.8.0 (`methodCitation()`).
 
 ## Removed
+- `gefToGiotto()`: Giotto's `importStereoSeq()` (and GiottoDisk's
+  `importStereoSeqDisk()`) read Stereo-seq GEF files. rhdf5 is no longer
+  suggested.
 - `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
   `giottoToSeuratV5()` (use `seuratToGiotto()` / `giottoToSeurat()`).
 - `giottoToSpatialData()`, and the reticulate-based `giottoToAnnData()`
