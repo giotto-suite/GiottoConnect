@@ -9,9 +9,14 @@ test_that("checkGiottoMethod passes a conforming run and explains failures", {
         verbose = FALSE)
     ok <- checkGiottoMethod(g, g2, slots = "dimension_reduction",
         param_class = "neighborhoodPCAParam", fn = "runNeighborhoodPCA",
-        package = "Giotto")
+        package = "Giotto", cite = FALSE)
     expect_true(all(ok$pass))
-    expect_giotto_method(g, g2, slots = "dimension_reduction")
+    expect_giotto_method(g, g2, slots = "dimension_reduction", cite = FALSE)
+    # a param without methodCitation() fails unless cite = FALSE
+    res <- checkGiottoMethod(g, g2, slots = "dimension_reduction")
+    expect_false(res$pass[res$check == "param declares a citation"])
+    expect_match(res$message[res$check == "param declares a citation"],
+        "methodCitation")
 
     bad <- GiottoClass::addCellMetadata(g, new_metadata = data.frame(
         cell_ID = GiottoClass::spatIDs(g), foo = NA), by_column = TRUE,

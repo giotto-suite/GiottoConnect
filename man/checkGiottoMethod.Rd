@@ -12,7 +12,8 @@ checkGiottoMethod(
   param_class = NULL,
   fn = NULL,
   package = NULL,
-  result = NULL
+  result = NULL,
+  cite = TRUE
 )
 
 expect_giotto_method(...)
@@ -32,6 +33,9 @@ documentation check; skipped when \code{NULL}}
 
 \item{result}{the returned result, with `slots = "none"}
 
+\item{cite}{logical. Whether the param must declare a paper. \code{FALSE} only
+for a Suite-native method that wraps or reimplements no published method}
+
 \item{...}{arguments of \code{checkGiottoMethod()}}
 }
 \value{
@@ -48,6 +52,8 @@ wrapper and checks the rules of GiottoClass ADR 0008:
 their spatial unit, and new cell metadata columns are not all \code{NA};
 \item the last history entry carries the method's param
 (\code{update_giotto_params(attachments = list(param = param))});
+\item the param declares its paper (\code{\link[GiottoClass:methodCitation]{GiottoClass::methodCitation()}}), which
+is then shown once per session and listed by \code{\link[GiottoClass:objCitations]{GiottoClass::objCitations()}};
 \item the help page of \code{fn} has references and asks users to cite them.
 }
 

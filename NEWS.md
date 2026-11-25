@@ -47,6 +47,18 @@
 - Lower-level tools: `findMapping()`, `convertWithMapping()`,
   `validateMapping()`, `repairMapping()`, `profileObject()`, `giottoContract()`.
 
+## External tools
+- Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
+  (`GiottoClass::methodCitation()`): the citation is shown once per session
+  when the tool runs and `GiottoClass::objCitations()` lists it.
+  `checkGiottoMethod()` checks that a param declares one (`cite = FALSE` for
+  Suite-native methods that wrap no published method).
+
+## Dependencies
+- reticulate moves to Suggests: only the Bento and SpatialData converters and
+  the python tools (ONTraC) use it, and they check for it when they run.
+- Requires GiottoClass 0.8.0 (`methodCitation()`).
+
 ## Removed
 - `seuratToGiottoV4()`, `seuratToGiottoV5()`, `giottoToSeuratV4()`,
   `giottoToSeuratV5()` (use `seuratToGiotto()` / `giottoToSeurat()`).

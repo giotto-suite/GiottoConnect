@@ -16,9 +16,8 @@ BugReports: https://github.com/giotto-suite/GiottoConnect/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
-    GiottoClass (>= 0.7.31),
+    GiottoClass (>= 0.8.0),
     GiottoUtils (>= 0.2.10),
-    reticulate (>= 1.35.0),
     data.table (>= 1.14.0),
     Matrix,
     methods,
@@ -39,6 +38,7 @@ Suggests:
     hdf5r,
     httr2,
     nnSVG,
+    reticulate (>= 1.35.0),
     rhdf5,
     S4Vectors,
     Seurat,

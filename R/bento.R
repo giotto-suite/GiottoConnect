@@ -45,6 +45,7 @@ createBentoAdata <- function(gobject = NULL,
     )
 
     # Install bento-tools / Check python environment for bento-tools
+    package_check("reticulate", repository = "CRAN")
     package_check(
         pkg_name = "bento-tools",
         repository = "pip:git+https://github.com/wwang-chcn/bento-tools.git"

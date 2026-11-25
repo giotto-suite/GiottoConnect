@@ -133,6 +133,27 @@ cellchatParam <- function(species = c("mouse", "human", "zebrafish"),
 #' @exportClass cellchatParam
 setClass("cellchatParam", contains = "analyzeParam")
 
+# the paper, shown once per session and listed by objCitations()
+setMethod("methodCitation", signature("cellchatParam"), function(x, ...) {
+    c(
+        .cite_article(
+            author = c("Suoqin Jin", "Christian F. Guerrero-Juarez",
+                "Lihua Zhang", "others"),
+            title = paste("Inference and analysis of cell-cell communication",
+                "using CellChat"),
+            journal = "Nature Communications", year = 2021, volume = 12,
+            pages = "1088", doi = "10.1038/s41467-021-21246-9"
+        ),
+        .cite_article(
+            author = c("Suoqin Jin", "Maksim V. Plikus", "Qing Nie"),
+            title = paste("CellChat for systematic analysis of cell-cell",
+                "communication from single-cell transcriptomics"),
+            journal = "Nature Protocols", year = 2025, volume = 20,
+            pages = "180--219", doi = "10.1038/s41596-024-01045-4"
+        )
+    )
+})
+
 #' @rdname cellchatParam
 #' @param x normalized (log) expression matrix, features x cells, feature
 #'   names as gene symbols of `species`
@@ -316,5 +337,6 @@ runCellChat <- function(gobject, cell_type, spat_unit = NULL, feat_type = NULL,
         if (spatial) "(spatial mode)" else "")
     res <- analyzeData(x, param, cell_type = labels, spatial_locs = locs)
     attr(res, "param") <- param
+    citeMethod(param, what = "runCellChat()")
     res
 }

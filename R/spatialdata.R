@@ -79,6 +79,7 @@ spatialdataToGiotto <- function(spatialdata_path = NULL,
     )
 
     # Check spatialdata dependencies
+    package_check("reticulate", repository = "CRAN")
     package_check(
         pkg_name = "spatialdata",
         repository = "pip:spatialdata"
