@@ -16,6 +16,9 @@ test_that("runScrublet stores doublet scores on the visium mini", {
     skip_if(Sys.getenv("GIOTTOCONNECT_TOOL_TESTS") == "",
         "set GIOTTOCONNECT_TOOL_TESTS to run external tools")
     skip_if_not_installed("reticulate", minimum_version = "1.41")
+    skip_if(reticulate::py_available(initialize = FALSE) &&
+        !reticulate::py_module_available("scrublet"),
+        "Python already started in this session without scrublet")
     skip_if_not_installed("GiottoData")
     options(giotto.has_conda = FALSE, giotto.use_conda = FALSE,
         giotto.no_python_warn = TRUE)
