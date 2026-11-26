@@ -48,6 +48,10 @@
   `validateMapping()`, `repairMapping()`, `profileObject()`, `giottoContract()`.
 
 ## External tools
+- `runSparkX()` runs SPARK-X (SPARK package, GitHub) for spatially variable
+  genes on counts and stores its combined and Benjamini-Yekutieli adjusted
+  p-values as feature metadata (`sparkxParam()` for `analyzeData()`). Use it
+  in place of Giotto's `spark()`, which runs the original SPARK model.
 - Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
   (`GiottoClass::methodCitation()`): the citation is shown once per session
   when the tool runs and `GiottoClass::objCitations()` lists it.

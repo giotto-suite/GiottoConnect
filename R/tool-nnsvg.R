@@ -181,7 +181,7 @@ runNnSVG <- function(gobject, spat_unit = NULL, feat_type = NULL,
     x <- getExpression(gobject, spat_unit = spat_unit, feat_type = feat_type,
         values = expression_values, output = "matrix")
     fm <- fDataDT(gobject, spat_unit = spat_unit, feat_type = feat_type)
-    feats <- .nnsvg_feats(feats_to_use, fm, rownames(x))
+    feats <- .tool_feats(feats_to_use, fm, rownames(x), fn = "runNnSVG")
     x <- x[feats, , drop = FALSE]
     n <- ncol(x)
     m <- Matrix::rowMeans(x)
@@ -231,20 +231,4 @@ runNnSVG <- function(gobject, spat_unit = NULL, feat_type = NULL,
         column_feat_ID = "feat_ID")
     update_giotto_params(gobject, description = "_nnSVG",
         attachments = list(param = param))
-}
-
-# features to test from `feats_to_use` (NULL, a feature metadata column or IDs)
-.nnsvg_feats <- function(feats_to_use, fm, all_feats) {
-    if (is.null(feats_to_use)) return(all_feats)
-    if (length(feats_to_use) == 1L && feats_to_use %in% names(fm)) {
-        v <- fm[[feats_to_use]]
-        sel <- fm$feat_ID[v %in% c("yes", TRUE)]
-    } else {
-        sel <- feats_to_use
-    }
-    sel <- intersect(all_feats, sel)
-    if (!length(sel)) {
-        stop("[runNnSVG] `feats_to_use` selects no features", call. = FALSE)
-    }
-    sel
 }
