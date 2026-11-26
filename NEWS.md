@@ -53,6 +53,11 @@
   when the tool runs and `GiottoClass::objCitations()` lists it.
   `checkGiottoMethod()` checks that a param declares one (`cite = FALSE` for
   Suite-native methods that wrap no published method).
+- `runMAST()` runs MAST for marker features between clusters, either one
+  comparison (`group_1` against `group_2`) or each cluster against the
+  others, and returns MAST's hurdle test per feature (`mastParam()` for
+  `analyzeData()`). It replaces Giotto's `findMastMarkers()` and
+  `findMastMarkers_one_vs_all()` with the same results. MAST is in Suggests.
 
 ## Dependencies
 - reticulate moves to Suggests: only the Bento and SpatialData converters and
