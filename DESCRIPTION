@@ -37,6 +37,7 @@ Suggests:
     GiottoVisuals,
     hdf5r,
     httr2,
+    MAST,
     nnSVG,
     reticulate (>= 1.35.0),
     S4Vectors,
