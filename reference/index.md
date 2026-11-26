@@ -106,6 +106,21 @@ Run methods from other packages on a Giotto object.
   : ONTraC parameters
 - [`plotONTraCConnectivity()`](https://giotto-suite.github.io/GiottoConnect/reference/plotONTraCConnectivity.md)
   : Plot ONTraC niche cluster connectivity
+- [`runSparkX()`](https://giotto-suite.github.io/GiottoConnect/reference/runSparkX.md)
+  : Run SPARK-X spatially variable genes
+- [`sparkxParam()`](https://giotto-suite.github.io/GiottoConnect/reference/sparkxParam.md)
+  [`analyzeData(`*`<allMatrix>`*`,`*`<sparkxParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/sparkxParam.md)
+  : SPARK-X parameters
+- [`runMAST()`](https://giotto-suite.github.io/GiottoConnect/reference/runMAST.md)
+  : Run MAST differential expression
+- [`mastParam()`](https://giotto-suite.github.io/GiottoConnect/reference/mastParam.md)
+  [`analyzeData(`*`<allMatrix>`*`,`*`<mastParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/mastParam.md)
+  : MAST parameters
+- [`runScrublet()`](https://giotto-suite.github.io/GiottoConnect/reference/runScrublet.md)
+  : Run Scrublet doublet detection
+- [`scrubletParam()`](https://giotto-suite.github.io/GiottoConnect/reference/scrubletParam.md)
+  [`analyzeData(`*`<allMatrix>`*`,`*`<scrubletParam>`*`)`](https://giotto-suite.github.io/GiottoConnect/reference/scrubletParam.md)
+  : Scrublet parameters
 - [`checkGiottoMethod()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
   [`expect_giotto_method()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
   : Check a method integration

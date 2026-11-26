@@ -29,6 +29,7 @@
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/llmBackend.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/llmPatch.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/mappingProvenance.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/mastParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/nnsvgParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/ontracParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/plotONTraCConnectivity.html</loc></url>
@@ -39,9 +40,14 @@
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runBanksy.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runBayesSpace.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runCellChat.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runMAST.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runNnSVG.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runONTraC.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runScrublet.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/runSparkX.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/scrubletParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/seuratToGiotto.html</loc></url>
+<url><loc>https://giotto-suite.github.io/GiottoConnect/reference/sparkxParam.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/spatialExperimentToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/spatialdataToGiotto.html</loc></url>
 <url><loc>https://giotto-suite.github.io/GiottoConnect/reference/summary.giottoMapping.html</loc></url>

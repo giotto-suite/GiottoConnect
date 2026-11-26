@@ -75,6 +75,23 @@
 
 ### External tools
 
+- [`runSparkX()`](https://giotto-suite.github.io/GiottoConnect/reference/runSparkX.md)
+  runs SPARK-X (SPARK package, GitHub) for spatially variable genes on
+  counts and stores its combined and Benjamini-Yekutieli adjusted
+  p-values as feature metadata
+  ([`sparkxParam()`](https://giotto-suite.github.io/GiottoConnect/reference/sparkxParam.md)
+  for `analyzeData()`). Use it in place of Giotto’s `spark()`, which
+  runs the original SPARK model.
+- [`runScrublet()`](https://giotto-suite.github.io/GiottoConnect/reference/runScrublet.md)
+  runs Scrublet doublet detection on counts and stores each cell’s score
+  and call as cell metadata
+  ([`scrubletParam()`](https://giotto-suite.github.io/GiottoConnect/reference/scrubletParam.md)
+  for `analyzeData()`); the Python package is installed with
+  [`reticulate::py_require()`](https://rstudio.github.io/reticulate/reference/py_require.html)
+  on first use, no conda. It replaces Giotto’s `doScrubletDetect()`,
+  with the same scores. When Scrublet cannot set a score threshold
+  (e.g. on spots) only the scores are stored, with a warning;
+  `scrubletParam(threshold =)` sets one.
 - Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
   ([`GiottoClass::methodCitation()`](https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html)):
   the citation is shown once per session when the tool runs and
@@ -83,12 +100,20 @@
   [`checkGiottoMethod()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
   checks that a param declares one (`cite = FALSE` for Suite-native
   methods that wrap no published method).
+- [`runMAST()`](https://giotto-suite.github.io/GiottoConnect/reference/runMAST.md)
+  runs MAST for marker features between clusters, either one comparison
+  (`group_1` against `group_2`) or each cluster against the others, and
+  returns MAST’s hurdle test per feature
+  ([`mastParam()`](https://giotto-suite.github.io/GiottoConnect/reference/mastParam.md)
+  for `analyzeData()`). It replaces Giotto’s `findMastMarkers()` and
+  `findMastMarkers_one_vs_all()` with the same results. MAST is in
+  Suggests.
 
 ### Dependencies
 
 - reticulate moves to Suggests: only the Bento and SpatialData
-  converters and the python tools (ONTraC) use it, and they check for it
-  when they run.
+  converters and the python tools (ONTraC, Scrublet) use it, and they
+  check for it when they run.
 - Requires GiottoClass 0.8.0 (`methodCitation()`).
 
 ### Removed

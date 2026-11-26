@@ -66,11 +66,17 @@
 </ul></div>
 <div class="section level3">
 <h3 id="external-tools-0-1-0">External tools<a class="anchor" aria-label="anchor" href="#external-tools-0-1-0"></a></h3>
-<ul><li>Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers (<code><a href="https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html" class="external-link">GiottoClass::methodCitation()</a></code>): the citation is shown once per session when the tool runs and <code><a href="https://giotto-suite.github.io/GiottoClass/reference/objCitations.html" class="external-link">GiottoClass::objCitations()</a></code> lists it. <code><a href="../reference/checkGiottoMethod.html">checkGiottoMethod()</a></code> checks that a param declares one (<code>cite = FALSE</code> for Suite-native methods that wrap no published method).</li>
+<ul><li>
+<code><a href="../reference/runSparkX.html">runSparkX()</a></code> runs SPARK-X (SPARK package, GitHub) for spatially variable genes on counts and stores its combined and Benjamini-Yekutieli adjusted p-values as feature metadata (<code><a href="../reference/sparkxParam.html">sparkxParam()</a></code> for <code>analyzeData()</code>). Use it in place of Giotto’s <code>spark()</code>, which runs the original SPARK model.</li>
+<li>
+<code><a href="../reference/runScrublet.html">runScrublet()</a></code> runs Scrublet doublet detection on counts and stores each cell’s score and call as cell metadata (<code><a href="../reference/scrubletParam.html">scrubletParam()</a></code> for <code>analyzeData()</code>); the Python package is installed with <code><a href="https://rstudio.github.io/reticulate/reference/py_require.html" class="external-link">reticulate::py_require()</a></code> on first use, no conda. It replaces Giotto’s <code>doScrubletDetect()</code>, with the same scores. When Scrublet cannot set a score threshold (e.g. on spots) only the scores are stored, with a warning; <code>scrubletParam(threshold =)</code> sets one.</li>
+<li>Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers (<code><a href="https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html" class="external-link">GiottoClass::methodCitation()</a></code>): the citation is shown once per session when the tool runs and <code><a href="https://giotto-suite.github.io/GiottoClass/reference/objCitations.html" class="external-link">GiottoClass::objCitations()</a></code> lists it. <code><a href="../reference/checkGiottoMethod.html">checkGiottoMethod()</a></code> checks that a param declares one (<code>cite = FALSE</code> for Suite-native methods that wrap no published method).</li>
+<li>
+<code><a href="../reference/runMAST.html">runMAST()</a></code> runs MAST for marker features between clusters, either one comparison (<code>group_1</code> against <code>group_2</code>) or each cluster against the others, and returns MAST’s hurdle test per feature (<code><a href="../reference/mastParam.html">mastParam()</a></code> for <code>analyzeData()</code>). It replaces Giotto’s <code>findMastMarkers()</code> and <code>findMastMarkers_one_vs_all()</code> with the same results. MAST is in Suggests.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="dependencies-0-1-0">Dependencies<a class="anchor" aria-label="anchor" href="#dependencies-0-1-0"></a></h3>
-<ul><li>reticulate moves to Suggests: only the Bento and SpatialData converters and the python tools (ONTraC) use it, and they check for it when they run.</li>
+<ul><li>reticulate moves to Suggests: only the Bento and SpatialData converters and the python tools (ONTraC, Scrublet) use it, and they check for it when they run.</li>
 <li>Requires GiottoClass 0.8.0 (<code>methodCitation()</code>).</li>
 </ul></div>
 <div class="section level3">
