@@ -53,3 +53,20 @@
         volume = volume, pages = pages, doi = doi
     )
 }
+
+# Features a tool tests, from `feats_to_use`: NULL (all), a feature metadata
+# column (features with "yes" or TRUE) or feature IDs.
+.tool_feats <- function(feats_to_use, fm, all_feats, fn) {
+    if (is.null(feats_to_use)) return(all_feats)
+    if (length(feats_to_use) == 1L && feats_to_use %in% names(fm)) {
+        v <- fm[[feats_to_use]]
+        sel <- fm$feat_ID[v %in% c("yes", TRUE)]
+    } else {
+        sel <- feats_to_use
+    }
+    sel <- intersect(all_feats, sel)
+    if (!length(sel)) {
+        stop("[", fn, "] `feats_to_use` selects no features", call. = FALSE)
+    }
+    sel
+}

@@ -16,7 +16,7 @@ test_that("nnsvgParam stores nnSVG's options", {
 test_that("feats_to_use selects by metadata column or IDs", {
     fm <- data.table::data.table(feat_ID = c("a", "b", "c"),
         hvf = c("yes", "no", "yes"), keep = c(FALSE, TRUE, TRUE))
-    f <- GiottoConnect:::.nnsvg_feats
+    f <- function(...) GiottoConnect:::.tool_feats(..., fn = "runNnSVG")
     expect_equal(f(NULL, fm, c("a", "b", "c")), c("a", "b", "c"))
     expect_equal(f("hvf", fm, c("a", "b", "c")), c("a", "c"))
     expect_equal(f("keep", fm, c("a", "b", "c")), c("b", "c"))
