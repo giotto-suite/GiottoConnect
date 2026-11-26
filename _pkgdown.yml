@@ -114,4 +114,10 @@ reference:
   - runONTraC
   - ontracParam
   - plotONTraCConnectivity
+  - runSparkX
+  - sparkxParam
+  - runMAST
+  - mastParam
+  - runScrublet
+  - scrubletParam
   - checkGiottoMethod
