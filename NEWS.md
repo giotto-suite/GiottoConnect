@@ -52,6 +52,13 @@
   genes on counts and stores its combined and Benjamini-Yekutieli adjusted
   p-values as feature metadata (`sparkxParam()` for `analyzeData()`). Use it
   in place of Giotto's `spark()`, which runs the original SPARK model.
+- `runScrublet()` runs Scrublet doublet detection on counts and stores each
+  cell's score and call as cell metadata (`scrubletParam()` for
+  `analyzeData()`); the Python package is installed with
+  `reticulate::py_require()` on first use, no conda. It replaces Giotto's
+  `doScrubletDetect()`, with the same scores. When Scrublet cannot set a
+  score threshold (e.g. on spots) only the scores are stored, with a
+  warning; `scrubletParam(threshold =)` sets one.
 - Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
   (`GiottoClass::methodCitation()`): the citation is shown once per session
   when the tool runs and `GiottoClass::objCitations()` lists it.
@@ -65,7 +72,7 @@
 
 ## Dependencies
 - reticulate moves to Suggests: only the Bento and SpatialData converters and
-  the python tools (ONTraC) use it, and they check for it when they run.
+  the python tools (ONTraC, Scrublet) use it, and they check for it when they run.
 - Requires GiottoClass 0.8.0 (`methodCitation()`).
 
 ## Removed

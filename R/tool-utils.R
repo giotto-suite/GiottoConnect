@@ -3,12 +3,10 @@
 # their function runs, Python tools get an environment at that point through
 # reticulate::py_require() (adr/0008 in GiottoClass).
 
-# Path of a Python tool's command line program, in an environment that
-# reticulate builds with uv on first use and caches afterwards. Must be
-# called before Python starts in the session, or with a session whose Python
-# already provides the tool.
-.tool_python_cli <- function(requirement, module, cli,
-    python_version = NULL) {
+# Make a Python tool importable: an environment that reticulate builds with uv
+# on first use and caches afterwards. Must be called before Python starts in
+# the session, or with a session whose Python already provides the tool.
+.tool_python_env <- function(requirement, module, python_version = NULL) {
     package_check("reticulate", repository = "CRAN")
     if (utils::packageVersion("reticulate") < "1.41") {
         stop(wrap_txt("[GiottoConnect] reticulate >= 1.41 is needed to",
@@ -22,6 +20,19 @@
             "session without", requirement, "- restart R and run this",
             "function before other Python code"), call. = FALSE)
     }
+    invisible(TRUE)
+}
+
+# A Python tool's module, for tools called in the R session.
+.tool_python_import <- function(requirement, module, python_version = NULL) {
+    .tool_python_env(requirement, module, python_version = python_version)
+    reticulate::import(module, convert = TRUE)
+}
+
+# Path of a Python tool's command line program (see .tool_python_env()).
+.tool_python_cli <- function(requirement, module, cli,
+    python_version = NULL) {
+    .tool_python_env(requirement, module, python_version = python_version)
     exe <- file.path(dirname(reticulate::py_exe()), cli)
     if (.Platform$OS.type == "windows") {
         exe <- file.path(dirname(reticulate::py_exe()), "Scripts",
