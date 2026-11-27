@@ -81,28 +81,40 @@ setMethod("methodCitation", signature("scrubletParam"), function(x, ...) {
 #' @export
 setMethod("analyzeData", signature(x = "allMatrix", param = "scrubletParam"),
     function(x, param, verbose = FALSE, ...) {
-        scr <- .tool_python_import("scrublet", "scrublet")
         if (is.null(colnames(x))) colnames(x) <- paste0("cell_", seq_len(ncol(x)))
-        # Scrublet takes cells as rows
-        counts <- to_scipy_sparse(x, format = "C", transpose = TRUE)
-        s <- scr$Scrublet(counts_matrix = counts,
-            expected_doublet_rate = param$expected_doublet_rate,
-            random_state = param$seed)
-        res <- s$scrub_doublets(min_counts = param$min_counts,
-            min_cells = param$min_cells,
-            min_gene_variability_pctl = param$min_gene_variability_pctl,
-            n_prin_comps = param$n_prin_comps, verbose = isTRUE(verbose))
-        calls <- res[[2]]
-        if (!is.null(param$threshold)) {
-            calls <- s$call_doublets(threshold = param$threshold,
-                verbose = isTRUE(verbose))
-        }
-        if (is.null(calls)) calls <- rep(NA, ncol(x))
-        data.table::data.table(cell_ID = colnames(x),
-            doublet_score = as.numeric(res[[1]]),
-            doublet = as.logical(calls))
+        # Scrublet takes cells as rows; it runs in a worker R session with
+        # its own Python environment (GiottoUtils::py_run())
+        res <- GiottoUtils::py_run(.scrublet_worker,
+            args = list(counts = Matrix::t(methods::as(x, "CsparseMatrix")),
+                p = as.list(param@param)),
+            requirements = "scrublet", name = "scrublet",
+            verbose = isTRUE(verbose))
+        out <- data.table::data.table(cell_ID = colnames(x),
+            doublet_score = res$score, doublet = res$call)
+        attr(out, "py_versions") <- attr(res, "py_versions")
+        out
     }
 )
+
+# Runs in the py_run() worker: only its arguments and `::` calls are
+# available there.
+.scrublet_worker <- function(counts, p) {
+    scr <- reticulate::import("scrublet")
+    s <- scr$Scrublet(counts_matrix = reticulate::r_to_py(counts),
+        expected_doublet_rate = p$expected_doublet_rate,
+        random_state = p$seed)
+    res <- s$scrub_doublets(min_counts = p$min_counts,
+        min_cells = p$min_cells,
+        min_gene_variability_pctl = p$min_gene_variability_pctl,
+        n_prin_comps = p$n_prin_comps, verbose = FALSE)
+    calls <- res[[2]]
+    if (!is.null(p$threshold)) {
+        calls <- s$call_doublets(threshold = p$threshold, verbose = FALSE)
+    }
+    score <- as.numeric(res[[1]])
+    list(score = score,
+        call = if (is.null(calls)) rep(NA, length(score)) else as.logical(calls))
+}
 
 #' @title Run Scrublet doublet detection
 #' @name runScrublet
@@ -162,5 +174,6 @@ runScrublet <- function(gobject, spat_unit = NULL, feat_type = NULL,
         feat_type = feat_type, new_metadata = out, by_column = TRUE,
         column_cell_ID = "cell_ID")
     update_giotto_params(gobject, description = "_scrublet",
-        attachments = list(param = param))
+        attachments = list(param = param,
+            py_versions = attr(res, "py_versions")))
 }

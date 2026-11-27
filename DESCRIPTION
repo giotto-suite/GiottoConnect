@@ -17,7 +17,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
     GiottoClass (>= 0.8.0),
-    GiottoUtils (>= 0.2.10),
+    GiottoUtils (>= 0.2.11),
     data.table (>= 1.14.0),
     Matrix,
     methods,

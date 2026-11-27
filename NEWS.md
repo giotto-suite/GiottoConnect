@@ -70,10 +70,18 @@
   `analyzeData()`). It replaces Giotto's `findMastMarkers()` and
   `findMastMarkers_one_vs_all()` with the same results. MAST is in Suggests.
 
+- Python tools (Scrublet, ONTraC) run in a worker R session through
+  `GiottoUtils::py_run()`, each in its own uv environment, so they run in
+  one R session in any order and the session itself never starts Python.
+  `options(giotto.py_python =)` points them at an own Python instead.
+  The Python and package versions they used are stored with their
+  parameters in the giotto object (`py_versions`).
+
 ## Dependencies
 - reticulate moves to Suggests: only the Bento and SpatialData converters and
   the python tools (ONTraC, Scrublet) use it, and they check for it when they run.
-- Requires GiottoClass 0.8.0 (`methodCitation()`).
+- Requires GiottoClass 0.8.0 (`methodCitation()`) and GiottoUtils 0.2.11
+  (`py_run()`).
 
 ## Removed
 - `gefToGiotto()`: Giotto's `importStereoSeq()` (and GiottoDisk's

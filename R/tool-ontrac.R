@@ -109,11 +109,6 @@ setMethod("analyzeData", signature(x = "data.frame", param = "ontracParam"),
             stop("[ontracParam] `x` lacks column(s): ",
                 paste(miss, collapse = ", "), call. = FALSE)
         }
-        exe <- .tool_python_cli(
-            requirement = paste0("ONTraC[analysis]==", param$version),
-            module = "ONTraC", cli = "ONTraC",
-            python_version = ">=3.10,<3.13"
-        )
         out <- param$out_dir %null% tempfile("ontrac_")
         dir.create(out, recursive = TRUE, showWarnings = FALSE)
         sample <- if ("sample" %in% names(x)) x$sample else "sample_1"
@@ -128,8 +123,15 @@ setMethod("analyzeData", signature(x = "data.frame", param = "ontracParam"),
             "--GNN-dir", file.path(out, "GNN"),
             "--NT-dir", file.path(out, "NT"),
             .ontrac_args(param))
-        .tool_run(exe, args, file.path(out, "ontrac.log"))
-        .ontrac_read(out)
+        # ONTraC's command line program runs from a worker R session with
+        # its own Python environment (GiottoUtils::py_run_cli())
+        run <- GiottoUtils::py_run_cli("ONTraC", args = args,
+            requirements = paste0("ONTraC[analysis]==", param$version),
+            python_version = ">=3.10,<3.13",
+            log_file = file.path(out, "ontrac.log"))
+        res <- .ontrac_read(out)
+        attr(res, "py_versions") <- attr(run, "py_versions")
+        res
     }
 )
 
@@ -273,7 +275,8 @@ runONTraC <- function(gobject, cell_type, spat_unit = NULL, feat_type = NULL,
     gobject <- setSpatialEnrichment(gobject, x = enr, spat_unit = spat_unit,
         feat_type = feat_type, name = name, verbose = FALSE)
     update_giotto_params(gobject, description = "_ontrac",
-        attachments = list(param = param))
+        attachments = list(param = param,
+            py_versions = attr(res, "py_versions")))
 }
 
 #' @title Plot ONTraC niche cluster connectivity
