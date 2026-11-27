@@ -124,31 +124,16 @@ setMethod("analyzeData", signature(x = "data.frame", param = "ontracParam"),
             "--NT-dir", file.path(out, "NT"),
             .ontrac_args(param))
         # ONTraC's command line program runs from a worker R session with
-        # its own Python environment (GiottoUtils::py_run())
-        run <- GiottoUtils::py_run(.ontrac_worker,
-            args = list(args = args, log_file = file.path(out, "ontrac.log")),
+        # its own Python environment (GiottoUtils::py_run_cli())
+        run <- GiottoUtils::py_run_cli("ONTraC", args = args,
             requirements = paste0("ONTraC[analysis]==", param$version),
-            python_version = ">=3.10,<3.13", name = "ONTraC")
+            python_version = ">=3.10,<3.13",
+            log_file = file.path(out, "ontrac.log"))
         res <- .ontrac_read(out)
         attr(res, "py_versions") <- attr(run, "py_versions")
         res
     }
 )
-
-# Runs in the py_run() worker: ONTraC's program sits next to the worker's
-# Python; stop with the end of its log when it fails.
-.ontrac_worker <- function(args, log_file) {
-    bin <- dirname(reticulate::py_exe())
-    exe <- file.path(bin, if (.Platform$OS.type == "windows") "ONTraC.exe"
-        else "ONTraC")
-    status <- system2(exe, args, stdout = log_file, stderr = log_file)
-    if (!identical(as.integer(status), 0L)) {
-        stop("ONTraC failed (status ", status, "):\n",
-            paste(utils::tail(readLines(log_file, warn = FALSE), 15L),
-                collapse = "\n"), call. = FALSE)
-    }
-    TRUE
-}
 
 # command line options from the param
 .ontrac_args <- function(p) {

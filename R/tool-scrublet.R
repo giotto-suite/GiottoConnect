@@ -87,7 +87,8 @@ setMethod("analyzeData", signature(x = "allMatrix", param = "scrubletParam"),
         res <- GiottoUtils::py_run(.scrublet_worker,
             args = list(counts = Matrix::t(methods::as(x, "CsparseMatrix")),
                 p = as.list(param@param)),
-            requirements = "scrublet", verbose = isTRUE(verbose))
+            requirements = "scrublet", name = "scrublet",
+            verbose = isTRUE(verbose))
         out <- data.table::data.table(cell_ID = colnames(x),
             doublet_score = res$score, doublet = res$call)
         attr(out, "py_versions") <- attr(res, "py_versions")
