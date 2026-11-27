@@ -1,4 +1,4 @@
-# Rebuilds https://giotto-suite.github.io/GiottoConnect/ when dev_connect changes.
+# Rebuilds https://giotto-suite.github.io/GiottoConnect/ when dev changes.
 #
 # The site is built by pkgdown.yaml on the `website` branch, which checks this
 # branch out. This dispatches it, so the site follows the package. GITHUB_TOKEN
@@ -8,7 +8,7 @@ name: pkgdown trigger
 
 on:
   push:
-    branches: [dev_connect]
+    branches: [dev]
     paths:
       - "R/**"
       - "man/**"
@@ -31,4 +31,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run pkgdown.yaml --repo "$GITHUB_REPOSITORY" \
-            --ref website -f package-ref=dev_connect
+            --ref website -f package-ref=dev
