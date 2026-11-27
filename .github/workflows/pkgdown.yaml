@@ -6,8 +6,8 @@
 # in sync with it. Articles stay with the package, in vignettes/articles/.
 #
 # WHEN DOES IT REBUILD?
-# On a push here, and whenever dev_connect changes: .github/workflows/
-# pkgdown-trigger.yaml on dev_connect dispatches this workflow.
+# On a push here, and whenever dev changes: .github/workflows/
+# pkgdown-trigger.yaml on dev dispatches this workflow.
 #
 # WHY resolve-packages AND pins
 # GiottoConnect's Remotes pin GiottoUtils@dev and GiottoClass@gsource, while
@@ -32,7 +32,7 @@ on:
     inputs:
       package-ref:
         description: "Branch/tag of giotto-suite/GiottoConnect to document"
-        default: dev_connect
+        default: dev
         required: false
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
     with:
       mode: release
       package-repo: giotto-suite/GiottoConnect
-      package-ref: ${{ inputs.package-ref || 'dev_connect' }}
+      package-ref: ${{ inputs.package-ref || 'dev' }}
       overlay-files: "_pkgdown.yml"
       examples: "false"
       resolve-packages: |
