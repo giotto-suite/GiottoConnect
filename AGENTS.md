@@ -188,6 +188,6 @@ adapter whose input is a file (.h5ad, read with hdf5r) rather than an R object.
   `GIOTTO_LLM_PROVIDER` is set. `R CMD check` WARNINGs about loading come from
   GiottoClass's `.onLoad` (`getClass()` without `methods::`), not from this package.
 - **Docs:** roxygen2 8.0.0 (suite pin).
-- **Branches:** feature branches off `dev_connect`; PRs target `dev_connect`.
+- **Branches:** feature branches off `dev`; PRs target `dev`.
 - **Results:** comparison results go in `examples/seurat_comparison/results/`, with time
   as a column. Run on the crops first; serialize timing runs under `caffeinate -dimsu`.
