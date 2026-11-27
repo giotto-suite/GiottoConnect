@@ -290,7 +290,8 @@ runONTraC <- function(gobject, cell_type, spat_unit = NULL, feat_type = NULL,
     gobject <- setSpatialEnrichment(gobject, x = enr, spat_unit = spat_unit,
         feat_type = feat_type, name = name, verbose = FALSE)
     update_giotto_params(gobject, description = "_ontrac",
-        attachments = list(param = param))
+        attachments = list(param = param,
+            py_versions = attr(res, "py_versions")))
 }
 
 #' @title Plot ONTraC niche cluster connectivity
