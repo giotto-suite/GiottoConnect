@@ -2,6 +2,14 @@
 
 ## GiottoConnect 0.1.0
 
+### Bug fixes
+
+- [`giottoToSeurat()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToSeurat.md)
+  no longer drops features whose names contain `_` from every layer but
+  `counts` and from the feature metadata. Seurat renames `_` to `-`; all
+  layers and the feature metadata now get the same names, and features
+  that would collide after the rename stop the export.
+
 ### Converters
 
 - [`giottoToAnnData()`](https://giotto-suite.github.io/GiottoConnect/reference/giottoToAnnData.md)
@@ -82,6 +90,7 @@
   ([`sparkxParam()`](https://giotto-suite.github.io/GiottoConnect/reference/sparkxParam.md)
   for `analyzeData()`). Use it in place of Giotto’s `spark()`, which
   runs the original SPARK model.
+
 - [`runScrublet()`](https://giotto-suite.github.io/GiottoConnect/reference/runScrublet.md)
   runs Scrublet doublet detection on counts and stores each cell’s score
   and call as cell metadata
@@ -92,6 +101,7 @@
   with the same scores. When Scrublet cannot set a score threshold
   (e.g. on spots) only the scores are stored, with a warning;
   `scrubletParam(threshold =)` sets one.
+
 - Banksy, BayesSpace, CellChat, nnSVG and ONTraC declare their papers
   ([`GiottoClass::methodCitation()`](https://giotto-suite.github.io/GiottoClass/reference/methodCitation.html)):
   the citation is shown once per session when the tool runs and
@@ -100,6 +110,7 @@
   [`checkGiottoMethod()`](https://giotto-suite.github.io/GiottoConnect/reference/checkGiottoMethod.md)
   checks that a param declares one (`cite = FALSE` for Suite-native
   methods that wrap no published method).
+
 - [`runMAST()`](https://giotto-suite.github.io/GiottoConnect/reference/runMAST.md)
   runs MAST for marker features between clusters, either one comparison
   (`group_1` against `group_2`) or each cluster against the others, and
@@ -109,12 +120,21 @@
   `findMastMarkers_one_vs_all()` with the same results. MAST is in
   Suggests.
 
+- Python tools (Scrublet, ONTraC) run in a worker R session through
+  [`GiottoUtils::py_run()`](https://giotto-suite.github.io/GiottoUtils/reference/py_run.html),
+  each in its own uv environment, so they run in one R session in any
+  order and the session itself never starts Python.
+  `options(giotto.py_python =)` points them at an own Python instead.
+  The Python and package versions they used are stored with their
+  parameters in the giotto object (`py_versions`).
+
 ### Dependencies
 
 - reticulate moves to Suggests: only the Bento and SpatialData
   converters and the python tools (ONTraC, Scrublet) use it, and they
   check for it when they run.
-- Requires GiottoClass 0.8.0 (`methodCitation()`).
+- Requires GiottoClass 0.8.0 (`methodCitation()`) and GiottoUtils 0.2.11
+  (`py_run()`).
 
 ### Removed
 
