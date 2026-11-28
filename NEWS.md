@@ -1,5 +1,11 @@
 # GiottoConnect 0.1.0
 
+## Bug fixes
+- `giottoToSeurat()` no longer drops features whose names contain `_` from
+  every layer but `counts` and from the feature metadata. Seurat renames `_`
+  to `-`; all layers and the feature metadata now get the same names, and
+  features that would collide after the rename stop the export.
+
 ## Converters
 - `giottoToAnnData()` writes one spatial unit and feature type of a giotto
   object (in memory or GiottoDisk-backed) as an `.h5ad` in scanpy's layout,

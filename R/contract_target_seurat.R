@@ -33,6 +33,20 @@
     by_part <- function(type) Filter(function(pp) pp$spec$part == type, prepared)
 
     expr <- by_part("expression")
+    # CreateAssay5Object() renames "_" to "-" in feature names, and LayerData<-
+    # drops rows whose names do not match, so every layer gets the same names
+    for (i in seq_along(expr)) {
+        rn <- rownames(expr[[i]]$data)
+        if (is.null(rn)) next
+        new <- .seurat_feat(rn)
+        clash <- new %in% new[duplicated(new)]
+        if (any(clash)) {
+            stop(wrap_txt("Seurat replaces '_' with '-' in feature names, which makes",
+                "these features collide:", paste(rn[clash], collapse = ", ")),
+                call. = FALSE)
+        }
+        rownames(expr[[i]]$data) <- new
+    }
     counts <- Filter(function(pp) identical(pp$spec$to$layer, "counts"), expr)
     if (!length(counts)) stop(wrap_txt("A Seurat target needs an expression part with layer 'counts'"),
         call. = FALSE)
@@ -57,7 +71,7 @@
     }
     for (pp in by_part("feat_metadata")) {
         fm <- as.data.frame(pp$data)
-        rownames(fm) <- fm$feat_ID
+        rownames(fm) <- .seurat_feat(fm$feat_ID)
         fm$feat_ID <- NULL
         if (ncol(fm)) {
             a <- s[[pp$spec$to$assay]]
