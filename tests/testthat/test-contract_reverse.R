@@ -140,3 +140,38 @@ test_that("transcripts, PCA loadings and every network go to Seurat", {
     expect_equal(ncol(mm), 2L * ncol(s))
     expect_true(attr(readbackCheck(g, out), "pass"))
 })
+
+test_that("features with '_' keep every layer and their metadata in Seurat", {
+    skip_if_not_installed("SeuratObject")
+    set.seed(1)
+    m <- matrix(rpois(40 * 30, 3), 40, 30,
+        dimnames = list(c(paste0("g", 1:37), "A_v2", "B_v2", "C-1"), paste0("c", 1:30)))
+    locs <- data.frame(sdimx = runif(30), sdimy = runif(30), cell_ID = colnames(m))
+    g <- suppressWarnings(GiottoClass::createGiottoObject(expression = m,
+        spatial_locs = locs, verbose = FALSE))
+    g <- GiottoClass::setExpression(g, GiottoClass::createExprObj(log1p(m),
+        name = "normalized", spat_unit = "cell", feat_type = "rna"), verbose = FALSE)
+    g <- GiottoClass::addFeatMetadata(g, new_metadata = data.table::data.table(
+        feat_ID = rownames(m), score = seq_len(40)), by_column = TRUE,
+        column_feat_ID = "feat_ID")
+    s <- suppressWarnings(giottoToSeurat(g))
+    for (ly in SeuratObject::Layers(s)) {
+        expect_setequal(rownames(SeuratObject::LayerData(s, layer = ly)),
+            gsub("_", "-", rownames(m), fixed = TRUE))
+    }
+    nm <- GiottoClass::getExpression(g, values = "normalized", output = "matrix")
+    expect_equal(as.numeric(SeuratObject::LayerData(s, layer = "data")["A-v2", colnames(nm)]),
+        as.numeric(nm["A_v2", ]))
+    expect_equal(s[["rna"]][[]]["B-v2", "score"], 39)
+    expect_true(attr(readbackCheck(g, s), "pass"))
+})
+
+test_that("features that collide after Seurat's '_' to '-' rename stop the export", {
+    skip_if_not_installed("SeuratObject")
+    m <- matrix(rpois(3 * 5, 3), 3, 5,
+        dimnames = list(c("A_1", "A-1", "B"), paste0("c", 1:5)))
+    g <- suppressWarnings(GiottoClass::createGiottoObject(expression = m,
+        spatial_locs = data.frame(sdimx = 1:5, sdimy = 1:5, cell_ID = colnames(m)),
+        verbose = FALSE))
+    expect_error(suppressWarnings(giottoToSeurat(g)), "A_1, A-1")
+})
